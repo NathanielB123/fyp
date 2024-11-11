@@ -4,6 +4,7 @@ import Agda.Builtin.Equality.Rewrite
 
 open import Utils
 open import STLC.Syntax
+open import STLC.BoolFlip
 
 -- Strong normalisation of STLC + Boolean rewrites
 -- Based on https://github.com/AndrasKovacs/misc-stuff/blob/master/agda/STLCStrongNorm/StrongNorm.agda
@@ -32,8 +33,6 @@ s⊔⊑ {s = T} _   = rfl
 {-# REWRITE ⊔V ⊔T ⊔⊔ #-}
 
 variable
-  t₁ t₂ t₃ u₁ u₂ u₃ v₁ v₂ v₃ : Tm Γ A
-  δ σ ξ : Tms[ q ] Δ Γ
   q⊑r : q ⊑ r
   Ξ : Ctx
 
@@ -51,24 +50,6 @@ data TmClo R where
   l· : TmClo R t₁ t₂ → TmClo R (t₁ · u) (t₂ · u) 
   ·r : TmClo R u₁ u₂ → TmClo R (t · u₁) (t · u₂)
   ƛ_ : TmClo R t₁ t₂ → TmClo R (ƛ t₁) (ƛ t₂)
-
-IsBool : Tm Γ A → Set
-IsBool true  = ⊤
-IsBool false = ⊤
-IsBool _     = ⊥
-
-¬IsBool : Tm Γ A → Set
-¬IsBool true  = ⊥
-¬IsBool false = ⊥
-¬IsBool _     = ⊤
-
-bool? : (t : Tm Γ A) → IsBool t ⊎ ¬IsBool t
-bool? true          = inl tt
-bool? false         = inl tt
-bool? (` i)         = inr tt
-bool? (t · u)       = inr tt
-bool? (ƛ t)         = inr tt
-bool? (𝔹-rec c t u) = inr tt
 
 -- Substitution laws
 -- Postulated because I can't be bothered rn
@@ -149,31 +130,6 @@ Val Γ (A ⇒ B) t
 data Env (Δ : Ctx) : ∀ Γ → Tms[ T ] Δ Γ → Set where
   ε   : Env Δ ε ε
   _,_ : Env Δ Γ δ → Val Δ A t → Env Δ (Γ , A) (δ , t)
-
-_[_]b : IsBool t → (δ : Tms[ q ] Δ Γ) → IsBool (t [ δ ])
-_[_]b {t = true}  tt _ = tt
-_[_]b {t = false} tt _ = tt
-
-[_]b⁻¹_ : (δ : Vars Δ Γ) → IsBool (t [ δ ]) → IsBool t
-[_]b⁻¹_ {t = true}  _ tt = tt
-[_]b⁻¹_ {t = false} _ tt = tt
-
-¬bool→ : ¬ IsBool t → ¬IsBool t
-¬bool→ {t = ` _}         _  = tt
-¬bool→ {t = _ · _}       _  = tt
-¬bool→ {t = ƛ _}         _  = tt
-¬bool→ {t = 𝔹-rec _ _ _} _  = tt
-¬bool→ {t = true}        ¬b = ¬b tt
-¬bool→ {t = false}       ¬b = ¬b tt
-
-¬bool← : ¬IsBool t → ¬ IsBool t
-¬bool← {t = ` _} _ ()
-
-_[_]¬b : ¬IsBool t → (δ : Vars Δ Γ) → ¬IsBool (t [ δ ])
-¬b [ δ ]¬b = ¬bool→ (λ b → ¬bool← ¬b ([ δ ]b⁻¹ b))
-
-[_]¬b⁻¹_ : (δ : Vars Δ Γ) → ¬IsBool (t [ δ ]) → ¬IsBool t
-[ δ ]¬b⁻¹ ¬b = ¬bool→ (λ b → ¬bool← ¬b (b [ δ ]b))
 
 _[_]→ : t [ q→ ]→ u → (δ : Vars Δ Γ) 
       → (t [ δ ]) [ q→ ]→ (u [ δ ])
@@ -274,29 +230,6 @@ _[_]neu {t = false}       tt δ = tt
 _[_]neu {t = 𝔹-rec _ _ _} tt δ = tt
 _[_]neu {t = ` _}         tt δ = tt
 
--- Syntactic equality modulo flipping booleans
-data _~/𝔹_ : Tm Γ A → Tm Γ A → Set where
-  bool  : IsBool t → IsBool u → t ~/𝔹 u 
-  `rfl  : (` i) ~/𝔹 (` i)
-  _·_   : t₁ ~/𝔹 t₂ → u₁ ~/𝔹 u₂ → (t₁ · u₁) ~/𝔹 (t₂ · u₂)
-  ƛ_    : t₁ ~/𝔹 t₂ → (ƛ t₁) ~/𝔹 (ƛ t₂)  
-  𝔹-rec : t₁ ~/𝔹 t₂ → u₁ ~/𝔹 u₂ → v₁ ~/𝔹 v₂ → 𝔹-rec t₁ u₁ v₁ ~/𝔹 𝔹-rec t₂ u₂ v₂
-
-rfl/𝔹 : t ~/𝔹 t
-rfl/𝔹 {t = true}        = bool tt tt
-rfl/𝔹 {t = false}       = bool tt tt
-rfl/𝔹 {t = ` i}        = `rfl
-rfl/𝔹 {t = t · u}       = rfl/𝔹 · rfl/𝔹
-rfl/𝔹 {t = ƛ t}        = ƛ rfl/𝔹
-rfl/𝔹 {t = 𝔹-rec c t u} = 𝔹-rec rfl/𝔹 rfl/𝔹 rfl/𝔹
-
-_[_]~/𝔹 : t ~/𝔹 u → (δ : Tms[ q ] Δ Γ) → (t [ δ ]) ~/𝔹 (u [ δ ])
-bool b₁ b₂  [ δ ]~/𝔹 = bool (b₁ [ δ ]b) (b₂ [ δ ]b)
-`rfl        [ δ ]~/𝔹 = rfl/𝔹
-(t · u)     [ δ ]~/𝔹 = (t [ δ ]~/𝔹) · (u [ δ ]~/𝔹)
-(ƛ t)       [ δ ]~/𝔹 = ƛ (t [ δ ^ _ ]~/𝔹)
-𝔹-rec c t u [ δ ]~/𝔹 = 𝔹-rec (c [ δ ]~/𝔹) (t [ δ ]~/𝔹) (u [ δ ]~/𝔹)
-
 _[_]→rw : t →rw u → (δ : Tms[ q ] Δ Γ) 
         → ((t [ δ ]) →rw (u [ δ ])) ⊎ ((t [ δ ]) ~/𝔹 (u [ δ ]))
 rw {t = t} ¬b b [ δ ]→rw with bool? (t [ δ ])
@@ -322,28 +255,6 @@ SN-l· (acc f) = acc (λ p → SN-l· (f (l· p)))
 
 SN-·r : SN Γ B (t · u) → SN Γ A u
 SN-·r (acc f) = acc (λ p → SN-·r (f (·r p)))
-
-IsBool/𝔹 : t ~/𝔹 u → IsBool t → IsBool u
-IsBool/𝔹 {t = true}  (bool tt b) tt = b
-IsBool/𝔹 {t = false} (bool tt b) tt = b
-
-¬IsBool/𝔹 : t ~/𝔹 u → ¬IsBool t → ¬IsBool u
-¬IsBool/𝔹 {t = ` _}         `rfl          tt = tt
-¬IsBool/𝔹 {t = _ · _}       (_ · _)       tt = tt
-¬IsBool/𝔹 {t = ƛ _}         (ƛ _)         tt = tt
-¬IsBool/𝔹 {t = 𝔹-rec _ _ _} (𝔹-rec _ _ _) tt = tt
-
-sym/𝔹 : t₁ ~/𝔹 t₂ → t₂ ~/𝔹 t₁
-sym/𝔹 (bool b₁ b₂)  = bool b₂ b₁
-sym/𝔹 `rfl          = `rfl
-sym/𝔹 (t · u)       = sym/𝔹 t · sym/𝔹 u
-sym/𝔹 (ƛ t)         = ƛ sym/𝔹 t
-sym/𝔹 (𝔹-rec c t u) = 𝔹-rec (sym/𝔹 c) (sym/𝔹 t) (sym/𝔹 u)
-
--- TODO: Fill in this boring setoid stuff
-_~/𝔹*_ : Tms Δ Γ → Tms Δ Γ → Set
-_[_]/𝔹 : t ~/𝔹 u → δ ~/𝔹* σ → (t [ δ ]) ~/𝔹 (u [ σ ])
-<_>/𝔹 : t ~/𝔹 u → < t > ~/𝔹* < u > 
 
 l→/𝔹 : t₁ ~/𝔹 t₂ → t₁ [ q→ ]→ u₁ → ∃ λ u₂ → u₁ ~/𝔹 u₂ × t₂ [ q→ ]→ u₂
 l→/𝔹 (bool b₁ b₂)   (rw ¬b b) = ⊥-elim (¬bool← ¬b b₁)
@@ -427,3 +338,4 @@ eval (ƛ t) ρ σ uⱽ
 eval true  ρ = true-sn
 eval false ρ = false-sn
 eval (𝔹-rec c t u) ρ = {!   !}
+  

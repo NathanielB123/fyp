@@ -41,7 +41,9 @@ module Syntax where
     A B C : Ty
     i j k : Var Γ A
     t u v : Tm Γ A
+    t₁ t₂ t₃ u₁ u₂ u₃ v₁ v₂ v₃ : Tm Γ A
     x y z : Tm[ q ] Γ A
+    x₁ x₂ x₃ y₁ y₂ y₃ z₁ z₂ z₃ : Tm[ q ] Γ A
 
   data Ctx where
     ε   : Ctx
@@ -118,6 +120,9 @@ module Subst where
   data Tms[_] (q : Sort) : Ctx → Ctx → Set where
     ε   : Tms[ q ] Δ ε
     _,_ : Tms[ q ] Δ Γ → Tm[ q ] Δ A → Tms[ q ] Δ (Γ , A)
+
+  variable
+    δ σ ξ δ₁ δ₂ δ₃ σ₁ σ₂ σ₃ ξ₁ ξ₂ ξ₃ : Tms[ q ] Δ Γ
 
   Vars = Tms[ V ]
   Tms  = Tms[ T ]
