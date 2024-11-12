@@ -1,5 +1,7 @@
 {-# OPTIONS --rewriting --prop #-}
 
+import Agda.Builtin.Equality.Rewrite
+
 open import Utils
 
 open import STLC.Syntax

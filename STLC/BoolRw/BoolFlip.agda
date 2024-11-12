@@ -1,4 +1,4 @@
-{-# OPTIONS --rewriting --prop --show-irrelevant #-}
+{-# OPTIONS --prop --show-irrelevant #-}
 
 open import Utils
 open import STLC.Syntax
