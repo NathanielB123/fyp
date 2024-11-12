@@ -3,9 +3,9 @@
 open import Utils
 open import STLC.Syntax
 
--- Defines an equivalence relation on terms corresponding to syntactic equality
--- modulo flipping booleans
-module STLC.BoolFlip where
+-- Equivalence relation on terms corresponding to syntactic equality modulo 
+-- flipping booleans
+module STLC.BoolRw.BoolFlip where
 
 IsBool : Tm Γ A → Set
 IsBool true  = ⊤
@@ -24,7 +24,6 @@ bool? (` i)         = inr tt
 bool? (t · u)       = inr tt
 bool? (ƛ t)         = inr tt
 bool? (𝔹-rec c t u) = inr tt
-
 
 _[_]b : IsBool t → (δ : Tms[ q ] Δ Γ) → IsBool (t [ δ ])
 _[_]b {t = true}  tt _ = tt
@@ -50,7 +49,6 @@ _[_]¬b : ¬IsBool t → (δ : Vars Δ Γ) → ¬IsBool (t [ δ ])
 
 [_]¬b⁻¹_ : (δ : Vars Δ Γ) → ¬IsBool (t [ δ ]) → ¬IsBool t
 [ δ ]¬b⁻¹ ¬b = ¬bool→ (λ b → ¬bool← ¬b (b [ δ ]b))
-
 
 data _~/𝔹_ : Tm[ q ] Γ A → Tm[ q ] Γ A → Set where
   bool  : IsBool t → IsBool u → t ~/𝔹 u 
@@ -84,7 +82,6 @@ bool b₁ b₂  [ δ ]~/𝔹 = bool (b₁ [ δ ]b) (b₂ [ δ ]b)
 (ƛ t)       [ δ ]~/𝔹 = ƛ (t [ δ ^ _ ]~/𝔹)
 𝔹-rec c t u [ δ ]~/𝔹 = 𝔹-rec (c [ δ ]~/𝔹) (t [ δ ]~/𝔹) (u [ δ ]~/𝔹)
 
-
 IsBool/𝔹 : t ~/𝔹 u → IsBool t → IsBool u
 IsBool/𝔹 {t = true}  (bool tt b) tt = b
 IsBool/𝔹 {t = false} (bool tt b) tt = b
@@ -102,27 +99,23 @@ sym/𝔹 (t · u)       = sym/𝔹 t · sym/𝔹 u
 sym/𝔹 (ƛ t)         = ƛ sym/𝔹 t
 sym/𝔹 (𝔹-rec c t u) = 𝔹-rec (sym/𝔹 c) (sym/𝔹 t) (sym/𝔹 u)
 
-
-_[_]/𝔹 : x₁ ~/𝔹 x₂ → δ₁ ~/𝔹* δ₂ → (x₁ [ δ₁ ]) ~/𝔹 (x₂ [ δ₂ ])
-
-suc[_]/𝔹 : ∀ q {x₁ : Tm[ q ] Γ A} {x₂ : Tm[ q ] Γ A} 
-         → x₁ ~/𝔹 x₂ → suc[_] {A = B} q x₁ ~/𝔹 suc[ q ] x₂
-suc[ V ]/𝔹 Vrfl = Vrfl
-suc[ T ]/𝔹 t    = t [ rfl/𝔹* ]/𝔹
-
-_⁺/𝔹_ : δ₁ ~/𝔹* δ₂ → ∀ A → (δ₁ ⁺ A) ~/𝔹* (δ₂ ⁺ A)
-ε       ⁺/𝔹 A = ε
-(δ , t) ⁺/𝔹 A = (δ ⁺/𝔹 A) , (suc[ _ ]/𝔹 t)
-
-_^/𝔹_ : δ₁ ~/𝔹* δ₂ → ∀ A → (δ₁ ^ A) ~/𝔹* (δ₂ ^ A)
-δ ^/𝔹 A = (δ ⁺/𝔹 A) , rfl/𝔹
-
-<_>/𝔹 : t₁ ~/𝔹 t₂ → < t₁ > ~/𝔹* < t₂ > 
-< t >/𝔹 = rfl/𝔹* , t
-
 tm⊑/𝔹 : (p : q ⊑ r) → x₁ ~/𝔹 x₂ → tm⊑ p x₁ ~/𝔹 tm⊑ p x₂
 tm⊑/𝔹 {q = V}         p Vrfl = rfl/𝔹
 tm⊑/𝔹 {q = T} {r = T} p x    = x
+
+_[_]/𝔹   : x₁ ~/𝔹 x₂ → δ₁ ~/𝔹* δ₂ → (x₁ [ δ₁ ]) ~/𝔹 (x₂ [ δ₂ ])
+_⁺/𝔹_    : δ₁ ~/𝔹* δ₂ → ∀ A → (δ₁ ⁺ A) ~/𝔹* (δ₂ ⁺ A)
+_^/𝔹_    : δ₁ ~/𝔹* δ₂ → ∀ A → (δ₁ ^ A) ~/𝔹* (δ₂ ^ A)
+suc[_]/𝔹 : ∀ q {x₁ : Tm[ q ] Γ A} {x₂ : Tm[ q ] Γ A} 
+         → x₁ ~/𝔹 x₂ → suc[_] {A = B} q x₁ ~/𝔹 suc[ q ] x₂
+
+suc[ V ]/𝔹 Vrfl = Vrfl
+suc[ T ]/𝔹 t    = t [ rfl/𝔹* ]/𝔹
+
+ε       ⁺/𝔹 A = ε
+(δ , t) ⁺/𝔹 A = (δ ⁺/𝔹 A) , (suc[ _ ]/𝔹 t)
+
+δ ^/𝔹 A = (δ ⁺/𝔹 A) , rfl/𝔹
 
 Vrfl {i = vz}                      [ δ , u ]/𝔹 = u
 Vrfl {i = vs i}                    [ δ , u ]/𝔹 = Vrfl {i = i} [ δ ]/𝔹
@@ -136,3 +129,5 @@ bool {t = false} {u = false} tt tt [ δ ]/𝔹     = bool tt tt
 𝔹-rec c t u                        [ δ ]/𝔹 
   = 𝔹-rec (c [ δ ]/𝔹) (t [ δ ]/𝔹) (u [ δ ]/𝔹)
 
+<_>/𝔹 : t₁ ~/𝔹 t₂ → < t₁ > ~/𝔹* < t₂ > 
+< t >/𝔹 = rfl/𝔹* , t

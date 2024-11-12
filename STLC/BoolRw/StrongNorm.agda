@@ -4,89 +4,12 @@ import Agda.Builtin.Equality.Rewrite
 
 open import Utils
 open import STLC.Syntax
-open import STLC.BoolFlip
+open import STLC.SubstEq
+open import STLC.BoolRw.BoolFlip
 
 -- Strong normalisation of STLC + Boolean rewrites
 -- Based on https://github.com/AndrasKovacs/misc-stuff/blob/master/agda/STLCStrongNorm/StrongNorm.agda
-module STLC.StrongNorm where
-
-⊑⊔s : q ⊑ r → (q ⊔ s) ⊑ (r ⊔ s)
-⊑⊔s V⊑T = ⊑T
-⊑⊔s rfl = rfl
-
-s⊔⊑ : q ⊑ r → (s ⊔ q) ⊑ (s ⊔ r)
-s⊔⊑ {s = V} q⊑r = q⊑r
-s⊔⊑ {s = T} _   = rfl
-
-⊔V : q ⊔ V ≡ q
-⊔V {q = V} = refl
-⊔V {q = T} = refl
-
-⊔T : q ⊔ T ≡ T
-⊔T {q = V} = refl
-⊔T {q = T} = refl
-
-⊔⊔ : (q ⊔ r) ⊔ s ≡ q ⊔ (r ⊔ s)
-⊔⊔ {q = V} = refl
-⊔⊔ {q = T} = refl
-
-{-# REWRITE ⊔V ⊔T ⊔⊔ #-}
-
-variable
-  q⊑r : q ⊑ r
-  Ξ : Ctx
-
-module Justβ where
-  -- β-reduction
-  data _→β_ : Tm Γ A → Tm Γ A → Set where
-    β  : ((ƛ t) · u) →β (t [ < u > ])
-
--- Closure of a relation over terms
-data TmClo (R : ∀ {Γ A} → Tm Γ A → Tm Γ A → Set) : Tm Γ A → Tm Γ A → Set
-
-data TmClo R where
-  ap : R t₁ t₂ → TmClo R t₁ t₂
-  
-  l· : TmClo R t₁ t₂ → TmClo R (t₁ · u) (t₂ · u) 
-  ·r : TmClo R u₁ u₂ → TmClo R (t · u₁) (t · u₂)
-  ƛ_ : TmClo R t₁ t₂ → TmClo R (ƛ t₁) (ƛ t₂)
-
--- Substitution laws
--- Postulated because I can't be bothered rn
-postulate 
-  [][]  : x [ δ ] [ σ ] ≡ x [ δ ⨾ σ ]
-  ⁺⨾    : (δ ⁺ A) ⨾ (σ , x) ≡ δ ⨾ σ
-  ⨾⁺    : δ ⨾ (σ ⁺ A) ≡ (δ ⨾ σ) ⁺ A
-  id⨾   : {δ : Tms[ q ] Δ Γ} → id ⨾ δ ≡ δ
-  ⨾id   : {δ : Tms[ q ] Δ Γ} → δ ⨾ id ≡ δ
-  vz[]  : ∀ {δ : Tms[ r ] Δ Γ} → vz[ q ] [ δ , x ] ≡ tm⊑ ⊑⊔₂ x
-  suc[] : suc[ q ] x [ δ , y ] ≡  x [ δ ]
-  [id]  : x [ id ] ≡ x
-  ⨾⨾    : (δ ⨾ σ) ⨾ ξ ≡ δ ⨾ (σ ⨾ ξ)
-  
-  ⊑⨾   : {q⊑r : q ⊑ r} {σ : Tms[ s ] Θ Δ} 
-       → tms⊑ q⊑r δ ⨾ σ ≡ tms⊑ (⊑⊔s {s = s} q⊑r) (δ ⨾ σ)
-  ⨾⊑   : {q⊑r : r ⊑ s} {δ : Tms[ q ] Δ Γ}
-       → δ ⨾ tms⊑ q⊑r σ ≡ tms⊑ (s⊔⊑ {s = q} q⊑r) (δ ⨾ σ)
-  
-  ⊑⁺   : tms⊑ q⊑r δ ⁺ A ≡ tms⊑ q⊑r (δ ⁺ A) 
-
-  [⊑]   : {q⊑r : q ⊑ r} {x : Tm[ s ] Γ A} 
-        → x [ tms⊑ q⊑r δ ] ≡ tm⊑ (s⊔⊑ {s = s} q⊑r) (x [ δ ])
-  [⊑,`] : x [ (tms⊑ ⊑T δ , (` vz)) ] ≡ tm⊑ ⊑T (x [ δ , vz ])
-
-  tms⊑-id : tms⊑ q⊑r δ ≡ δ
-
--- Epic rewrite fail
-T[][] : t [ δ ] [ σ ] ≡ t [ δ ⨾ σ ]
-T[][] {t = t} = [][] {x = t}
-
-V⨾⨾ : ∀ {σ : Tms[ q ] Θ Δ} → (δ ⨾ σ) ⨾ ξ ≡ δ ⨾ (σ ⨾ ξ)
-V⨾⨾ = ⨾⨾
-
-{-# REWRITE [][] ⁺⨾ ⨾⁺ id⨾ ⨾id vz[] [id] ⨾⨾ ⊑⨾ ⨾⊑ ⊑⁺ [⊑] [⊑,`] tms⊑-id 
-            T[][] V⨾⨾ #-}
-
+module STLC.BoolRw.StrongNorm where
 
 data Sort→ : Set where
   β rw : Sort→ 
@@ -219,16 +142,16 @@ _[_]E : Env Δ Γ δ → ∀ (σ : Vars Θ Δ) → Env Θ Γ (δ ⨾ σ)
 ValAcc : ∀ Γ A → Tm Γ A → Set
 ValAcc Γ A t = ∀ {q→ u} → t [ q→ ]→ u → Val Γ A u
 
-neu : Tm Γ A → Set
-neu (ƛ _) = ⊥
-neu _     = ⊤
+¬lam : Tm Γ A → Set
+¬lam (ƛ _) = ⊥
+¬lam _     = ⊤
 
-_[_]neu : neu t → (δ : Vars Δ Γ) → neu (t [ δ ])
-_[_]neu {t = _ · _}       tt δ = tt
-_[_]neu {t = true}        tt δ = tt
-_[_]neu {t = false}       tt δ = tt
-_[_]neu {t = 𝔹-rec _ _ _} tt δ = tt
-_[_]neu {t = ` _}         tt δ = tt
+_[_]¬lam : ¬lam t → (δ : Vars Δ Γ) → ¬lam (t [ δ ])
+_[_]¬lam {t = _ · _}       tt δ = tt
+_[_]¬lam {t = true}        tt δ = tt
+_[_]¬lam {t = false}       tt δ = tt
+_[_]¬lam {t = 𝔹-rec _ _ _} tt δ = tt
+_[_]¬lam {t = ` _}         tt δ = tt
 
 _[_]→rw : t →rw u → (δ : Tms[ q ] Δ Γ) 
         → ((t [ δ ]) →rw (u [ δ ])) ⊎ ((t [ δ ]) ~/𝔹 (u [ δ ]))
@@ -284,7 +207,7 @@ Val[]→ δ p t[]ⱽ with p [ δ ]→/𝔹
 ... | inr p[] = Val~ p[] t[]ⱽ
 
 reify   : Val Γ A t → SN Γ A t
-reflect : neu t → ValAcc Γ A t → Val Γ A t
+reflect : ¬lam t → ValAcc Γ A t → Val Γ A t
 eval    : ∀ (t : Tm Γ A) (ρ : Env Δ Γ δ) → Val Δ A (t [ δ ])
 
 
@@ -304,19 +227,19 @@ eval-lam-acc (acc f) tⱽ (acc g) uⱽ (l· (ƛ p))
 eval-lam-acc (acc f) tⱽ (acc g) uⱽ (·r p) 
   = eval-lam (acc f) tⱽ (g p) (Val→ p uⱽ)
 
-  
-reflect {A = 𝔹'}    n tⱽ      = acc tⱽ                                      
+reflect-app : (t · u) [ q→ ]→ v → ¬lam t → ValAcc _ (A ⇒ B) t 
+            → SN Γ A u → Val _ _ u → Val _ B v
+
+reflect {A = 𝔹'}            n tⱽ = acc tⱽ                                      
 reflect {A = A ⇒ B} {t = t} n tⱽ δ uⱽ 
-  = reflect tt (λ where p → go p (n [ δ ]neu) t[]ⱽ (reify uⱽ) uⱽ) 
+  = reflect tt (λ where p → reflect-app p (n [ δ ]¬lam) t[]ⱽ (reify uⱽ) uⱽ) 
   where t[]ⱽ : ValAcc _ _ (t [ δ ])
         t[]ⱽ p σ uⱽ with _ Σ, p Σ, refl ← [ δ ]→⁻¹ p = tⱽ p (δ ⨾ σ) uⱽ
-  
-        go : (u₁ · u₂) [ q→ ]→ v → neu u₁ → ValAcc _ (A ⇒ B) u₁ 
-            → SN Γ A u₂ → Val _ _ u₂ → Val _ B v
-        go (rw ¬b b) n tⱽ uₛₙ uⱽ = bool-sn b
-        go (l· p)    n tⱽ uₛₙ uⱽ = tⱽ p id uⱽ
-        go (·r p)    n tⱽ (acc a) uⱽ 
-          = reflect tt (λ q → go q n tⱽ (a p) (Val→ p uⱽ))
+
+reflect-app (rw ¬b b) n tⱽ uₛₙ     uⱽ = bool-sn b
+reflect-app (l· p)    n tⱽ uₛₙ     uⱽ = tⱽ p id uⱽ
+reflect-app (·r p)    n tⱽ (acc a) uⱽ 
+  = reflect tt (λ q → reflect-app q n tⱽ (a p) (Val→ p uⱽ))
 
 vz-val : Val (Γ , A) A (` vz)
 vz-val = reflect tt λ where (rw ¬b b) → bool-sn b
@@ -338,4 +261,10 @@ eval (ƛ t) ρ σ uⱽ
 eval true  ρ = true-sn
 eval false ρ = false-sn
 eval (𝔹-rec c t u) ρ = {!   !}
-  
+
+idᴱ : Env Γ Γ (id[ T ])
+idᴱ {Γ = ε}     = ε
+idᴱ {Γ = Γ , A} = idᴱ {Γ = Γ} [ id ⁺ A ]E , vz-val
+
+sn : ∀ t → SN Γ A t
+sn t = reify (eval t idᴱ)
