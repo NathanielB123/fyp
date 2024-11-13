@@ -40,9 +40,15 @@ SN-·r (acc a) = acc λ p → SN-·r (a (·r p))
 SN-ƛ : SN Γ (A ⇒ B) (ƛ t) → SN (Γ , A) B t
 SN-ƛ (acc a) = acc λ p → SN-ƛ (a (ƛ p))
 
+struc< : Struc Γ A t → u < t  → Struc Δ B u
+struc< (acc a b) = b
+
+struc-l· : Struc Γ B (t · u) → Struc Γ (A ⇒ B) t
+struc-l· (acc a b) = acc (λ p → struc-l· (a (l· p))) (struc< (b l·))
+
 -- Oh dear...
 sn-struc : SN Γ A t → Struc Γ A t
 sn-struc (acc a) = acc (λ p → sn-struc (a p)) 
-                λ where l· → sn-struc (SN-l· (acc a))
-                        ·r → sn-struc (SN-·r (acc a))
-                        ƛ_ → sn-struc (SN-ƛ (acc a))
+                 λ where l· → sn-struc (SN-l· (acc a))
+                         ·r → sn-struc (SN-·r (acc a))
+                         ƛ_ → sn-struc (SN-ƛ (acc a))
