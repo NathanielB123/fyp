@@ -6,10 +6,12 @@ open import Utils
 
 open import STLC.Syntax
 
--- Substitution equations
--- Proving these using the approach outlined 
+-- Equations abot substitutions
+--
+-- Proving these using the approach outlined in
 -- https://github.com/txa/substitution/blob/main/submission.pdf
--- should not be too tricky, but for now I will just postulate them
+-- should not be too tricky, but for now I am a bit bored of proving 
+-- substitution lemmas, and will just postulate them
 module STLC.SubstEq where
 
 ⊑⊔s : q ⊑ r → (q ⊔ s) ⊑ (r ⊔ s)

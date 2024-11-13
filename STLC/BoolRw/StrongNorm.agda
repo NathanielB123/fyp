@@ -226,8 +226,8 @@ SN~-helper _ (acc a) (rw ¬b b) = bool-sn b
 SN~-helper ((ƛ p) · q) (acc a) β = acc (SN~-helper (p [ < q >/𝔹 ]/𝔹) (a β))
 SN~-helper (𝔹-rec p q r) (acc a) rec-true
   -- I want to fill this in with the following case, but Agda's termination
-  -- checker is not convinced. There is no guarantee 'SN-𝔹-rec₂ (acc a)' 
-  -- < 'acc a'
+  -- checker is not convinced. There is no guarantee 
+  -- 'SN-𝔹-rec₂ (acc a)' ≤ 'acc a' (and this is probably fair)
   -- I would like a way to augment 'SN' with structural orderings on terms
   = {!!} -- acc (SN~-helper q (SN-𝔹-rec₂ (acc a)))
 SN~-helper (𝔹-rec p q r) (acc a) rec-false = {!   !}

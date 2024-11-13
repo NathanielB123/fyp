@@ -52,3 +52,21 @@ sn-struc (acc a) = acc (λ p → sn-struc (a p))
                  λ where l· → sn-struc (SN-l· (acc a))
                          ·r → sn-struc (SN-·r (acc a))
                          ƛ_ → sn-struc (SN-ƛ (acc a))
+
+{-
+/home/nathaniel/agda/fyp/STLC/ReductionExample.agda:50,1-54,54
+Termination checking failed for the following functions:
+  sn-struc
+Problematic calls:
+  sn-struc (a p)
+    (at /home/nathaniel/agda/fyp/STLC/ReductionExample.agda:51,31-39)
+  λ { l· → sn-struc (SN-l· (acc a))
+    ; ·r → sn-struc (SN-·r (acc a))
+    ; ƛ_ → sn-struc (SN-ƛ (acc a))
+    }
+    (at /home/nathaniel/agda/fyp/STLC/ReductionExample.agda:52,18-54,54)
+  sn-struc (SN-l· (acc a))
+    (at /home/nathaniel/agda/fyp/STLC/ReductionExample.agda:52,31-39)
+  sn-struc (SN-ƛ (acc a))
+    (at /home/nathaniel/agda/fyp/STLC/ReductionExample.agda:54,31-39)
+-}
