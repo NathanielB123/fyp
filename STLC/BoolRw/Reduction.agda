@@ -39,9 +39,9 @@ sn : SN Γ A t → t [ q→ ]→ u → SN Γ A u
 sn (acc a) p = a p
 
 -- Structural ordering on terms
-data _≤_ : Tm Γ A → Tm Δ B → Set where
-  l· : t ≤ (t · u)
-  ·r : u ≤ (t · u)
+data _<_ : Tm Γ A → Tm Δ B → Set where
+  l· : t < (t · u)
+  ·r : u < (t · u)
 
 SN-l· : SN Γ B (t · u) → SN Γ (A ⇒ B) t
 SN-l· (acc f) = acc (λ p → SN-l· (f (l· p)))
@@ -61,17 +61,20 @@ SN-𝔹-rec₃ (acc f) = acc (λ p → SN-𝔹-rec₃ (f (𝔹-rec₃ p)))
 -- Structural ordering augmented with reduction
 data Struc : ∀ Γ A → Tm Γ A → Set where
   acc : (∀ {q→ u}  → t [ q→ ]→ u → Struc Γ A u)
-      → (∀ {Δ B u} → u ≤ t       → Struc Δ B u)
+      → (∀ {Δ B u} → u < t       → Struc Δ B u)
       → Struc Γ A t
 
-struc≤ : Struc Γ A t → u ≤ t → Struc Δ B u
-struc≤ (acc a b) = b
+struc< : Struc Γ A t → u < t → Struc Δ B u
+struc< (acc a b) = b
 
 struc-l· : Struc Γ B (t · u) → Struc Γ (A ⇒ B) t
-struc-l· (acc a b) = acc (λ p → struc-l· (a (l· p))) (λ p → struc≤ (b l·) p)
+struc-l· (acc a b) = acc (λ p → struc-l· (a (l· p))) (λ p → struc< (b l·) p)
 
+-- Hmm
 -- sn-struc : SN Γ A t → Struc Γ A t
--- sn-struc-acc : SN Γ A t → t [ q→ ]→ u₁ → v ≤ u₂ → u₁ ≡ u₂ → Struc Δ B v
+
+-- This isn't really what I want to prove, but it does seem easier...
+-- sn-struc-acc : SN Γ A t → t [ q→ ]→ u₁ → v < u₂ → u₁ ≡ u₂ → Struc Δ B v
 
 -- sn-struc (acc a) = acc (λ p → {!!}) (λ q → sn-struc-acc (acc a) {!!} q refl)
 
