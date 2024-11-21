@@ -22,6 +22,7 @@ open import Relation.Binary.Construct.Closure.Transitive
   using (TransClosure; _∷_; wellFounded) 
   renaming ([_] to ⟪_⟫)
   public
+open import Function using (case_of_) public
 
 variable
   ℓ : Level

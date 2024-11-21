@@ -32,81 +32,62 @@ data Env (Δ : Ctx) : ∀ Γ → Tms[ T ] Δ Γ → Set where
 
 _[_]→ : t [ q→ ]→ u → (δ : Vars Δ Γ) 
       → (t [ δ ]) [ q→ ]→ (u [ δ ])
-β         [ δ ]→ = β
-rec-true  [ δ ]→ = rec-true
-rec-false [ δ ]→ = rec-false
-rw ¬b b   [ δ ]→ = rw (¬b [ δ ]¬b) (b [ δ ]b) 
-l· p      [ δ ]→ = l· (p [ δ ]→)
-·r p      [ δ ]→ = ·r (p [ δ ]→)
-𝔹-rec₁ p  [ δ ]→ = 𝔹-rec₁ (p [ δ ]→)
-𝔹-rec₂ p  [ δ ]→ = 𝔹-rec₂ (p [ δ ]→)
-𝔹-rec₃ p  [ δ ]→ = 𝔹-rec₃ (p [ δ ]→)
-(ƛ p)     [ δ ]→ = ƛ (p [ δ ^ _ ]→)
+β refl refl [ δ ]→ = β refl refl
+𝔹-rec-β₁ b  [ δ ]→ = 𝔹-rec-β₁ (b [ δ ]b)
+𝔹-rec-β₂ b  [ δ ]→ = 𝔹-rec-β₂ (b [ δ ]b)
+rw ¬b b     [ δ ]→ = rw (¬b [ δ ]¬b) (b [ δ ]b) 
+l· p        [ δ ]→ = l· (p [ δ ]→)
+·r p        [ δ ]→ = ·r (p [ δ ]→)
+𝔹-rec₁ p    [ δ ]→ = 𝔹-rec₁ (p [ δ ]→)
+𝔹-rec₂ p    [ δ ]→ = 𝔹-rec₂ (p [ δ ]→)
+𝔹-rec₃ p    [ δ ]→ = 𝔹-rec₃ (p [ δ ]→)
+(ƛ p)       [ δ ]→ = ƛ (p [ δ ^ _ ]→)
 
 _[_]→β : t →β u → (δ : Tms[ q ] Δ Γ) 
         → (t [ δ ]) →β (u [ δ ])
-β         [ δ ]→β = β
-rec-true  [ δ ]→β = rec-true
-rec-false [ δ ]→β = rec-false
-l· p      [ δ ]→β = l· (p [ δ ]→β)
-·r p      [ δ ]→β = ·r (p [ δ ]→β)
-𝔹-rec₁ p  [ δ ]→β = 𝔹-rec₁ (p [ δ ]→β)
-𝔹-rec₂ p  [ δ ]→β = 𝔹-rec₂ (p [ δ ]→β)
-𝔹-rec₃ p  [ δ ]→β = 𝔹-rec₃ (p [ δ ]→β)
-(ƛ p)     [ δ ]→β = ƛ (p [ δ ^ _ ]→β)
+β refl refl [ δ ]→β = β refl refl
+𝔹-rec-β₁ b  [ δ ]→β = 𝔹-rec-β₁ (b [ δ ]b)
+𝔹-rec-β₂ b  [ δ ]→β = 𝔹-rec-β₂ (b [ δ ]b)
+l· p        [ δ ]→β = l· (p [ δ ]→β)
+·r p        [ δ ]→β = ·r (p [ δ ]→β)
+𝔹-rec₁ p    [ δ ]→β = 𝔹-rec₁ (p [ δ ]→β)
+𝔹-rec₂ p    [ δ ]→β = 𝔹-rec₂ (p [ δ ]→β)
+𝔹-rec₃ p    [ δ ]→β = 𝔹-rec₃ (p [ δ ]→β)
+(ƛ p)       [ δ ]→β = ƛ (p [ δ ^ _ ]→β)
 
--- These cases are mostly mechanical, but I got bored so I have commented them 
--- out for now
+ƛ[_]⁻¹_ : (δ : Vars Δ Γ) → t [ δ ] ≡ ƛ u → ∃ λ u⁻¹ → t ≡ ƛ u⁻¹
+ƛ[_]⁻¹_ {t = ƛ t} δ refl = _ Σ, refl 
+
 [_]→β⁻¹_ : ∀ (δ : Vars Δ Γ) → (t [ δ ]) →β u
           → ∃ λ u⁻¹ → (t →β u⁻¹) × (u⁻¹ [ δ ] ≡ u)
 
--- [_]→β⁻¹_ {t = ƛ t} δ (ƛ p) 
---   = let u⁻¹   Σ, p   Σ, q = [_]→β⁻¹_ {t = t} (δ ^ _) p 
---       in ƛ u⁻¹ Σ, ƛ p Σ, cong ƛ_ q
+[_]→β⁻¹_ {t = t · u} δ (β p q) with t′ Σ, refl ← ƛ[_]⁻¹_ {t = t} δ p
+                               with refl       ← p
+                               with refl       ← q
+  = _ Σ, β refl refl Σ, refl
+[_]→β⁻¹_ {t = 𝔹-rec t u v}  δ (𝔹-rec-β₁ p) = u Σ, 𝔹-rec-β₁ ([ δ ]b⁻¹ p) Σ, refl
+[_]→β⁻¹_ {t = 𝔹-rec t u v} δ (𝔹-rec-β₂ p) = v Σ, 𝔹-rec-β₂ ([ δ ]b⁻¹ p) Σ, refl
 
--- -- There is some very careful case-splitting here to avoid LHS-unification 
--- -- issues with 'β'. I wonder if fording would make this neater...
--- [_]→β⁻¹_ {t = t · u · v} δ (l· p) 
---   = let tu⁻¹     Σ, p    Σ, q = [_]→β⁻¹_ {t = t · u} δ p
---      in tu⁻¹ · v Σ, l· p Σ, cong (_· (v [ δ ])) q
--- [_]→β⁻¹_ {t = (ƛ t) · u} δ (l· p) 
---   = let t⁻¹      Σ, p    Σ, q = [_]→β⁻¹_ {t = ƛ t} δ p
---      in t⁻¹ · u Σ, l· p Σ, cong (_· (u [ δ ])) q
--- [_]→β⁻¹_ {t = 𝔹-rec c t u · v} δ (l· p) 
---   = let r⁻¹     Σ, p    Σ, q = [_]→β⁻¹_ {t = 𝔹-rec c t u} δ p
---      in r⁻¹ · v Σ, l· p Σ, cong (_· (v [ δ ])) q
+[_]→β⁻¹_ {t = ƛ t} δ (ƛ p) 
+  = let u⁻¹   Σ, p⁻¹   Σ, q = [_]→β⁻¹_ {t = t} (δ ^ _) p 
+     in ƛ u⁻¹ Σ, ƛ p⁻¹ Σ, cong ƛ_ q
 
--- [_]→β⁻¹_ {t = ` i · u} δ (·r p) 
---   = let u⁻¹       Σ, p    Σ, q = [_]→β⁻¹_ {t = u} δ p 
---      in ` i · u⁻¹ Σ, ·r p Σ, cong (` (i [ δ ]) ·_) q
--- [_]→β⁻¹_ {t = t · u · v} δ (·r p)
---   = let v⁻¹         Σ, p    Σ, q = [_]→β⁻¹_ {t = v} δ p 
---      in t · u · v⁻¹ Σ, ·r p Σ, cong ((t [ δ ]) · (u [ δ ]) ·_) q
--- [_]→β⁻¹_ {t = (ƛ t) · u} δ (·r p) 
---   = let u⁻¹         Σ, p    Σ, q = [_]→β⁻¹_ {t = u} δ p 
---      in (ƛ t) · u⁻¹ Σ, ·r p Σ, cong ((ƛ t [ δ ^ _ ]) ·_) q
--- [_]→β⁻¹_ {t = 𝔹-rec c t u · v} δ (·r p)
---   = let v⁻¹               Σ, p    Σ, q = [_]→β⁻¹_ {t = v} δ p 
---      in 𝔹-rec c t u · v⁻¹ Σ, ·r p 
---      Σ, cong (𝔹-rec (c [ δ ]) (t [ δ ]) (u [ δ ]) ·_) q
+[_]→β⁻¹_ {t = t · u} δ (l· p)
+  = let t⁻¹     Σ, p′    Σ, q = [_]→β⁻¹_ {t = t} δ p
+     in t⁻¹ · u Σ, l· p′ Σ, cong (_· (u [ δ ])) q
+[_]→β⁻¹_ {t = t · u} δ (·r p)
+  = let u⁻¹     Σ, p′    Σ, q = [_]→β⁻¹_ {t = u} δ p
+     in t · u⁻¹ Σ, ·r p′ Σ, cong (t [ δ ] ·_) q
 
--- [_]→β⁻¹_ {t = 𝔹-rec true t u}  δ rec-true  = t Σ, rec-true Σ, refl
--- [_]→β⁻¹_ {t = 𝔹-rec false t u} δ rec-false = u Σ, rec-false Σ, refl
--- [_]→β⁻¹_ {t = (ƛ t) · u}       δ β         = t [ < u > ] Σ, β Σ, refl
-
--- TODO
--- [_]→β⁻¹_ {t = 𝔹-rec (` i) t u} δ (𝔹-rec₂ p) = {!   !}
--- [_]→β⁻¹_ {t = 𝔹-rec (` i) t u} δ (𝔹-rec₃ p) = {!   !}
--- [_]→β⁻¹_ {t = 𝔹-rec (c₁ · c₂) t u} δ (𝔹-rec₁ p) = {!   !}
--- [_]→β⁻¹_ {t = 𝔹-rec (c₁ · c₂) t u} δ (𝔹-rec₂ p) = {!   !}
--- [_]→β⁻¹_ {t = 𝔹-rec (c₁ · c₂) t u} δ (𝔹-rec₃ p) = {!   !}
--- [_]→β⁻¹_ {t = 𝔹-rec true t u} δ (𝔹-rec₂ p) = {!   !}
--- [_]→β⁻¹_ {t = 𝔹-rec true t u} δ (𝔹-rec₃ p) = {!   !}
--- [_]→β⁻¹_ {t = 𝔹-rec false t u} δ (𝔹-rec₂ p) = {!   !}
--- [_]→β⁻¹_ {t = 𝔹-rec false t u} δ (𝔹-rec₃ p) = {!   !}
--- [_]→β⁻¹_ {t = 𝔹-rec (𝔹-rec _ _ _) t u} δ (𝔹-rec₁ p) = {!   !}
--- [_]→β⁻¹_ {t = 𝔹-rec (𝔹-rec _ _ _) t u} δ (𝔹-rec₂ p) = {!   !}
--- [_]→β⁻¹_ {t = 𝔹-rec (𝔹-rec _ _ _) t u} δ (𝔹-rec₃ p) = {!   !}
+[_]→β⁻¹_ {t = 𝔹-rec t u v} δ (𝔹-rec₁ p) 
+  = let t⁻¹           Σ, p′        Σ, q = [_]→β⁻¹_ {t = t} δ p
+     in 𝔹-rec t⁻¹ u v Σ, 𝔹-rec₁ p′ Σ, cong (λ □ → 𝔹-rec □ (u [ δ ]) (v [ δ ])) q
+[_]→β⁻¹_ {t = 𝔹-rec t u v} δ (𝔹-rec₂ p) 
+  = let u⁻¹           Σ, p′        Σ, q = [_]→β⁻¹_ {t = u} δ p
+     in 𝔹-rec t u⁻¹ v Σ, 𝔹-rec₂ p′ Σ, cong (λ □ → 𝔹-rec (t [ δ ]) □ (v [ δ ])) q
+[_]→β⁻¹_ {t = 𝔹-rec t u v} δ (𝔹-rec₃ p) 
+  = let v⁻¹           Σ, p′        Σ, q = [_]→β⁻¹_ {t = v} δ p
+     in 𝔹-rec t u v⁻¹ Σ, 𝔹-rec₃ p′ Σ, cong (λ □ → 𝔹-rec (t [ δ ]) (u [ δ ]) □) q
 
 [_]→rw⁻¹_ : ∀ (δ : Vars Δ Γ) → (t [ δ ]) →rw u
           → ∃ λ u⁻¹ → (t →rw u⁻¹) × (u⁻¹ [ δ ] ≡ u)
@@ -200,52 +181,37 @@ _[_]→/𝔹 : t [ q→ ]→ u → (δ : Tms[ q ] Δ Γ)
 _[_]→/𝔹 {q→ = β}  p δ = inl (p [ δ ]→β)
 _[_]→/𝔹 {q→ = rw}     = _[_]→rw
 
--- Because of 'rec-true'/'rec-false', this is straight-up false!
--- Leaving commented out in case parts of it are helpful later...
--- l→/𝔹 : t₁ ~/𝔹 t₂ → t₁ [ q→ ]→ u₁ → ∃ λ u₂ → u₁ ~/𝔹 u₂ × t₂ [ q→ ]→ u₂
--- l→/𝔹 (bool b₁ b₂)   (rw ¬b b) = ⊥-elim (¬bool← ¬b b₁)
--- l→/𝔹 `rfl           (rw ¬b b) = _ Σ, bool b b Σ, rw tt b
--- l→/𝔹 (_ · _)        (rw ¬b b) = _ Σ, bool b b Σ, rw tt b
--- l→/𝔹 (𝔹-rec _ _ _)  (rw ¬b b) = _ Σ, bool b b Σ, rw tt b
--- l→/𝔹 ((ƛ t) · u) β            = _ Σ, (t [ < u >/𝔹 ]/𝔹) Σ, β
--- l→/𝔹 (𝔹-rec (bool tt b₂) t u) rec-true   = _ Σ, t Σ, {!!}
--- l→/𝔹 (𝔹-rec (bool tt b₂) t u) rec-false  = {!   !}
--- l→/𝔹 (t · u)     (l· p)       = let t⁻¹ Σ, t~       Σ, q = l→/𝔹 t p
---                                  in _   Σ, (t~ · u) Σ, (l· q)
--- l→/𝔹 (t · u)     (·r p)       = let u⁻¹ Σ, u~       Σ, q = l→/𝔹 u p
---                                  in _   Σ, (t · u~) Σ, (·r q)
--- l→/𝔹 (ƛ t)       (ƛ p)        = let t⁻¹ Σ, t~       Σ, q = l→/𝔹 t p
---                                  in _   Σ, (ƛ t~)   Σ, (ƛ q)
+l→/𝔹 : t₁ ~/𝔹 t₂ → t₁ [ q→ ]→ u₁ → ∃ λ u₂ → u₁ ~/𝔹 u₂ × t₂ [ q→ ]→ u₂
+l→/𝔹 (bool b₁ b₂)   (rw ¬b b) = ⊥-elim (¬bool← ¬b b₁)
+l→/𝔹 `rfl           (rw ¬b b) = _ Σ, bool b b Σ, rw tt b
+l→/𝔹 (_ · _)        (rw ¬b b) = _ Σ, bool b b Σ, rw tt b
+l→/𝔹 (𝔹-rec _ _ _)  (rw ¬b b) = _ Σ, bool b b Σ, rw tt b
+
+l→/𝔹 ((ƛ t) · u)              (β refl refl) = _ Σ, (t [ < u >/𝔹 ]/𝔹) Σ, β refl refl
+l→/𝔹 (bool () b₂)             (β refl refl)
+l→/𝔹 (𝔹-rec (bool b₁ b₂) u v) (𝔹-rec-β₁ b) = _ Σ, u Σ, 𝔹-rec-β₁ b₂
+l→/𝔹 (𝔹-rec (bool b₁ b₂) u v) (𝔹-rec-β₂ b) = _ Σ, v Σ, 𝔹-rec-β₂ b₂
+
+l→/𝔹 (t · u)     (l· p)       = let _   Σ, t′             Σ, q = l→/𝔹 t p
+                                 in _   Σ, (t′ · u)       Σ, (l· q)
+l→/𝔹 (t · u)     (·r p)       = let _   Σ, u′             Σ, q = l→/𝔹 u p
+                                 in _   Σ, (t · u′)       Σ, (·r q)
+l→/𝔹 (ƛ t)       (ƛ p)        = let _   Σ, t′             Σ, q = l→/𝔹 t p
+                                 in _   Σ, (ƛ t′)         Σ, (ƛ q)
+l→/𝔹 (𝔹-rec t u v) (𝔹-rec₁ p) = let _   Σ, t′             Σ, q = l→/𝔹 t p
+                                 in _   Σ, (𝔹-rec t′ u v) Σ, (𝔹-rec₁ q)
+l→/𝔹 (𝔹-rec t u v) (𝔹-rec₂ p) = let _   Σ, u′             Σ, q = l→/𝔹 u p
+                                 in _   Σ, (𝔹-rec t u′ v) Σ, (𝔹-rec₂ q)
+l→/𝔹 (𝔹-rec t u v) (𝔹-rec₃ p) = let _   Σ, v′             Σ, q = l→/𝔹 v p
+                                 in _   Σ, (𝔹-rec t u v′) Σ, (𝔹-rec₃ q)
 
 SN~ : t ~/𝔹 u → SN Γ A t → SN Γ A u
-SN~-helper : t ~/𝔹 u → SN Γ A t → u [ q→ ]→ v → SN Γ A v
-
-SN~ p a = acc (SN~-helper p a)
-
-SN~-helper _ (acc a) (rw ¬b b) = bool-sn b
-SN~-helper ((ƛ p) · q) (acc a) β = acc (SN~-helper (p [ < q >/𝔹 ]/𝔹) (a β))
-SN~-helper (𝔹-rec p q r) (acc a) rec-true
-  -- I want to fill this in with the following case, but Agda's termination
-  -- checker is not convinced. There is no guarantee 
-  -- 'SN-𝔹-rec₂ (acc a)' ≤ 'acc a' (and this is probably fair)
-  -- I would like a way to augment 'SN' with structural orderings on terms
-  = {!!} -- acc (SN~-helper q (SN-𝔹-rec₂ (acc a)))
-SN~-helper (𝔹-rec p q r) (acc a) rec-false = {!   !}
-SN~-helper (p · q) (acc a) (l· r) = {!   !}
-SN~-helper (p · q) (acc a) (·r r) = {!   !}
-SN~-helper (ƛ p) (acc a) (ƛ q) = {!   !}
-SN~-helper (𝔹-rec p q r) (acc a) (𝔹-rec₁ s) = {!!}
-SN~-helper (𝔹-rec p q r) (acc a) (𝔹-rec₂ s) = {!!}
-SN~-helper (𝔹-rec p q r) (acc a) (𝔹-rec₃ s) = {!!}
-
-
--- Old version
--- SN~ p (acc a) = acc (λ q → let u⁻¹ Σ, p′ Σ, q′ = l→/𝔹 (sym/𝔹 p) q 
---                             in SN~ {!sym/𝔹 p′!} (a q′))
+SN~ p (acc a) = acc λ q → let _ Σ, p′ Σ, q′ = l→/𝔹 (sym/𝔹 p) q
+                           in SN~ (sym/𝔹 p′) (a q′)
 
 Val~ : t ~/𝔹 u → Val Γ A t → Val Γ A u
-Val~ {A = 𝔹'}              = SN~
-Val~ {A = A ⇒ B} p tⱽ δ uⱽ = Val~ (p [ δ ]~/𝔹 · rfl/𝔹) (tⱽ δ uⱽ)
+Val~ {A = 𝔹'}    p tⱽ      = SN~ p tⱽ
+Val~ {A = A ⇒ B} p tⱽ δ uⱽ = Val~ (p [ rfl/𝔹* {δ = δ} ]/𝔹 · rfl/𝔹) (tⱽ δ uⱽ)
 
 Val[]→ : (δ : Tms[ q ] Δ Γ) → t [ q→ ]→ u → Val Δ A (t [ δ ]) 
         → Val Δ A (u [ δ ])
@@ -262,16 +228,16 @@ eval    : ∀ (t : Tm Γ A) (ρ : Env Δ Γ δ) → Val Δ A (t [ δ ])
 eval-lam : SN (Γ , A) B t → (∀ {u} → Val Γ A u → Val Γ B (t [ < u > ])) 
           → SN Γ A u → Val Γ A u → Val Γ B ((ƛ t) · u)
           
-eval-lam-acc : SN (Γ , A) B t → (∀ {u} → Val Γ A u → Val Γ B (t [ < u > ])) 
+eval-lam→ : SN (Γ , A) B t → (∀ {u} → Val Γ A u → Val Γ B (t [ < u > ])) 
                 → SN Γ A u → Val Γ A u → ValAcc Γ B ((ƛ t) · u)
 
-eval-lam tₛₙ tⱽ uₛₙ uⱽ = reflect tt (eval-lam-acc tₛₙ tⱽ uₛₙ uⱽ) 
+eval-lam tₛₙ tⱽ uₛₙ uⱽ = reflect tt (eval-lam→ tₛₙ tⱽ uₛₙ uⱽ) 
 
-eval-lam-acc (acc f) tⱽ (acc g) uⱽ β         = tⱽ uⱽ
-eval-lam-acc (acc f) tⱽ (acc g) uⱽ (rw ¬b b) = bool-sn b
-eval-lam-acc (acc f) tⱽ (acc g) uⱽ (l· (ƛ p))
+eval-lam→ (acc f) tⱽ (acc g) uⱽ (β refl refl)  = tⱽ uⱽ
+eval-lam→ (acc f) tⱽ (acc g) uⱽ (rw ¬b b) = bool-sn b
+eval-lam→ (acc f) tⱽ (acc g) uⱽ (l· (ƛ p))
   = eval-lam (f p) (λ uⱽ′ → Val[]→ (< _ >) p (tⱽ uⱽ′)) (acc g) uⱽ
-eval-lam-acc (acc f) tⱽ (acc g) uⱽ (·r p) 
+eval-lam→ (acc f) tⱽ (acc g) uⱽ (·r p) 
   = eval-lam (acc f) tⱽ (g p) (Val→ p uⱽ)
 
 reflect-app : (t · u) [ q→ ]→ v → ¬lam t → ValAcc _ (A ⇒ B) t 
@@ -284,6 +250,7 @@ reflect {A = A ⇒ B} {t = t} n tⱽ δ uⱽ
         t[]ⱽ p σ uⱽ with _ Σ, p Σ, refl ← [ δ ]→⁻¹ p = tⱽ p (δ ⨾ σ) uⱽ
 
 reflect-app (rw ¬b b) n tⱽ uₛₙ     uⱽ = bool-sn b
+reflect-app (β refl refl)  () tⱽ uₛₙ     uⱽ
 reflect-app (l· p)    n tⱽ uₛₙ     uⱽ = tⱽ p id uⱽ
 reflect-app (·r p)    n tⱽ (acc a) uⱽ 
   = reflect tt (λ q → reflect-app q n tⱽ (a p) (Val→ p uⱽ))
@@ -298,6 +265,22 @@ lookup : ∀ (i : Var Γ A) (ρ : Env Δ Γ δ) → Val Δ A (i [ δ ])
 lookup vz     (ρ , u) = u
 lookup (vs i) (ρ , u) = lookup i ρ
 
+eval-𝔹-rec : Val Γ 𝔹' t → SN Γ A u → Val Γ A u → SN Γ A v → Val Γ A v 
+           → Val Γ A (𝔹-rec t u v)
+eval-𝔹-rec→ : Val Γ 𝔹' t → SN Γ A u₁ → Val Γ A u₁ → SN Γ A u₂ → Val Γ A u₂ 
+            → 𝔹-rec t u₁ u₂ [ q→ ]→ v → Val Γ A v 
+
+eval-𝔹-rec tⱽ uˢⁿ uⱽ vˢⁿ vⱽ = reflect tt (eval-𝔹-rec→ tⱽ uˢⁿ uⱽ vˢⁿ vⱽ)
+
+eval-𝔹-rec→ tⱽ uˢⁿ uⱽ vˢⁿ vⱽ (𝔹-rec-β₁ b) = uⱽ
+eval-𝔹-rec→ tⱽ uˢⁿ uⱽ vˢⁿ vⱽ (𝔹-rec-β₂ b) = vⱽ
+eval-𝔹-rec→ tⱽ uˢⁿ uⱽ vˢⁿ vⱽ (rw tt b)    = bool-sn b
+eval-𝔹-rec→ (acc tⱽ) uˢⁿ uⱽ vˢⁿ vⱽ (𝔹-rec₁ p) = eval-𝔹-rec (tⱽ p) uˢⁿ uⱽ vˢⁿ vⱽ
+eval-𝔹-rec→ tⱽ (acc uˢⁿ) uⱽ vˢⁿ vⱽ (𝔹-rec₂ p) 
+  = eval-𝔹-rec tⱽ (uˢⁿ p) (Val→ p uⱽ) vˢⁿ vⱽ
+eval-𝔹-rec→ tⱽ uˢⁿ uⱽ (acc vˢⁿ) vⱽ (𝔹-rec₃ p) 
+  = eval-𝔹-rec tⱽ uˢⁿ uⱽ (vˢⁿ p) (Val→ p vⱽ)
+
 eval (` i)   ρ    = lookup i ρ
 eval (t · u) ρ    = eval t ρ id (eval u ρ)
 eval (ƛ t) ρ σ uⱽ 
@@ -305,9 +288,11 @@ eval (ƛ t) ρ σ uⱽ
               (λ uⱽ′ → eval t ((ρ [ σ ]E) , uⱽ′)) 
               (reify uⱽ) uⱽ
 
-eval true  ρ = true-sn
-eval false ρ = false-sn
-eval (𝔹-rec c t u) ρ = {!   !}
+eval true  ρ         = true-sn
+eval false ρ         = false-sn
+eval (𝔹-rec t u v) ρ = eval-𝔹-rec (eval t ρ) (reify uⱽ) uⱽ (reify vⱽ) vⱽ
+  where uⱽ = eval u ρ
+        vⱽ = eval v ρ
 
 idᴱ : Env Γ Γ (id[ T ])
 idᴱ {Γ = ε}     = ε
@@ -315,4 +300,3 @@ idᴱ {Γ = Γ , A} = idᴱ {Γ = Γ} [ id ⁺ A ]E , vz-val
 
 strong-norm : ∀ t → SN Γ A t
 strong-norm t = reify (eval t idᴱ)
- 
