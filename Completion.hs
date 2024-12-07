@@ -9,7 +9,7 @@
 -- gets stuck in loops a lot.
 
 import Prelude hiding (lookup)
-import Data.List (findIndex)
+import Data.List (findIndex, nub)
 import Data.Maybe (maybeToList, mapMaybe)
 import Test.QuickCheck 
   (Gen, Arbitrary (arbitrary), within, Property, quickCheck, verbose)
@@ -22,8 +22,9 @@ type EqClass = ([Tm], [Int])
 varMember :: Int -> EqClass -> Bool
 varMember i (_, js) = i `elem` js
 
+-- TODO: Is the lexicographic comparison here sound?
 member :: [EqClass] -> Tm -> EqClass -> Bool
-member eqs t (us, _) = any (checkEqDesc eqs t) us
+member eqs t (us, _) = any (\u -> t > u && checkEqDesc eqs t u) us
 
 lookupVar :: [EqClass] -> Int -> Maybe Int
 lookupVar eqs i = findIndex (varMember i) eqs
@@ -82,7 +83,7 @@ insert (Var i) (ts, is) = (ts, i : is)
 insert t       (ts, is) = (t : ts, is)
 
 buildEqs :: [TmEq] -> [EqClass]
-buildEqs (t := u : eqs) = case (lookup built t, lookup built u) of
+buildEqs (t := u : eqs) = case (i, j) of
   (Just i', Just j') -> if i' == j'
                         then built
                         else merge (built !! i') (built !! j') : built'
@@ -93,7 +94,7 @@ buildEqs (t := u : eqs) = case (lookup built t, lookup built u) of
         i = lookup built t
         j = lookup built u
         ij = maybeToList i ++ maybeToList j
-        built' = fmap fst (filter ((`elem` ij) . snd) (zip built [0..]))
+        built' = fmap fst (filter (not . (`elem` ij) . snd) (zip built [0..]))
 buildEqs [] = []
 
 mkRw :: Tm -> Tm -> Maybe Rw
@@ -105,17 +106,17 @@ mkRw t u
 rwRw :: [Rw] -> Rw -> Maybe Rw
 rwRw rws (l :-> r) = mkRw (rwFix rws l) (rwFix rws r)
 
+-- TODO: Can we add rw' to the accumulator and make this tail-recursive?
 rwWrtRws :: [Rw] -> [Rw] -> [Rw]
-rwWrtRws acc []         = acc
-rwWrtRws acc (lr : lrs) = maybeToList rw' ++ rwWrtRws acc lrs
+rwWrtRws _   []         = []
+rwWrtRws acc (lr : lrs) = maybeToList rw' ++ rwWrtRws (lr : acc) lrs
   where rw' = rwRw (acc ++ lrs) lr
 
-
 rwRwsFix :: [Rw] -> [Rw]
-rwRwsFix = iterFix (rwWrtRws [])
+rwRwsFix = iterFix (nub . rwWrtRws [])
 
 buildRws :: [TmEq] -> [Rw]
-buildRws eqs = rwRwsFix (mapMaybe (\(t := u) -> mkRw t u) eqs)
+buildRws eqs = rwRwsFix (nub (mapMaybe (\(t := u) -> mkRw t u) eqs))
 
 genVar :: Gen Int
 genVar = do
