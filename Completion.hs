@@ -15,7 +15,24 @@ import Test.QuickCheck
   (Gen, Arbitrary (arbitrary), within, Property, quickCheck, verbose)
 
 data Tm = Var Int | App Tm Tm
-  deriving (Eq, Ord, Show)
+  deriving (Eq, Show)
+
+spLen :: Tm -> Int
+spLen (Var _)   = 0
+spLen (App _ t) = 1 + spLen t
+
+instance Ord Tm where
+  compare t u = case compare (spLen t) (spLen u) of
+    LT -> LT
+    GT -> GT
+    EQ -> case (t, u) of
+      (Var i, Var j) -> compare i j
+      (App t1 t2, App u1 u2) -> case compare t1 u1 of
+        LT -> LT
+        GT -> GT
+        EQ -> compare t2 u2
+      _ -> error "Impossible"
+    
 
 type EqClass = ([Tm], [Int])
 
@@ -152,10 +169,9 @@ fuzzVerbose :: IO ()
 fuzzVerbose = quickCheck (verbose cmpStratsSafe)
 
 {-
-Example Failure Cases:
-[ Var 1 := App (App (Var 1) (Var 2)) (Var 0)
-, App (App (App (Var 1) (Var 3)) (App (Var 2) (App (Var 0) (Var 0)))) (Var 0) 
-  := Var 1]
-App (App (Var 3) (App (Var 1) (App (Var 2) (Var 3)))) (Var 2)
-Var 3
+Example Failure Cases:]
+
+[Var 1 := Var 2,App (App (Var 3) (App (Var 3) (Var 1))) (Var 1) := Var 3]
+App (App (Var 1) (App (Var 3) (App (App (Var 1) (Var 3)) (Var 1)))) (Var 2)
+Var 1
 -}
