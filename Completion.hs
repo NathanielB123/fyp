@@ -9,10 +9,10 @@
 -- gets stuck in loops a lot.
 
 import Prelude hiding (lookup)
-import Data.List (findIndex, nub)
+import Data.List (findIndex, nub, sort)
 import Data.Maybe (maybeToList, mapMaybe)
-import Test.QuickCheck 
-  (Gen, Arbitrary (arbitrary), within, Property, quickCheck, verbose)
+import Test.QuickCheck
+  (Gen, Arbitrary (arbitrary), within, Property, quickCheck, verbose, discardAfter)
 
 data Tm = Var Int | App Tm Tm
   deriving (Eq, Show)
@@ -41,7 +41,7 @@ varMember i (_, js) = i `elem` js
 
 -- TODO: Is the lexicographic comparison here sound?
 member :: [EqClass] -> Tm -> EqClass -> Bool
-member eqs t (us, _) = any (\u -> t > u && checkEqDesc eqs t u) us
+member eqs t (us, _) = any (\u -> u <= t && checkEqDesc eqs t u) us
 
 lookupVar :: [EqClass] -> Int -> Maybe Int
 lookupVar eqs i = findIndex (varMember i) eqs
@@ -123,17 +123,16 @@ mkRw t u
 rwRw :: [Rw] -> Rw -> Maybe Rw
 rwRw rws (l :-> r) = mkRw (rwFix rws l) (rwFix rws r)
 
--- TODO: Can we add rw' to the accumulator and make this tail-recursive?
 rwWrtRws :: [Rw] -> [Rw] -> [Rw]
-rwWrtRws _   []         = []
-rwWrtRws acc (lr : lrs) = maybeToList rw' ++ rwWrtRws (lr : acc) lrs
+rwWrtRws acc []         = acc
+rwWrtRws acc (lr : lrs) = rwWrtRws (acc ++ maybeToList rw') lrs
   where rw' = rwRw (acc ++ lrs) lr
 
 rwRwsFix :: [Rw] -> [Rw]
-rwRwsFix = iterFix (nub . rwWrtRws [])
+rwRwsFix = iterFix (rwWrtRws [])
 
 buildRws :: [TmEq] -> [Rw]
-buildRws eqs = rwRwsFix (nub (mapMaybe (\(t := u) -> mkRw t u) eqs))
+buildRws eqs = rwRwsFix (mapMaybe (\(t := u) -> mkRw t u) eqs)
 
 genVar :: Gen Int
 genVar = do
@@ -160,7 +159,7 @@ cmpStrats eqs t u = checkEq cls t u == checkRwEq rws t u
         rws = buildRws eqs
 
 cmpStratsSafe :: [TmEq] -> Tm -> Tm -> Property
-cmpStratsSafe eqs t u = within 50000 (cmpStrats eqs t u)
+cmpStratsSafe eqs t u = discardAfter 50000 (cmpStrats eqs t u)
 
 fuzz :: IO ()
 fuzz = quickCheck cmpStratsSafe
