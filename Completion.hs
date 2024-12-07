@@ -9,10 +9,10 @@
 -- gets stuck in loops a lot.
 
 import Prelude hiding (lookup)
-import Data.List (findIndex, nub, sort)
+import Data.List (findIndex)
 import Data.Maybe (maybeToList, mapMaybe)
 import Test.QuickCheck
-  (Gen, Arbitrary (arbitrary), within, Property, quickCheck, verbose, discardAfter)
+  (Gen, Arbitrary (arbitrary), within, Property, quickCheck, verbose)
 
 data Tm = Var Int | App Tm Tm
   deriving (Eq, Show)
@@ -39,9 +39,8 @@ type EqClass = ([Tm], [Int])
 varMember :: Int -> EqClass -> Bool
 varMember i (_, js) = i `elem` js
 
--- TODO: Is the lexicographic comparison here sound?
 member :: [EqClass] -> Tm -> EqClass -> Bool
-member eqs t (us, _) = any (\u -> u <= t && checkEqDesc eqs t u) us
+member eqs t (us, _) = any (checkEqDesc eqs t) us
 
 lookupVar :: [EqClass] -> Int -> Maybe Int
 lookupVar eqs i = findIndex (varMember i) eqs
@@ -99,6 +98,7 @@ insert :: Tm -> EqClass -> EqClass
 insert (Var i) (ts, is) = (ts, i : is)
 insert t       (ts, is) = (t : ts, is)
 
+-- I think union-find would make this actually reasonably efficient
 buildEqs :: [TmEq] -> [EqClass]
 buildEqs (t := u : eqs) = case (i, j) of
   (Just i', Just j') -> if i' == j'
@@ -107,11 +107,11 @@ buildEqs (t := u : eqs) = case (i, j) of
   (Just i', Nothing) -> insert u (built !! i') : built'
   (Nothing, Just j') -> insert t (built !! j') : built'
   (Nothing, Nothing) -> insert t (insert u mempty) : built
-  where built = buildEqs eqs
-        i = lookup built t
-        j = lookup built u
-        ij = maybeToList i ++ maybeToList j
+  where built  = buildEqs eqs
         built' = fmap fst (filter (not . (`elem` ij) . snd) (zip built [0..]))
+        i      = lookup built t
+        j      = lookup built u
+        ij     = maybeToList i ++ maybeToList j
 buildEqs [] = []
 
 mkRw :: Tm -> Tm -> Maybe Rw
@@ -159,7 +159,7 @@ cmpStrats eqs t u = checkEq cls t u == checkRwEq rws t u
         rws = buildRws eqs
 
 cmpStratsSafe :: [TmEq] -> Tm -> Tm -> Property
-cmpStratsSafe eqs t u = discardAfter 50000 (cmpStrats eqs t u)
+cmpStratsSafe eqs t u = within 50000 (cmpStrats eqs t u)
 
 fuzz :: IO ()
 fuzz = quickCheck cmpStratsSafe
@@ -167,10 +167,31 @@ fuzz = quickCheck cmpStratsSafe
 fuzzVerbose :: IO ()
 fuzzVerbose = quickCheck (verbose cmpStratsSafe)
 
+-- Evil utilities for testing
+lhs :: Tm -> Tm 
+lhs (App t _) = t
+lhs _         = undefined
+
+rhs :: Tm -> Tm
+rhs (App _ u) = u
+rhs _         = undefined
+
 {-
-Example Failure Cases:]
+Example Failure Cases:
+
+f (f (f x)) = x, f (f (f (f (f x)))) = x
+f x =? x
+
+- Lookup x = 0
+- Lookup f x
+  - f x =? f (f (f x))
+    - f = f
+    - x =? f (f x)
+      - Lookup x = 0
+      - Lookup f x
+        - Cycle!
 
 [Var 1 := Var 2,App (App (Var 3) (App (Var 3) (Var 1))) (Var 1) := Var 3]
-App (App (Var 1) (App (Var 3) (App (App (Var 1) (Var 3)) (Var 1)))) (Var 2)
+App (Var 3) (App (App (Var 1) (Var 3)) (Var 1))
 Var 1
 -}
