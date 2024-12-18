@@ -1,6 +1,9 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE PatternSynonyms #-}
 
 
 -- Attempts at implementing ground completion (will be used for dealing with
@@ -8,11 +11,18 @@
 -- Includes a naive rewriting-based approach and a WIP E-graph impl
 
 import Prelude hiding (lookup)
-import Data.Maybe (maybeToList, mapMaybe)
+import Data.Maybe (maybeToList, mapMaybe, isJust)
 import Test.QuickCheck
   (Gen, Arbitrary (arbitrary), Property, quickCheck, verbose, discardAfter)
 import Control.Monad.State (State, MonadState (..), gets, execState)
-import Data.IntMap (IntMap, insert, partition, toList, (!))
+import Data.IntMap (IntMap, insert, partition, toList, (!), adjust)
+import Data.Foldable (traverse_)
+import Data.Kind (Type)
+import Data.Containers.ListUtils (nubOrd)
+import Data.Functor (($>))
+import Control.Monad.Reader (MonadReader(..), asks)
+
+type Reader = (->)
 
 data Tm = Var Int | App Tm Tm
   deriving (Eq, Show)
@@ -46,6 +56,27 @@ invSing m = case toList m of
 findInMap :: (a -> Bool) -> IntMap a -> Maybe (Int, a)
 findInMap p m = invSing m'
   where (m', _) = partition p m
+
+maybeM :: Monad m => m b -> (a -> m b) -> m (Maybe a) -> m b
+maybeM y f x = x >>= maybe y f
+
+boolToMaybe :: Bool -> a -> Maybe a
+boolToMaybe True  = Just
+boolToMaybe False = const Nothing
+
+whenNothing :: Applicative f => Maybe a -> f (Maybe a) -> f (Maybe a)
+whenNothing (Just x) _ = pure (Just x)
+whenNothing Nothing  f = f
+
+findJustM :: (Foldable f, Monad m) => (a -> m (Maybe b)) -> f a -> m (Maybe b)
+findJustM f = foldr (\x -> (>>= flip whenNothing (f x)))
+                    (pure Nothing)
+
+findM :: (Foldable f, Monad m) => (a -> m Bool) -> f a -> m (Maybe a)
+findM f = findJustM (\x -> flip boolToMaybe x <$> f x)
+
+anyM :: (Foldable f, Monad m) => (a -> m Bool) -> f a -> m Bool
+anyM f = fmap isJust . findM f
 
 -- Rewriting to completion
 
@@ -119,64 +150,152 @@ instance Arbitrary TmEq where
 
 -- E-Graphs
 
-data EClass = Cls {
-  vars :: [Int],
-  apps :: [(Int, Int)]
-} | Ptr Int
-  deriving (Show)
+data ETmSort = Branch | Leaf
+
+type ETmData :: ETmSort -> Type
+data ETmData s where
+  EVar :: Int -> ETmData Leaf
+  -- We want to be flexible to support other branching (application-like) terms
+  -- (e.g. constructor or eliminator-headed), but for now we only have 'EApp'
+  EApp :: Int -> Int -> ETmData Branch
+
+deriving instance Show (ETmData s)
+deriving instance Eq (ETmData Leaf)
+
+type EBranch = ETmData Branch
+type ELeaf   = ETmData Leaf
+
+data ETm = L ELeaf | B EBranch
+
+data EClassSort = Root | Child
+
+type EClassData :: EClassSort -> Type
+data EClassData s where
+  Cls :: {
+    vars    :: [ELeaf],
+    apps    :: [EBranch],
+    parents :: [(Int, EBranch)]
+  } -> EClassData Root
+  Ptr :: Int -> EClassData Child
+
+deriving instance Show (EClassData s)
+
+data EClass = forall s. E (EClassData s)
+
+deriving instance Show EClass
+
+pattern ECls :: () => ()
+             => [ELeaf] -> [EBranch] -> [(Int, EBranch)] -> EClass
+pattern ECls vs as ps = E (Cls vs as ps)
+pattern EPtr :: () => () => Int -> EClass
+pattern EPtr i        = E (Ptr i)
+{-# COMPLETE ECls, EPtr #-}
+
+type EClassRoot = EClassData Root
 
 data EGraph = Graph {
   classes :: IntMap EClass,
-  size    :: Int
+  size    :: Int,
+  wlist   :: [Int]
 }
   deriving (Show)
 
 -- Pre-condition: 'f' should not create new EClass entries
-modifyClasses :: (IntMap EClass -> IntMap EClass) -> State EGraph ()
+modifyClasses :: (IntMap EClass -> (IntMap EClass, a)) -> State EGraph a
 modifyClasses f = do
-  Graph cs s <- get
-  put (Graph (f cs) s)
+  Graph cs s w <- get
+  let (cs', x) = f cs
+  put (Graph cs' s w)
+  pure x
 
-chase :: Int -> EClass -> IntMap EClass -> (Int, [Int], [(Int, Int)])
-chase _ (Ptr j)     cs = chase j (cs ! j) cs
-chase i (Cls vs as) _  = (i, vs, as)
+workListPush :: Int -> State EGraph ()
+workListPush i = do
+  Graph cs s w <- get
+  put (Graph cs s (i : w))
 
-findCls :: ([Int] -> [(Int, Int)] -> Bool) -> IntMap EClass 
-        -> Maybe (Int, EClass)
-findCls p = findInMap \case Cls vs as -> p vs as
-                            Ptr _     -> False
+chase :: Int -> EClass -> Reader (IntMap EClass) (Int, EClassRoot)
+chase _ (EPtr j)        = chase' j
+chase i (ECls vs as ps) = pure (i, Cls vs as ps)
 
-addCls :: EClass -> State EGraph Int
-addCls c = do
-  Graph cs s <- get
-  put (Graph (insert s c cs) (s + 1))
-  pure s
+chase' :: Int -> Reader (IntMap EClass) (Int, EClassRoot)
+chase' i = do
+  cs <- ask
+  chase i (cs ! i)
 
-chaseEq :: Int -> Int -> IntMap EClass -> Bool
-chaseEq i j cs = i' == j'
-  where (i', _, _) = chase i (cs ! i) cs
-        (j', _, _) = chase j (cs ! j) cs
+findCls :: ([ELeaf] -> [EBranch] -> Reader (IntMap EClass) Bool)
+        -> Reader (IntMap EClass) (Maybe (Int, EClass))
+findCls p = do
+  cs <- asks toList
+  findM (\case (_, ECls vs as _) -> p vs as
+               (_, EPtr _)       -> pure False) cs
 
-lookupEVar :: Int -> IntMap EClass -> Maybe (Int, EClass)
-lookupEVar i = findCls (\vs _ -> i `elem` vs)
+-- Todo: Tidy these up with a 'chaseAdjust' helper
+addParent :: Int -> EBranch -> Int -> IntMap EClass -> IntMap EClass
+addParent i c j cs = insert j' (ECls vs as ((i, c):ps)) cs
+  where (j', Cls vs as ps) = chase' j cs
 
-lookupEApp :: Int -> Int -> IntMap EClass -> Maybe (Int, EClass)
-lookupEApp i j cs 
-  = findCls (\_ as -> any (\(k, l) -> chaseEq i k cs && chaseEq j l cs) as) cs
+setParents :: Int -> [(Int, EBranch)] -> State EGraph ()
+setParents i ps = do
+  Graph cs s w <- get
 
-lookupETm :: Tm -> IntMap EClass -> Maybe (Int, EClass)
-lookupETm (Var i)   cs = lookupEVar i cs
+  let (i', Cls vs as _) = chase' i cs
+      cs' = insert i' (ECls vs as ps) cs
+  
+  put (Graph cs' s w)
+
+singClass :: ETm -> EClass
+singClass (L i) = ECls [i] [] []
+singClass (B t) = ECls [] [t] []
+
+children :: EBranch -> [Int]
+children (EApp i j) = [i, j]
+
+addSingCls :: ETm -> State EGraph (Int, EClass)
+addSingCls t = do
+  Graph cs s w <- get
+  let c = singClass t
+      cs' = case t of
+        L _  -> cs
+        B t' -> foldr (addParent s t') cs (children t') 
+
+  put (Graph (insert s c cs') (s + 1) w)
+  pure (s, c)
+
+chaseEq :: Int -> Int -> Reader (IntMap EClass) Bool
+chaseEq i j = do
+  (i', _) <- chase' i
+  (j', _) <- chase' j
+  pure (i' == j')
+
+lookupELeaf :: ELeaf -> Reader (IntMap EClass) (Maybe (Int, EClass))
+lookupELeaf i = findCls \vs _ -> pure (i `elem` vs)
+
+branchEq :: EBranch -> EBranch -> Reader (IntMap EClass) Bool
+branchEq (EApp i j) (EApp i' j') = (&&) <$> chaseEq i i' <*> chaseEq j j'
+
+lookupEBranch :: EBranch -> Reader (IntMap EClass) (Maybe (Int, EClass))
+lookupEBranch t = findCls (\_ as -> anyM (branchEq t) as)
+
+lookupEBranch' :: Foldable f => EBranch -> f (Int, EBranch)
+               -> Reader (IntMap EClass) (Maybe Int)
+lookupEBranch' t 
+  = findJustM \(i, u) -> do
+      b <- branchEq t u
+      pure (boolToMaybe b i)
+
+lookupETm :: Tm -> Reader (IntMap EClass) (Maybe (Int, EClass))
+lookupETm (Var i)   cs = lookupELeaf (EVar i) cs
 lookupETm (App t u) cs = do
   (i, _) <- lookupETm t cs
   (j, _) <- lookupETm u cs
-  lookupEApp i j cs
+  lookupEBranch (EApp i j) cs
 
-singClass :: Tm -> State EGraph EClass
-singClass (Var i)   = pure (Cls [i] [])
-singClass (App t u) = do
+toETm :: Tm -> State EGraph ETm
+toETm (Var i)   = pure (L (EVar i))
+toETm (App t u) = do
   (i, _) <- addTm t
   (j, _) <- addTm u
-  pure (Cls [] [(i, j)])
+  pure (B (EApp i j))
 
 addTm :: Tm -> State EGraph (Int, EClass)
 addTm t = do
@@ -184,15 +303,22 @@ addTm t = do
   case lookupETm t g of
     Just e -> pure e
     Nothing -> do
-      c <- singClass t
-      (, c) <$> addCls c
+      t' <- toETm t
+      addSingCls t' 
 
 mergeECls :: Int -> Int -> EClass -> EClass -> State EGraph ()
-mergeECls i j c1 c2
-  = modifyClasses \cs -> let (i', vs1, as1) = chase i c1 cs
-                             (j', vs2, as2) = chase j c2 cs
-                          in insert j' (Ptr i')
-                           $ insert i' (Cls (vs1 <> vs2) (as1 <> as2)) cs
+mergeECls i j c1 c2 = do
+  i' <- modifyClasses \cs ->
+    let (i', Cls vs1 as1 ps1) = chase i c1 cs
+        (j', Cls vs2 as2 ps2) = chase j c2 cs
+    in (insert j' (EPtr i')
+     $  insert i' (ECls (vs1 <> vs2) (as1 <> as2) (ps1 <> ps2)) cs, i')
+  workListPush i'
+
+mergeECls' :: Int -> Int -> State EGraph ()
+mergeECls' i j = do
+  cs <- gets classes
+  mergeECls i j (cs ! i) (cs ! j)
 
 addEq :: TmEq -> State EGraph ()
 addEq (t := u) = do
@@ -204,19 +330,55 @@ addEq (t := u) = do
     else mergeECls i j c1 c2
 
 buildEGraph :: [TmEq] -> EGraph
-buildEGraph = foldr (execState . addEq) (Graph mempty 0)
+buildEGraph = execState rebuild . foldr (execState . addEq) (Graph mempty 0 [])
 
 checkEGraphEqRec :: Tm -> Tm -> EGraph -> Bool
-checkEGraphEqRec (App t1 t2) (App u1 u2) g 
+checkEGraphEqRec (App t1 t2) (App u1 u2) g
   = checkEGraphEq t1 u1 g && checkEGraphEq t2 u2 g
 checkEGraphEqRec (Var i)     (Var j)     _ = i == j
 checkEGraphEqRec _           _           _ = False
 
 checkEGraphEq :: Tm -> Tm -> EGraph -> Bool
-checkEGraphEq t u g@(Graph cs _)
-  =  checkEGraphEqRec t u g 
+checkEGraphEq t u g@(Graph cs _ _)
+  =  checkEGraphEqRec t u g
   || justEq (fst <$> lookupETm t cs) (fst <$> lookupETm u cs)
 
+workListPop :: (Int -> State EGraph ()) -> State EGraph ()
+workListPop f = do
+  Graph cs s w <- get
+  case w of
+    []   -> pure ()
+    i:is -> do
+      put (Graph cs s is)
+      f i
+
+repair :: Int -> State EGraph ()
+repair i = do
+  (_, c) <- gets (chase' i . classes)
+  
+  let Cls _ _ ps = c
+      
+      go :: [(Int, EBranch)] -> [(Int, EBranch)] 
+         -> State EGraph [(Int, EBranch)]
+      go ts []           = pure ts
+      go ts ((j, t):ps') = do
+        cs <- gets classes
+        ts' <- case lookupEBranch' t ts cs of
+          Just j' -> mergeECls' j j' $> ts
+          Nothing -> pure ((j, t):ts)
+        go ts' ps'
+
+  ps' <- go [] ps
+  setParents i ps'
+
+rebuild :: State EGraph ()
+rebuild = do
+  Graph cs s w <- get
+  put (Graph cs s [])
+  traverse_ repair (nubOrd (fmap (\i -> fst (chase i (cs ! i) cs)) w))
+  
+  w' <- gets wlist
+  if null w' then pure () else error "Oh dear!!!"
 
 -- Fuzzing
 cmpStrats :: [TmEq] -> Tm -> Tm -> Bool
