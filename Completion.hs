@@ -307,13 +307,15 @@ addTm t = do
       addSingCls t' 
 
 mergeECls :: Int -> Int -> EClass -> EClass -> State EGraph ()
-mergeECls i j c1 c2 = do
-  i' <- modifyClasses \cs ->
-    let (i', Cls vs1 as1 ps1) = chase i c1 cs
-        (j', Cls vs2 as2 ps2) = chase j c2 cs
-    in (insert j' (EPtr i')
-     $  insert i' (ECls (vs1 <> vs2) (as1 <> as2) (ps1 <> ps2)) cs, i')
-  workListPush i'
+mergeECls i j c1 c2 
+  | i == j = pure ()
+  | otherwise = do
+    i' <- modifyClasses \cs ->
+      let (i', Cls vs1 as1 ps1) = chase i c1 cs
+          (j', Cls vs2 as2 ps2) = chase j c2 cs
+      in (insert j' (EPtr i')
+      $  insert i' (ECls (vs1 <> vs2) (as1 <> as2) (ps1 <> ps2)) cs, i')
+    workListPush i'
 
 mergeECls' :: Int -> Int -> State EGraph ()
 mergeECls' i j = do
@@ -324,10 +326,7 @@ addEq :: TmEq -> State EGraph ()
 addEq (t := u) = do
   (i, c1) <- addTm t
   (j, c2) <- addTm u
-  cs <- gets classes
-  if chaseEq i j cs
-    then pure ()
-    else mergeECls i j c1 c2
+  mergeECls i j c1 c2 
 
 buildEGraph :: [TmEq] -> EGraph
 buildEGraph = execState rebuild . foldr (execState . addEq) (Graph mempty 0 [])
@@ -362,7 +361,7 @@ repair i = do
          -> State EGraph [(Int, EBranch)]
       go ts []           = pure ts
       go ts ((j, t):ps') = do
-        cs <- gets classes
+        cs  <- gets classes
         ts' <- case lookupEBranch' t ts cs of
           Just j' -> mergeECls' j j' $> ts
           Nothing -> pure ((j, t):ts)
