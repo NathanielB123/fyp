@@ -218,19 +218,20 @@ checkEGraphEq t u g@(Graph cs _)
   || justEq (fst <$> lookupETm t cs) (fst <$> lookupETm u cs)
 
 
-cmpStrats2 :: [TmEq] -> Tm -> Tm -> Bool
-cmpStrats2 eqs t u = checkEGraphEq t u g == checkRwEq rws t u
+-- Fuzzing
+cmpStrats :: [TmEq] -> Tm -> Tm -> Bool
+cmpStrats eqs t u = checkEGraphEq t u g == checkRwEq rws t u
   where g   = buildEGraph eqs
         rws = buildRws eqs
 
-cmpStratsSafe2 :: [TmEq] -> Tm -> Tm -> Property
-cmpStratsSafe2 eqs t u = discardAfter 500000 (cmpStrats2 eqs t u)
+cmpStratsSafe :: [TmEq] -> Tm -> Tm -> Property
+cmpStratsSafe eqs t u = discardAfter 500000 (cmpStrats eqs t u)
 
-fuzz2 :: IO ()
-fuzz2 = quickCheck cmpStratsSafe2
+fuzz :: IO ()
+fuzz = quickCheck cmpStratsSafe
 
-fuzzVerbose2 :: IO ()
-fuzzVerbose2 = quickCheck (verbose cmpStratsSafe2)
+fuzzVerbose :: IO ()
+fuzzVerbose = quickCheck (verbose cmpStratsSafe)
 
 -- Counter-examples
 {-
