@@ -1,18 +1,18 @@
 {-# OPTIONS -Wall #-}
 {-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE LambdaCase #-}
 
 
 -- Attempts at implementing ground completion (will be used for dealing with
 -- neutral equations)
--- Ordering rewrites based on lexicographic order appears to *just work*
--- Equivalence classes of terms *feels* nicer, but my implementation currently
--- gets stuck in loops a lot.
+-- Includes a naive rewriting-based approach and a WIP E-graph impl
 
 import Prelude hiding (lookup)
-import Data.List (findIndex)
 import Data.Maybe (maybeToList, mapMaybe)
 import Test.QuickCheck
-  (Gen, Arbitrary (arbitrary), within, Property, quickCheck, verbose)
+  (Gen, Arbitrary (arbitrary), Property, quickCheck, verbose, discardAfter)
+import Control.Monad.State (State, MonadState (..), gets, execState)
+import Data.IntMap (IntMap, insert, partition, toList, (!))
 
 data Tm = Var Int | App Tm Tm
   deriving (Eq, Show)
@@ -22,6 +22,7 @@ spLen (Var _)   = 0
 spLen (App _ t) = 1 + spLen t
 
 instance Ord Tm where
+  compare :: Tm -> Tm -> Ordering
   compare t u = case compare (spLen t) (spLen u) of
     LT -> LT
     GT -> GT
@@ -32,36 +33,21 @@ instance Ord Tm where
         GT -> GT
         EQ -> compare t2 u2
       _ -> error "Impossible"
-    
-
-type EqClass = ([Tm], [Int])
-
-varMember :: Int -> EqClass -> Bool
-varMember i (_, js) = i `elem` js
-
-member :: [EqClass] -> Tm -> EqClass -> Bool
-member eqs t (us, _) = any (checkEqDesc eqs t) us
-
-lookupVar :: [EqClass] -> Int -> Maybe Int
-lookupVar eqs i = findIndex (varMember i) eqs
-
-lookup :: [EqClass] -> Tm -> Maybe Int
-lookup eqs (Var i) = lookupVar eqs i
-lookup eqs t       = findIndex (member eqs t) eqs
 
 justEq :: Eq a => Maybe a -> Maybe a -> Bool
 justEq (Just x) (Just y) = x == y
 justEq _        _        = False
 
-checkEqDesc :: [EqClass] -> Tm -> Tm -> Bool
-checkEqDesc eqs (Var i) (Var j)
-  = i == j || justEq (lookupVar eqs i) (lookupVar eqs j)
-checkEqDesc eqs (App t1 t2) (App u1 u2)
-  = checkEq eqs t1 u1 && checkEq eqs t2 u2
-checkEqDesc _ _ _ = False
+invSing :: IntMap a -> Maybe (Int, a)
+invSing m = case toList m of
+  [x] -> Just x
+  _   -> Nothing
 
-checkEq :: [EqClass] -> Tm -> Tm -> Bool
-checkEq eqs t u = checkEqDesc eqs t u || justEq (lookup eqs t) (lookup eqs u)
+findInMap :: (a -> Bool) -> IntMap a -> Maybe (Int, a)
+findInMap p m = invSing m'
+  where (m', _) = partition p m
+
+-- Rewriting to completion
 
 data Rw = Tm :-> Tm
   deriving (Show, Eq)
@@ -74,7 +60,6 @@ rw :: Rw -> Tm -> Tm
 rw (l :-> r) t
   | l == t = r
   | otherwise = rwDesc (l :-> r) t
-
 
 rwAll :: [Rw] -> Tm -> Tm
 rwAll lrs t = foldr rw t lrs
@@ -91,28 +76,7 @@ checkRwEq lrs t u = rwFix lrs t == rwFix lrs u
 data TmEq = Tm := Tm
   deriving (Show)
 
-merge :: EqClass -> EqClass -> EqClass
-merge (ts, is) (us, js) = (ts ++ us, is ++ js)
-
-insert :: Tm -> EqClass -> EqClass
-insert (Var i) (ts, is) = (ts, i : is)
-insert t       (ts, is) = (t : ts, is)
-
--- I think union-find would make this actually reasonably efficient
-buildEqs :: [TmEq] -> [EqClass]
-buildEqs (t := u : eqs) = case (i, j) of
-  (Just i', Just j') -> if i' == j'
-                        then built
-                        else merge (built !! i') (built !! j') : built'
-  (Just i', Nothing) -> insert u (built !! i') : built'
-  (Nothing, Just j') -> insert t (built !! j') : built'
-  (Nothing, Nothing) -> insert t (insert u mempty) : built
-  where built  = buildEqs eqs
-        built' = fmap fst (filter (not . (`elem` ij) . snd) (zip built [0..]))
-        i      = lookup built t
-        j      = lookup built u
-        ij     = maybeToList i ++ maybeToList j
-buildEqs [] = []
+type EqClass = ([Tm], [Int])
 
 mkRw :: Tm -> Tm -> Maybe Rw
 mkRw t u
@@ -153,45 +117,124 @@ instance Arbitrary TmEq where
     (t, u) <- arbitrary @(Tm, Tm)
     pure (t := u)
 
-cmpStrats :: [TmEq] -> Tm -> Tm -> Bool
-cmpStrats eqs t u = checkEq cls t u == checkRwEq rws t u
-  where cls = buildEqs eqs
+-- E-Graphs
+
+data EClass = Cls {
+  vars :: [Int],
+  apps :: [(Int, Int)]
+} | Ptr Int
+  deriving (Show)
+
+data EGraph = Graph {
+  classes :: IntMap EClass,
+  size    :: Int
+}
+  deriving (Show)
+
+-- Pre-condition: 'f' should not create new EClass entries
+modifyClasses :: (IntMap EClass -> IntMap EClass) -> State EGraph ()
+modifyClasses f = do
+  Graph cs s <- get
+  put (Graph (f cs) s)
+
+chase :: Int -> EClass -> IntMap EClass -> (Int, [Int], [(Int, Int)])
+chase _ (Ptr j)     cs = chase j (cs ! j) cs
+chase i (Cls vs as) _  = (i, vs, as)
+
+findCls :: ([Int] -> [(Int, Int)] -> Bool) -> IntMap EClass 
+        -> Maybe (Int, EClass)
+findCls p = findInMap \case Cls vs as -> p vs as
+                            Ptr _     -> False
+
+addCls :: EClass -> State EGraph Int
+addCls c = do
+  Graph cs s <- get
+  put (Graph (insert s c cs) (s + 1))
+  pure s
+
+chaseEq :: Int -> Int -> IntMap EClass -> Bool
+chaseEq i j cs = i' == j'
+  where (i', _, _) = chase i (cs ! i) cs
+        (j', _, _) = chase j (cs ! j) cs
+
+lookupEVar :: Int -> IntMap EClass -> Maybe (Int, EClass)
+lookupEVar i = findCls (\vs _ -> i `elem` vs)
+
+lookupEApp :: Int -> Int -> IntMap EClass -> Maybe (Int, EClass)
+lookupEApp i j cs 
+  = findCls (\_ as -> any (\(k, l) -> chaseEq i k cs && chaseEq j l cs) as) cs
+
+lookupETm :: Tm -> IntMap EClass -> Maybe (Int, EClass)
+lookupETm (Var i)   cs = lookupEVar i cs
+lookupETm (App t u) cs = do
+  (i, _) <- lookupETm t cs
+  (j, _) <- lookupETm u cs
+  lookupEApp i j cs
+
+singClass :: Tm -> State EGraph EClass
+singClass (Var i)   = pure (Cls [i] [])
+singClass (App t u) = do
+  (i, _) <- addTm t
+  (j, _) <- addTm u
+  pure (Cls [] [(i, j)])
+
+addTm :: Tm -> State EGraph (Int, EClass)
+addTm t = do
+  g <- gets classes
+  case lookupETm t g of
+    Just e -> pure e
+    Nothing -> do
+      c <- singClass t
+      (, c) <$> addCls c
+
+mergeECls :: Int -> Int -> EClass -> EClass -> State EGraph ()
+mergeECls i j c1 c2
+  = modifyClasses \cs -> let (i', vs1, as1) = chase i c1 cs
+                             (j', vs2, as2) = chase j c2 cs
+                          in insert j' (Ptr i')
+                           $ insert i' (Cls (vs1 <> vs2) (as1 <> as2)) cs
+
+addEq :: TmEq -> State EGraph ()
+addEq (t := u) = do
+  (i, c1) <- addTm t
+  (j, c2) <- addTm u
+  cs <- gets classes
+  if chaseEq i j cs
+    then pure ()
+    else mergeECls i j c1 c2
+
+buildEGraph :: [TmEq] -> EGraph
+buildEGraph = foldr (execState . addEq) (Graph mempty 0)
+
+checkEGraphEqRec :: Tm -> Tm -> EGraph -> Bool
+checkEGraphEqRec (App t1 t2) (App u1 u2) g 
+  = checkEGraphEq t1 u1 g && checkEGraphEq t2 u2 g
+checkEGraphEqRec (Var i)     (Var j)     _ = i == j
+checkEGraphEqRec _           _           _ = False
+
+checkEGraphEq :: Tm -> Tm -> EGraph -> Bool
+checkEGraphEq t u g@(Graph cs _)
+  =  checkEGraphEqRec t u g 
+  || justEq (fst <$> lookupETm t cs) (fst <$> lookupETm u cs)
+
+
+cmpStrats2 :: [TmEq] -> Tm -> Tm -> Bool
+cmpStrats2 eqs t u = checkEGraphEq t u g == checkRwEq rws t u
+  where g   = buildEGraph eqs
         rws = buildRws eqs
 
-cmpStratsSafe :: [TmEq] -> Tm -> Tm -> Property
-cmpStratsSafe eqs t u = within 50000 (cmpStrats eqs t u)
+cmpStratsSafe2 :: [TmEq] -> Tm -> Tm -> Property
+cmpStratsSafe2 eqs t u = discardAfter 500000 (cmpStrats2 eqs t u)
 
-fuzz :: IO ()
-fuzz = quickCheck cmpStratsSafe
+fuzz2 :: IO ()
+fuzz2 = quickCheck cmpStratsSafe2
 
-fuzzVerbose :: IO ()
-fuzzVerbose = quickCheck (verbose cmpStratsSafe)
+fuzzVerbose2 :: IO ()
+fuzzVerbose2 = quickCheck (verbose cmpStratsSafe2)
 
--- Evil utilities for testing
-lhs :: Tm -> Tm 
-lhs (App t _) = t
-lhs _         = undefined
-
-rhs :: Tm -> Tm
-rhs (App _ u) = u
-rhs _         = undefined
-
+-- Counter-examples
 {-
-Example Failure Cases:
-
-f (f (f x)) = x, f (f (f (f (f x)))) = x
-f x =? x
-
-- Lookup x = 0
-- Lookup f x
-  - f x =? f (f (f x))
-    - f = f
-    - x =? f (f x)
-      - Lookup x = 0
-      - Lookup f x
-        - Cycle!
-
-[Var 1 := Var 2,App (App (Var 3) (App (Var 3) (Var 1))) (Var 1) := Var 3]
-App (Var 3) (App (App (Var 1) (Var 3)) (Var 1))
-Var 1
+[Var 3 := Var 1,Var 1 := Var 0,App (Var 0) (Var 3) := Var 0,App (App (Var 3) (App (Var 1) (Var 1))) (Var 0) := App (Var 1) (Var 1)]
+Var 0
+App (Var 1) (Var 3)
 -}
