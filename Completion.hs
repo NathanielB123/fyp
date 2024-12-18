@@ -15,12 +15,14 @@ import Data.Maybe (maybeToList, mapMaybe, isJust)
 import Test.QuickCheck
   (Gen, Arbitrary (arbitrary), Property, quickCheck, verbose, discardAfter)
 import Control.Monad.State (State, MonadState (..), gets, execState)
-import Data.IntMap (IntMap, insert, partition, toList, (!), adjust)
+import Data.IntMap (IntMap, insert, partition, toList, (!))
 import Data.Foldable (traverse_)
 import Data.Kind (Type)
 import Data.Containers.ListUtils (nubOrd)
 import Data.Functor (($>))
 import Control.Monad.Reader (MonadReader(..), asks)
+import Control.Monad (unless)
+import Debug.Trace (trace)
 
 type Reader = (->)
 
@@ -129,25 +131,6 @@ rwRwsFix = iterFix (rwWrtRws [])
 buildRws :: [TmEq] -> [Rw]
 buildRws eqs = rwRwsFix (mapMaybe (\(t := u) -> mkRw t u) eqs)
 
-genVar :: Gen Int
-genVar = do
-  (b2, b1) <- arbitrary @(Bool, Bool)
-  pure (2 * fromEnum b2 + fromEnum b1)
-
-instance Arbitrary Tm where
-  arbitrary = do
-    b <- arbitrary @Bool
-    if b
-    then do Var <$> genVar
-    else do t <- arbitrary @Tm
-            u <- arbitrary @Tm
-            pure (App t u)
-
-instance Arbitrary TmEq where
-  arbitrary = do
-    (t, u) <- arbitrary @(Tm, Tm)
-    pure (t := u)
-
 -- E-Graphs
 
 data ETmSort = Branch | Leaf
@@ -240,7 +223,7 @@ setParents i ps = do
 
   let (i', Cls vs as _) = chase' i cs
       cs' = insert i' (ECls vs as ps) cs
-  
+
   put (Graph cs' s w)
 
 singClass :: ETm -> EClass
@@ -256,7 +239,7 @@ addSingCls t = do
   let c = singClass t
       cs' = case t of
         L _  -> cs
-        B t' -> foldr (addParent s t') cs (children t') 
+        B t' -> foldr (addParent s t') cs (children t')
 
   put (Graph (insert s c cs') (s + 1) w)
   pure (s, c)
@@ -278,10 +261,9 @@ lookupEBranch t = findCls (\_ as -> anyM (branchEq t) as)
 
 lookupEBranch' :: Foldable f => EBranch -> f (Int, EBranch)
                -> Reader (IntMap EClass) (Maybe Int)
-lookupEBranch' t 
-  = findJustM \(i, u) -> do
-      b <- branchEq t u
-      pure (boolToMaybe b i)
+lookupEBranch' t = findJustM \(i, u) -> do
+  b <- branchEq t u
+  pure (boolToMaybe b i)
 
 lookupETm :: Tm -> Reader (IntMap EClass) (Maybe (Int, EClass))
 lookupETm (Var i)   cs = lookupELeaf (EVar i) cs
@@ -304,17 +286,18 @@ addTm t = do
     Just e -> pure e
     Nothing -> do
       t' <- toETm t
-      addSingCls t' 
+      addSingCls t'
 
 mergeECls :: Int -> Int -> EClass -> EClass -> State EGraph ()
-mergeECls i j c1 c2 
-  | i == j = pure ()
-  | otherwise = do
-    i' <- modifyClasses \cs ->
-      let (i', Cls vs1 as1 ps1) = chase i c1 cs
-          (j', Cls vs2 as2 ps2) = chase j c2 cs
-      in (insert j' (EPtr i')
-      $  insert i' (ECls (vs1 <> vs2) (as1 <> as2) (ps1 <> ps2)) cs, i')
+mergeECls i j c1 c2 = do
+  Graph cs s w <- get
+  let (i', Cls vs1 as1 ps1) = chase i c1 cs
+      (j', Cls vs2 as2 ps2) = chase j c2 cs
+  
+  unless (i' == j') do
+    let cs' = insert j' (EPtr i')
+             (insert i' (ECls (vs1 <> vs2) (as1 <> as2) (ps1 <> ps2)) cs)
+    put (Graph cs' s w)
     workListPush i'
 
 mergeECls' :: Int -> Int -> State EGraph ()
@@ -326,7 +309,7 @@ addEq :: TmEq -> State EGraph ()
 addEq (t := u) = do
   (i, c1) <- addTm t
   (j, c2) <- addTm u
-  mergeECls i j c1 c2 
+  mergeECls i j c1 c2
 
 buildEGraph :: [TmEq] -> EGraph
 buildEGraph = execState rebuild . foldr (execState . addEq) (Graph mempty 0 [])
@@ -353,33 +336,53 @@ workListPop f = do
 
 repair :: Int -> State EGraph ()
 repair i = do
-  (_, c) <- gets (chase' i . classes)
-  
-  let Cls _ _ ps = c
-      
-      go :: [(Int, EBranch)] -> [(Int, EBranch)] 
-         -> State EGraph [(Int, EBranch)]
-      go ts []           = pure ts
-      go ts ((j, t):ps') = do
-        cs  <- gets classes
-        ts' <- case lookupEBranch' t ts cs of
-          Just j' -> mergeECls' j j' $> ts
-          Nothing -> pure ((j, t):ts)
-        go ts' ps'
-
+  ps <- gets (parents . snd . chase' i . classes)
   ps' <- go [] ps
   setParents i ps'
+  where go :: [(Int, EBranch)] -> [(Int, EBranch)]
+           -> State EGraph [(Int, EBranch)]
+        go ts []           = pure ts
+        go ts ((j, t):ps') = do
+          cs  <- gets classes
+          ts' <- case lookupEBranch' t ts cs of
+            Just j' -> mergeECls' j j' $> ts
+            Nothing -> pure ((j, t):ts)
+          go ts' ps'
 
 rebuild :: State EGraph ()
 rebuild = do
   Graph cs s w <- get
+  let w' = nubOrd (fmap (\i -> fst (chase' i cs)) w)
+
   put (Graph cs s [])
-  traverse_ repair (nubOrd (fmap (\i -> fst (chase i (cs ! i) cs)) w))
-  
-  w' <- gets wlist
-  if null w' then pure () else error "Oh dear!!!"
+  traverse_ repair w'
+
+  w'' <- gets wlist
+  unless (null w'') rebuild
 
 -- Fuzzing
+
+genVar :: Gen Int
+genVar = do
+  (b2, b1) <- arbitrary @(Bool, Bool)
+  pure (2 * fromEnum b2 + fromEnum b1)
+
+instance Arbitrary Tm where
+  arbitrary :: Gen Tm
+  arbitrary = do
+    b <- arbitrary @Bool
+    if b
+    then do Var <$> genVar
+    else do t <- arbitrary @Tm
+            u <- arbitrary @Tm
+            pure (App t u)
+
+instance Arbitrary TmEq where
+  arbitrary :: Gen TmEq
+  arbitrary = do
+    (t, u) <- arbitrary @(Tm, Tm)
+    pure (t := u)
+
 cmpStrats :: [TmEq] -> Tm -> Tm -> Bool
 cmpStrats eqs t u = checkEGraphEq t u g == checkRwEq rws t u
   where g   = buildEGraph eqs
@@ -396,7 +399,13 @@ fuzzVerbose = quickCheck (verbose cmpStratsSafe)
 
 -- Counter-examples
 {-
-[Var 3 := Var 1,Var 1 := Var 0,App (Var 0) (Var 3) := Var 0,App (App (Var 3) (App (Var 1) (Var 1))) (Var 0) := App (Var 1) (Var 1)]
+[Var 1 := Var 3,App (Var 1) (Var 2) := App (Var 3) (App (Var 3) (Var 2)),App (Var 0) (App (Var 1) (App (Var 1) (Var 2))) := Var 1,Var 3 := Var 2,Var 0 := Var 2]
 Var 0
-App (Var 1) (Var 3)
+App (Var 3) (Var 1)
+-}
+
+{-
+[Var 0 := Var 1,Var 1 := App (Var 0) (Var 3),Var 3 := App (Var 1) (Var 3),App (Var 1) (App (Var 0) (App (Var 3) (Var 3))) := Var 2]
+App (App (Var 2) (Var 2)) (App (App (App (App (Var 0) (Var 2)) (Var 3)) (App (Var 3) (Var 2))) (App (Var 2) (Var 0)))
+App (Var 3) (Var 2)
 -}
