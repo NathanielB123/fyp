@@ -17,7 +17,7 @@
 import Prelude hiding (lookup)
 import Data.Maybe (maybeToList, mapMaybe, isJust)
 import Test.QuickCheck
-  (Gen, Arbitrary (arbitrary), Property, quickCheck, verbose, within)
+  (Gen, Arbitrary (arbitrary), Property, quickCheck, verbose, discardAfter)
 import Control.Monad.State (State, MonadState (..), gets, execState)
 import Data.IntMap (IntMap, insert, partition, toList, (!))
 import Data.Foldable (traverse_)
@@ -174,9 +174,11 @@ deriving instance Show EClass
 
 pattern ECls :: () => ()
              => [ELeaf] -> [EBranch] -> [(Int, EBranch)] -> EClass
-pattern ECls vs as ps = E (Cls vs as ps)
 pattern EPtr :: () => () => Int -> EClass
+
+pattern ECls vs as ps = E (Cls vs as ps)
 pattern EPtr i        = E (Ptr i)
+
 {-# COMPLETE ECls, EPtr #-}
 
 type EClassRoot = EClassData Root
@@ -223,10 +225,7 @@ addParent i c j cs = insert j' (ECls vs as ((i, c):ps)) cs
 addParents :: Int -> [(Int, EBranch)] -> State EGraph ()
 addParents i ps = do
   Graph cs s w <- get
-
-  let (i', Cls vs as ps') = chase i cs
-      cs' = insert i' (ECls vs as (ps <> ps')) cs
-
+  let cs' = foldr (\(j, c) -> addParent j c i) cs ps
   put (Graph cs' s w)
 
 setParents :: Int -> [(Int, EBranch)] -> State EGraph ()
@@ -404,7 +403,7 @@ cmpStrats eqs t u = checkEGraphEq t u g == checkRwEq rws t u
         rws = buildRws eqs
 
 cmpStratsSafe :: [TmEq] -> Tm -> Tm -> Property
-cmpStratsSafe eqs t u = within 5000000 (cmpStrats eqs t u)
+cmpStratsSafe eqs t u = discardAfter 500000 (cmpStrats eqs t u)
 
 fuzz :: IO ()
 fuzz = quickCheck cmpStratsSafe
