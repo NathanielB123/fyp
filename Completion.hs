@@ -8,12 +8,16 @@
 
 -- Attempts at implementing ground completion (will be used for dealing with
 -- neutral equations)
--- Includes a naive rewriting-based approach and a WIP E-graph impl
+
+-- Includes a naive rewriting-based approach and e-graph implementation
+-- The e-graph is current extremely slow, but I'm currently not bothering 
+-- trying to keep the union-find balanced, or even doing hash-consing, so I
+-- expect it could get a LOT faster.
 
 import Prelude hiding (lookup)
 import Data.Maybe (maybeToList, mapMaybe, isJust)
 import Test.QuickCheck
-  (Gen, Arbitrary (arbitrary), Property, quickCheck, verbose, discardAfter)
+  (Gen, Arbitrary (arbitrary), Property, quickCheck, verbose, within)
 import Control.Monad.State (State, MonadState (..), gets, execState)
 import Data.IntMap (IntMap, insert, partition, toList, (!))
 import Data.Foldable (traverse_)
@@ -22,29 +26,10 @@ import Data.Containers.ListUtils (nubOrd)
 import Data.Functor (($>))
 import Control.Monad.Reader (MonadReader(..), asks)
 import Control.Monad (unless)
-import Debug.Trace (trace)
+
+-- Utilities
 
 type Reader = (->)
-
-data Tm = Var Int | App Tm Tm
-  deriving (Eq, Show)
-
-spLen :: Tm -> Int
-spLen (Var _)   = 0
-spLen (App _ t) = 1 + spLen t
-
-instance Ord Tm where
-  compare :: Tm -> Tm -> Ordering
-  compare t u = case compare (spLen t) (spLen u) of
-    LT -> LT
-    GT -> GT
-    EQ -> case (t, u) of
-      (Var i, Var j) -> compare i j
-      (App t1 t2, App u1 u2) -> case compare t1 u1 of
-        LT -> LT
-        GT -> GT
-        EQ -> compare t2 u2
-      _ -> error "Impossible"
 
 justEq :: Eq a => Maybe a -> Maybe a -> Bool
 justEq (Just x) (Just y) = x == y
@@ -80,6 +65,31 @@ findM f = findJustM (\x -> flip boolToMaybe x <$> f x)
 anyM :: (Foldable f, Monad m) => (a -> m Bool) -> f a -> m Bool
 anyM f = fmap isJust . findM f
 
+-- Terms
+
+data Tm = Var Int | App Tm Tm
+  deriving (Eq, Show)
+
+spLen :: Tm -> Int
+spLen (Var _)   = 0
+spLen (App _ t) = 1 + spLen t
+
+instance Ord Tm where
+  compare :: Tm -> Tm -> Ordering
+  compare t u = case compare (spLen t) (spLen u) of
+    LT -> LT
+    GT -> GT
+    EQ -> case (t, u) of
+      (Var i, Var j) -> compare i j
+      (App t1 t2, App u1 u2) -> case compare t1 u1 of
+        LT -> LT
+        GT -> GT
+        EQ -> compare t2 u2
+      _ -> error "Impossible"
+
+data TmEq = Tm := Tm
+  deriving (Show)
+
 -- Rewriting to completion
 
 data Rw = Tm :-> Tm
@@ -105,11 +115,6 @@ rwFix lrs = iterFix (rwAll lrs)
 
 checkRwEq :: [Rw] -> Tm -> Tm -> Bool
 checkRwEq lrs t u = rwFix lrs t == rwFix lrs u
-
-data TmEq = Tm := Tm
-  deriving (Show)
-
-type EqClass = ([Tm], [Int])
 
 mkRw :: Tm -> Tm -> Maybe Rw
 mkRw t u
@@ -196,14 +201,12 @@ workListPush i = do
   Graph cs s w <- get
   put (Graph cs s (i : w))
 
-chase :: Int -> EClass -> Reader (IntMap EClass) (Int, EClassRoot)
-chase _ (EPtr j)        = chase' j
-chase i (ECls vs as ps) = pure (i, Cls vs as ps)
-
-chase' :: Int -> Reader (IntMap EClass) (Int, EClassRoot)
-chase' i = do
+chase :: Int -> Reader (IntMap EClass) (Int, EClassRoot)
+chase i = do
   cs <- ask
-  chase i (cs ! i)
+  case cs ! i of
+    EPtr j        -> chase j
+    ECls vs as ps -> pure (i, Cls vs as ps)
 
 findCls :: ([ELeaf] -> [EBranch] -> Reader (IntMap EClass) Bool)
         -> Reader (IntMap EClass) (Maybe (Int, EClass))
@@ -215,13 +218,22 @@ findCls p = do
 -- Todo: Tidy these up with a 'chaseAdjust' helper
 addParent :: Int -> EBranch -> Int -> IntMap EClass -> IntMap EClass
 addParent i c j cs = insert j' (ECls vs as ((i, c):ps)) cs
-  where (j', Cls vs as ps) = chase' j cs
+  where (j', Cls vs as ps) = chase j cs
+
+addParents :: Int -> [(Int, EBranch)] -> State EGraph ()
+addParents i ps = do
+  Graph cs s w <- get
+
+  let (i', Cls vs as ps') = chase i cs
+      cs' = insert i' (ECls vs as (ps <> ps')) cs
+
+  put (Graph cs' s w)
 
 setParents :: Int -> [(Int, EBranch)] -> State EGraph ()
 setParents i ps = do
   Graph cs s w <- get
 
-  let (i', Cls vs as _) = chase' i cs
+  let (i', Cls vs as _) = chase i cs
       cs' = insert i' (ECls vs as ps) cs
 
   put (Graph cs' s w)
@@ -236,7 +248,7 @@ children (EApp i j) = [i, j]
 addSingCls :: ETm -> State EGraph (Int, EClass)
 addSingCls t = do
   Graph cs s w <- get
-  let c = singClass t
+  let c   = singClass t
       cs' = case t of
         L _  -> cs
         B t' -> foldr (addParent s t') cs (children t')
@@ -246,8 +258,8 @@ addSingCls t = do
 
 chaseEq :: Int -> Int -> Reader (IntMap EClass) Bool
 chaseEq i j = do
-  (i', _) <- chase' i
-  (j', _) <- chase' j
+  (i', _) <- chase i
+  (j', _) <- chase j
   pure (i' == j')
 
 lookupELeaf :: ELeaf -> Reader (IntMap EClass) (Maybe (Int, EClass))
@@ -257,7 +269,7 @@ branchEq :: EBranch -> EBranch -> Reader (IntMap EClass) Bool
 branchEq (EApp i j) (EApp i' j') = (&&) <$> chaseEq i i' <*> chaseEq j j'
 
 lookupEBranch :: EBranch -> Reader (IntMap EClass) (Maybe (Int, EClass))
-lookupEBranch t = findCls (\_ as -> anyM (branchEq t) as)
+lookupEBranch t = findCls (const (anyM (branchEq t)))
 
 lookupEBranch' :: Foldable f => EBranch -> f (Int, EBranch)
                -> Reader (IntMap EClass) (Maybe Int)
@@ -288,28 +300,23 @@ addTm t = do
       t' <- toETm t
       addSingCls t'
 
-mergeECls :: Int -> Int -> EClass -> EClass -> State EGraph ()
-mergeECls i j c1 c2 = do
+mergeECls :: Int -> Int -> State EGraph ()
+mergeECls i j = do
   Graph cs s w <- get
-  let (i', Cls vs1 as1 ps1) = chase i c1 cs
-      (j', Cls vs2 as2 ps2) = chase j c2 cs
-  
+  let (i', Cls vs1 as1 ps1) = chase i cs
+      (j', Cls vs2 as2 ps2) = chase j cs
+
   unless (i' == j') do
     let cs' = insert j' (EPtr i')
              (insert i' (ECls (vs1 <> vs2) (as1 <> as2) (ps1 <> ps2)) cs)
     put (Graph cs' s w)
     workListPush i'
 
-mergeECls' :: Int -> Int -> State EGraph ()
-mergeECls' i j = do
-  cs <- gets classes
-  mergeECls i j (cs ! i) (cs ! j)
-
 addEq :: TmEq -> State EGraph ()
 addEq (t := u) = do
-  (i, c1) <- addTm t
-  (j, c2) <- addTm u
-  mergeECls i j c1 c2
+  (i, _) <- addTm t
+  (j, _) <- addTm u
+  mergeECls i j
 
 buildEGraph :: [TmEq] -> EGraph
 buildEGraph = execState rebuild . foldr (execState . addEq) (Graph mempty 0 [])
@@ -335,26 +342,34 @@ workListPop f = do
       f i
 
 repair :: Int -> State EGraph ()
-repair i = do
-  ps <- gets (parents . snd . chase' i . classes)
-  ps' <- go [] ps
-  setParents i ps'
+repair i = do  
+  cs <- gets classes
+
+  -- We know the root e-class will always get added to the work list, so we can
+  -- ignore non-root e-classes
+  case cs ! i of
+    EPtr _      -> pure ()
+    ECls _ _ ps -> do
+      setParents i []
+      ps' <- go [] ps
+      addParents i ps'
   where go :: [(Int, EBranch)] -> [(Int, EBranch)]
            -> State EGraph [(Int, EBranch)]
         go ts []           = pure ts
         go ts ((j, t):ps') = do
           cs  <- gets classes
           ts' <- case lookupEBranch' t ts cs of
-            Just j' -> mergeECls' j j' $> ts
+            Just j' -> mergeECls j j' $> ts
             Nothing -> pure ((j, t):ts)
           go ts' ps'
 
 rebuild :: State EGraph ()
 rebuild = do
   Graph cs s w <- get
-  let w' = nubOrd (fmap (\i -> fst (chase' i cs)) w)
+  let w' = nubOrd (fmap (\i -> fst (chase i cs)) w)
 
   put (Graph cs s [])
+  
   traverse_ repair w'
 
   w'' <- gets wlist
@@ -364,15 +379,15 @@ rebuild = do
 
 genVar :: Gen Int
 genVar = do
-  (b2, b1) <- arbitrary @(Bool, Bool)
-  pure (2 * fromEnum b2 + fromEnum b1)
+  (b4, b2, b1) <- arbitrary @(Bool, Bool, Bool)
+  pure (4 * fromEnum b4 + 2 * fromEnum b2 + fromEnum b1)
 
 instance Arbitrary Tm where
   arbitrary :: Gen Tm
   arbitrary = do
     b <- arbitrary @Bool
     if b
-    then do Var <$> genVar
+    then Var <$> genVar
     else do t <- arbitrary @Tm
             u <- arbitrary @Tm
             pure (App t u)
@@ -389,23 +404,10 @@ cmpStrats eqs t u = checkEGraphEq t u g == checkRwEq rws t u
         rws = buildRws eqs
 
 cmpStratsSafe :: [TmEq] -> Tm -> Tm -> Property
-cmpStratsSafe eqs t u = discardAfter 500000 (cmpStrats eqs t u)
+cmpStratsSafe eqs t u = within 5000000 (cmpStrats eqs t u)
 
 fuzz :: IO ()
 fuzz = quickCheck cmpStratsSafe
 
 fuzzVerbose :: IO ()
 fuzzVerbose = quickCheck (verbose cmpStratsSafe)
-
--- Counter-examples
-{-
-[Var 1 := Var 3,App (Var 1) (Var 2) := App (Var 3) (App (Var 3) (Var 2)),App (Var 0) (App (Var 1) (App (Var 1) (Var 2))) := Var 1,Var 3 := Var 2,Var 0 := Var 2]
-Var 0
-App (Var 3) (Var 1)
--}
-
-{-
-[Var 0 := Var 1,Var 1 := App (Var 0) (Var 3),Var 3 := App (Var 1) (Var 3),App (Var 1) (App (Var 0) (App (Var 3) (Var 3))) := Var 2]
-App (App (Var 2) (Var 2)) (App (App (App (App (Var 0) (Var 2)) (Var 3)) (App (Var 3) (Var 2))) (App (Var 2) (Var 0)))
-App (Var 3) (Var 2)
--}
