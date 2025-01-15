@@ -5,11 +5,11 @@
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE PatternSynonyms #-}
 
-
 -- Attempts at implementing ground completion (will be used for dealing with
 -- neutral equations)
 
 -- Includes a naive rewriting-based approach and e-graph implementation
+
 -- The e-graph is current extremely slow, but I'm currently not bothering 
 -- trying to keep the union-find balanced, or even doing hash-consing, so I
 -- expect it could get a LOT faster.

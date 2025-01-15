@@ -3,6 +3,8 @@
 import Agda.Builtin.Equality.Rewrite
 
 open import Utils
+open import Common.Sort
+open import Common.SortEq
 
 open import STLC.Syntax
 
@@ -12,32 +14,11 @@ open import STLC.Syntax
 -- https://github.com/txa/substitution/blob/main/submission.pdf
 -- should not be too tricky, but for now I am a bit bored of proving 
 -- substitution lemmas, and will just postulate them
-module STLC.SubstEq where
+module STLC.SubstEq (𝕏 : Extensions) where
 
-⊑⊔s : q ⊑ r → (q ⊔ s) ⊑ (r ⊔ s)
-⊑⊔s V⊑T = ⊑T
-⊑⊔s rfl = rfl
-
-s⊔⊑ : q ⊑ r → (s ⊔ q) ⊑ (s ⊔ r)
-s⊔⊑ {s = V} q⊑r = q⊑r
-s⊔⊑ {s = T} _   = rfl
-
-⊔V : q ⊔ V ≡ q
-⊔V {q = V} = refl
-⊔V {q = T} = refl
-
-⊔T : q ⊔ T ≡ T
-⊔T {q = V} = refl
-⊔T {q = T} = refl
-
-⊔⊔ : (q ⊔ r) ⊔ s ≡ q ⊔ (r ⊔ s)
-⊔⊔ {q = V} = refl
-⊔⊔ {q = T} = refl
-
-{-# REWRITE ⊔V ⊔T ⊔⊔ #-}
+open Parameterised 𝕏
 
 variable
-  q⊑r : q ⊑ r
   Ξ : Ctx
 
 postulate 
@@ -49,6 +30,7 @@ postulate
   vz[]  : ∀ {δ : Tms[ r ] Δ Γ} → vz[ q ] [ δ , x ] ≡ tm⊑ ⊑⊔₂ x
   suc[] : suc[ q ] x [ δ , y ] ≡  x [ δ ]
   [id]  : x [ id ] ≡ x
+  [id,] : x [ (id ⁺ A) , y ] ≡ x
   ⨾⨾    : (δ ⨾ σ) ⨾ ξ ≡ δ ⨾ (σ ⨾ ξ)
   
   ⊑⨾   : {q⊑r : q ⊑ r} {σ : Tms[ s ] Θ Δ} 
@@ -60,7 +42,9 @@ postulate
 
   [⊑]   : {q⊑r : q ⊑ r} {x : Tm[ s ] Γ A} 
         → x [ tms⊑ q⊑r δ ] ≡ tm⊑ (s⊔⊑ {s = s} q⊑r) (x [ δ ])
-  [⊑,`] : x [ (tms⊑ ⊑T δ , (` vz)) ] ≡ tm⊑ ⊑T (x [ δ , vz ])
+  [⊑,`] : x [ (tms⊑ ⊑T δ , (` j)) ] ≡ tm⊑ ⊑T (x [ δ , j ])
+
+  id⁺vs : i [ id ⁺ A ] ≡ vs i
 
   tms⊑-id : tms⊑ q⊑r δ ≡ δ
 
@@ -69,5 +53,8 @@ postulate
 T[][] : t [ δ ] [ σ ] ≡ t [ δ ⨾ σ ]
 T[][] {t = t} = [][] {x = t}
 
-{-# REWRITE [][] ⁺⨾ ⨾⁺ id⨾ ⨾id vz[] [id] ⨾⨾ ⊑⨾ ⨾⊑ ⊑⁺ [⊑] [⊑,`] tms⊑-id 
-            T[][] #-}
+V[][] : i [ δ ] [ σ ] ≡ i [ δ ⨾ σ ]
+V[][] {i = i} = [][] {x = i}
+
+{-# REWRITE [][] ⁺⨾ ⨾⁺ id⨾ ⨾id vz[] [id] ⨾⨾ ⊑⨾ ⨾⊑ ⊑⁺ [⊑] [⊑,`] id⁺vs tms⊑-id 
+            T[][] V[][] [id,] #-}

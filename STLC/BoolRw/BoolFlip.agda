@@ -1,7 +1,9 @@
 {-# OPTIONS --prop --show-irrelevant #-}
 
 open import Utils
-open import STLC.Syntax
+open import Common.Sort
+
+open import STLC.BoolRw.Syntax
 
 -- Equivalence relation on terms corresponding to syntactic equality modulo 
 -- flipping booleans
@@ -17,13 +19,18 @@ IsBool _     = ⊥
 ¬IsBool false = ⊥
 ¬IsBool _     = ⊤
 
+-- TODO: Should we make 'IsBool' INJECTIVE_FOR_INFERENCE?
+
 bool? : (t : Tm Γ A) → IsBool t ⊎ ¬IsBool t
 bool? true          = inl tt
 bool? false         = inl tt
-bool? (` i)         = inr tt
-bool? (t · u)       = inr tt
-bool? (ƛ t)         = inr tt
-bool? (𝔹-rec c t u) = inr tt
+bool? (` _)         = inr tt
+bool? (_ · _)       = inr tt
+bool? (ƛ _)         = inr tt
+bool? (𝔹-rec _ _ _) = inr tt
+bool? (inl _)       = inr tt
+bool? (inr _)       = inr tt
+bool? (+-rec _ _ _) = inr tt
 
 _[_]b : IsBool t → (δ : Tms[ q ] Δ Γ) → IsBool (t [ δ ])
 _[_]b {t = true}  tt _ = tt
@@ -38,8 +45,12 @@ _[_]b {t = false} tt _ = tt
 ¬bool→ {t = _ · _}       _  = tt
 ¬bool→ {t = ƛ _}         _  = tt
 ¬bool→ {t = 𝔹-rec _ _ _} _  = tt
+¬bool→ {t = inl _}       _  = tt
+¬bool→ {t = inr _}       _  = tt
+¬bool→ {t = +-rec _ _ _} _  = tt
 ¬bool→ {t = true}        ¬b = ¬b tt
 ¬bool→ {t = false}       ¬b = ¬b tt
+
 
 ¬bool← : ¬IsBool t → ¬ IsBool t
 ¬bool← {t = ` _} _ ()
@@ -57,6 +68,9 @@ data _~/𝔹_ : Tm[ q ] Γ A → Tm[ q ] Γ A → Set where
   _·_   : t₁ ~/𝔹 t₂ → u₁ ~/𝔹 u₂ → (t₁ · u₁) ~/𝔹 (t₂ · u₂)
   ƛ_    : t₁ ~/𝔹 t₂ → (ƛ t₁) ~/𝔹 (ƛ t₂)  
   𝔹-rec : t₁ ~/𝔹 t₂ → u₁ ~/𝔹 u₂ → v₁ ~/𝔹 v₂ → 𝔹-rec t₁ u₁ v₁ ~/𝔹 𝔹-rec t₂ u₂ v₂
+  inl   : t₁ ~/𝔹 t₂ → inl {B = B} t₁ ~/𝔹 inl t₂
+  inr   : t₁ ~/𝔹 t₂ → inr {A = A} t₁ ~/𝔹 inr t₂
+  +-rec : t₁ ~/𝔹 t₂ → u₁ ~/𝔹 u₂ → v₁ ~/𝔹 v₂ → +-rec t₁ u₁ v₁ ~/𝔹 +-rec t₂ u₂ v₂
 
 data _~/𝔹*_ {q} {Δ} : Tms[ q ] Δ Γ → Tms[ q ] Δ Γ → Set where
   ε   : ε ~/𝔹* ε
@@ -70,6 +84,9 @@ rfl/𝔹 {x = ` i}         = `rfl
 rfl/𝔹 {x = t · u}       = rfl/𝔹 · rfl/𝔹
 rfl/𝔹 {x = ƛ t}         = ƛ rfl/𝔹
 rfl/𝔹 {x = 𝔹-rec c t u} = 𝔹-rec rfl/𝔹 rfl/𝔹 rfl/𝔹
+rfl/𝔹 {x = inl t}       = inl rfl/𝔹
+rfl/𝔹 {x = inr t}       = inr rfl/𝔹
+rfl/𝔹 {x = +-rec s l r} = +-rec rfl/𝔹 rfl/𝔹 rfl/𝔹
 
 rfl/𝔹* : δ ~/𝔹* δ 
 rfl/𝔹* {δ = ε}     = ε
@@ -84,6 +101,9 @@ IsBool/𝔹 {t = false} (bool tt b) tt = b
 ¬IsBool/𝔹 {t = _ · _}       (_ · _)       tt = tt
 ¬IsBool/𝔹 {t = ƛ _}         (ƛ _)         tt = tt
 ¬IsBool/𝔹 {t = 𝔹-rec _ _ _} (𝔹-rec _ _ _) tt = tt
+¬IsBool/𝔹 {t = inl _}       (inl _)       tt = tt
+¬IsBool/𝔹 {t = inr _}       (inr _)       tt = tt
+¬IsBool/𝔹 {t = +-rec _ _ _} (+-rec _ _ _) tt = tt
 
 sym/𝔹 : t₁ ~/𝔹 t₂ → t₂ ~/𝔹 t₁
 sym/𝔹 (bool b₁ b₂)  = bool b₂ b₁
@@ -91,6 +111,9 @@ sym/𝔹 `rfl          = `rfl
 sym/𝔹 (t · u)       = sym/𝔹 t · sym/𝔹 u
 sym/𝔹 (ƛ t)         = ƛ sym/𝔹 t
 sym/𝔹 (𝔹-rec c t u) = 𝔹-rec (sym/𝔹 c) (sym/𝔹 t) (sym/𝔹 u)
+sym/𝔹 (inl t)       = inl (sym/𝔹 t)
+sym/𝔹 (inr t)       = inr (sym/𝔹 t)
+sym/𝔹 (+-rec t u v) = +-rec (sym/𝔹 t) (sym/𝔹 u) (sym/𝔹 v)
 
 tm⊑/𝔹 : (p : q ⊑ r) → x₁ ~/𝔹 x₂ → tm⊑ p x₁ ~/𝔹 tm⊑ p x₂
 tm⊑/𝔹 {q = V}         p Vrfl = rfl/𝔹
@@ -119,6 +142,10 @@ bool {t = false} {u = true}  tt tt [ δ ]/𝔹     = bool tt tt
 bool {t = false} {u = false} tt tt [ δ ]/𝔹     = bool tt tt
 (t · u)                            [ δ ]/𝔹     = (t [ δ ]/𝔹) · (u [ δ ]/𝔹)
 (ƛ t)                              [ δ ]/𝔹     = ƛ (t [ δ ^/𝔹 _ ]/𝔹)
+inl t                              [ δ ]/𝔹     = inl (t [ δ ]/𝔹)
+inr t                              [ δ ]/𝔹     = inr (t [ δ ]/𝔹)
++-rec t u v                        [ δ ]/𝔹
+  = +-rec (t [ δ ]/𝔹) (u [ δ ^/𝔹 _ ]/𝔹) (v [ δ ^/𝔹 _ ]/𝔹)
 𝔹-rec c t u                        [ δ ]/𝔹 
   = 𝔹-rec (c [ δ ]/𝔹) (t [ δ ]/𝔹) (u [ δ ]/𝔹)
 

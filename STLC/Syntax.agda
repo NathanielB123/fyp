@@ -1,104 +1,153 @@
 {-# OPTIONS --prop #-}
 
 open import Utils
+open import Common.Sort
 
 module STLC.Syntax where
 
+record Extensions : Set where
+  constructor ⟨ƛ≔_,⊤≔_,𝔹≔_,+≔_,×≔_,ℕ≔_⟩
+  field
+    ƛ? : Bool
+    ⊤? : Bool
+    𝔹? : Bool
+    +? : Bool
+    ×? : Bool
+    ℕ? : Bool
+open Extensions public
+
+all : Extensions
+all .ƛ? = true
+all .⊤? = true
+all .𝔹? = true
+all .+? = true
+all .×? = true
+all .ℕ? = true
+
+none : Extensions
+none .ƛ? = false
+none .⊤? = false
+none .𝔹? = false
+none .+? = false
+none .×? = false
+none .ℕ? = false
+
+unit : Extensions
+unit = record none {⊤? = true}
+
+ƛ∪𝔹∪+ : Extensions
+ƛ∪𝔹∪+ = record none {ƛ? = true; 𝔹? = true; +? = true}
+
+variable
+  𝕏 : Extensions
+  b₁ b₂ b₃ b₄ b₅ : Bool
+
+pattern 𝕏∪ƛ = ⟨ƛ≔ true ,⊤≔ _ ,𝔹≔ _ ,+≔ _ ,×≔ _ ,ℕ≔ _ ⟩
+pattern 𝕏∪⊤ = ⟨ƛ≔ _ ,⊤≔ true ,𝔹≔ _ ,+≔ _ ,×≔ _ ,ℕ≔ _ ⟩
+pattern 𝕏∪𝔹 = ⟨ƛ≔ _ ,⊤≔ _ ,𝔹≔ true ,+≔ _ ,×≔ _ ,ℕ≔ _ ⟩
+pattern 𝕏∪+ = ⟨ƛ≔ _ ,⊤≔ _ ,𝔹≔ _ ,+≔ true ,×≔ _ ,ℕ≔ _ ⟩
+pattern 𝕏∪× = ⟨ƛ≔ _ ,⊤≔ _ ,𝔹≔ _ ,+≔ _ ,×≔ true ,ℕ≔ _ ⟩
+pattern 𝕏∪ℕ = ⟨ƛ≔ _ ,⊤≔ _ ,𝔹≔ _ ,+≔ _ ,×≔ _ ,ℕ≔ true ⟩
+
 module Syntax where
   infixr 5 _⇒_
-  infixl  4  _,_
-  infix   5  ƛ_
-  infixl  6  _·_
-  infix   7  `_
+  infixl 4  _,_
+  infix  5  ƛ_
+  infixl 6  _·_
+  infix  7  `_
 
-  data Sort : Set where
-    V   : Sort
-    T>V : ∀ v → v ≡ V → Sort
-
-  pattern T = T>V V refl
-
-  variable
-    q r s : Sort
-
-  _⊔_ : Sort → Sort → Sort
-  T ⊔ q = T
-  V ⊔ q = q
-
-  data _⊑_ : Sort → Sort → Prop where
-    V⊑T : V ⊑ T
-    rfl : q ⊑ q
-
-  data Ctx : Set
-  data Ty  : Set
-  data Tm[_] : Sort → Ctx → Ty → Set
+  data Ctx (ex : Extensions) : Set
+  data Ty  : Extensions → Set
+  data Tm[_] : Sort → ∀ 𝕏 → Ctx 𝕏 → Ty 𝕏 → Set
   Var = Tm[ V ]
   Tm  = Tm[ T ]
 
   variable
-    Γ Δ Θ : Ctx
-    A B C : Ty
-    i j k : Var Γ A
-    t u v : Tm Γ A
-    t₁ t₂ t₃ u₁ u₂ u₃ v₁ v₂ v₃ : Tm Γ A
-    x y z : Tm[ q ] Γ A
-    x₁ x₂ x₃ y₁ y₂ y₃ z₁ z₂ z₃ : Tm[ q ] Γ A
+    Γ Δ Θ : Ctx 𝕏
+    A B C : Ty 𝕏
+    A₁ A₂ A₃ B₁ B₂ B₃ C₁ C₂ C₃ : Ty 𝕏
+    i j k : Var 𝕏 Γ A
+    t u v : Tm 𝕏 Γ A
+    t₁ t₂ t₃ u₁ u₂ u₃ v₁ v₂ v₃ : Tm 𝕏 Γ A
+    x y z : Tm[ q ] 𝕏 Γ A
+    x₁ x₂ x₃ y₁ y₂ y₃ z₁ z₂ z₃ : Tm[ q ] 𝕏 Γ A
 
-  data Ctx where
-    ε   : Ctx
-    _,_ : Ctx → Ty → Ctx
+  data Ctx 𝕏 where
+    ε   : Ctx 𝕏
+    _,_ : Ctx 𝕏 → Ty 𝕏 → Ctx 𝕏
 
   data Ty where
-    𝔹'  : Ty 
-    _⇒_ : Ty → Ty → Ty
+    _⇒_  : Ty 𝕏 → Ty 𝕏 → Ty 𝕏
+    ⊤'   : let 𝕏 = ⟨ƛ≔ b₁ ,⊤≔ true ,𝔹≔ b₂ ,+≔ b₃ ,×≔ b₄ ,ℕ≔ b₅ ⟩ 
+        in Ty 𝕏
+    𝔹'   : let 𝕏 = ⟨ƛ≔ b₁ ,⊤≔ b₂ ,𝔹≔ true ,+≔ b₃ ,×≔ b₄ ,ℕ≔ b₅ ⟩
+         in Ty 𝕏
+    _+'_ : let 𝕏 = ⟨ƛ≔ b₁ ,⊤≔ b₂ ,𝔹≔ b₃ ,+≔ true ,×≔ b₄ ,ℕ≔ b₅ ⟩ 
+        in Ty 𝕏 → Ty 𝕏 → Ty 𝕏
+    _×'_ : let 𝕏 = ⟨ƛ≔ b₁ ,⊤≔ b₂ ,𝔹≔ b₃ ,+≔ b₄ ,×≔ true ,ℕ≔ b₅ ⟩
+        in Ty 𝕏 → Ty 𝕏 → Ty 𝕏
+    ℕ'   : let 𝕏 = ⟨ƛ≔ b₁ ,⊤≔ b₂ ,𝔹≔ b₃ ,+≔ b₄ ,×≔ b₅ ,ℕ≔ true ⟩
+        in Ty 𝕏
 
   data Tm[_] where
-    vz    : Var (Γ , A) A
-    vs    : Var Γ B → Var (Γ , A) B
+    vz    : Var _ (Γ , A) A
+    vs    : Var _ Γ B → Var 𝕏 (Γ , A) B
     
-    `_    : Var Γ A → Tm Γ A
-    _·_   : Tm Γ (A ⇒ B) → Tm Γ A → Tm Γ B
-    ƛ_    : Tm (Γ , A) B → Tm Γ (A ⇒ B)
+    `_    : Var 𝕏 Γ A → Tm 𝕏 Γ A
+    _·_   : Tm 𝕏 Γ (A ⇒ B) → Tm 𝕏 Γ A → Tm 𝕏 Γ B
+    ƛ_    : Tm 𝕏∪ƛ (Γ , A) B → Tm 𝕏∪ƛ Γ (A ⇒ B)
     
-    true  : Tm Γ 𝔹'
-    false : Tm Γ 𝔹'
-    𝔹-rec : Tm Γ 𝔹' → Tm Γ A → Tm Γ A → Tm Γ A 
+    ⟨⟩    : Tm 𝕏∪⊤ Γ ⊤'
+
+    true  : Tm 𝕏∪𝔹 Γ 𝔹'
+    false : Tm 𝕏∪𝔹 Γ 𝔹'
+    𝔹-rec : Tm 𝕏∪𝔹 Γ 𝔹' → Tm 𝕏∪𝔹 Γ A → Tm 𝕏∪𝔹 Γ A → Tm 𝕏∪𝔹 Γ A 
+
+    inl   : Tm 𝕏∪+ Γ A → Tm _ Γ (A +' B)
+    inr   : Tm 𝕏∪+ Γ B → Tm _ Γ (A +' B)
+    +-rec : Tm 𝕏∪+ Γ (A +' B) → Tm 𝕏∪+ (Γ , A) C → Tm 𝕏∪+ (Γ , B) C → Tm 𝕏∪+ Γ C
+
+    fst   : Tm 𝕏∪× Γ (A ×' B) → Tm 𝕏∪× Γ A
+    snd   : Tm 𝕏∪× Γ (A ×' B) → Tm 𝕏∪× Γ B
+    ⟨_,_⟩ : Tm 𝕏∪× Γ A → Tm 𝕏∪× Γ B → Tm 𝕏∪× Γ (A ×' B)
+
+    ze    : Tm 𝕏∪ℕ Γ ℕ' 
+    su    : Tm 𝕏∪ℕ Γ ℕ' → Tm 𝕏∪ℕ Γ ℕ'
+    ℕ-rec : Tm 𝕏∪ℕ Γ ℕ' → Tm 𝕏∪ℕ Γ A → Tm 𝕏∪ℕ (Γ , A) A → Tm 𝕏∪ℕ Γ A
+
+  data Ne : ∀ 𝕏 → Ctx 𝕏 → Ty 𝕏 → Set
+  data Nf : ∀ 𝕏 → Ctx 𝕏 → Ty 𝕏 → Set
+
+  data Ne where
+    `_    : Var 𝕏 Γ A → Ne 𝕏 Γ A
+    _·_   : Ne 𝕏 Γ (A ⇒ B) → Nf 𝕏 Γ A → Ne 𝕏 Γ B
+    
+    𝔹-rec : Ne 𝕏∪𝔹 Γ 𝔹' → Nf 𝕏∪𝔹 Γ A → Nf 𝕏∪𝔹 Γ A → Ne 𝕏∪𝔹 Γ A 
+
+  data Nf where
+    ne  : Ne 𝕏 Γ A → Nf 𝕏 Γ A
+    ƛ_  : Nf 𝕏∪ƛ (Γ , A) B → Nf 𝕏∪ƛ Γ (A ⇒ B)
+    
+    true  : Nf 𝕏∪𝔹 Γ 𝔹'
+    false : Nf 𝕏∪𝔹 Γ 𝔹'
+
+module Parameterised (𝕏 : Extensions) where
+  open Syntax renaming 
+    (Ctx to _⊢Ctx; Ty to _⊢Ty; Tm[_] to [_]_⊢Tm; Tm to _⊢Tm; Var to _⊢Var
+    ; Ne to _⊢Ne; Nf to _⊢Nf) 
+    public
+  Ctx   = 𝕏 ⊢Ctx
+  Ty    = 𝕏 ⊢Ty
+  Tm[_] = [_] 𝕏 ⊢Tm
+  Tm    = 𝕏 ⊢Tm
+  Var   = 𝕏 ⊢Var
+  Ne    = 𝕏 ⊢Ne
+  Nf    = 𝕏 ⊢Nf
 
   tm⊑ : q ⊑ r → Tm[ q ] Γ A → Tm[ r ] Γ A
   tm⊑ {q = V} {r = T} _ i = ` i
   tm⊑ {q = V} {r = V} _ i = i
   tm⊑ {q = T} {r = T} _ t = t
-
-  ⊑T : q ⊑ T
-  ⊑T {q = V} = V⊑T
-  ⊑T {q = T} = rfl
-
-  V⊑ : V ⊑ q
-  V⊑ {q = V} = rfl
-  V⊑ {q = T} = V⊑T
-
-  ⊑⊔₁ : q ⊑ (q ⊔ r)
-  ⊑⊔₁ {q = V} = V⊑
-  ⊑⊔₁ {q = T} = rfl
-
-  ⊑⊔₂ : q ⊑ (r ⊔ q)
-  ⊑⊔₂ {r = V} = rfl
-  ⊑⊔₂ {r = T} = ⊑T
-
-  data Ne : Ctx → Ty → Set
-  data Nf : Ctx → Ty → Set
-
-  data Ne where
-    `_    : Var Γ A → Ne Γ A
-    _·_   : Ne Γ (A ⇒ B) → Nf Γ A → Ne Γ B
-    
-    𝔹-rec : Ne Γ 𝔹' → Nf Γ A → Nf Γ A → Ne Γ A 
-
-  data Nf where
-    ne  : Ne Γ A → Nf Γ A
-    ƛ_  : Nf (Γ , A) B → Nf Γ (A ⇒ B)
-    
-    true  : Nf Γ 𝔹'
-    false : Nf Γ 𝔹'
 
   ne→tm : Ne Γ A → Tm Γ A
   nf→tm : Nf Γ A → Tm Γ A
@@ -112,9 +161,8 @@ module Syntax where
   nf→tm true   = true
   nf→tm false  = false
 
-open Syntax public
-
-module Subst where
+  -- TODO: Move 'Tms' out of the parameterised module to avoid case splitting
+  -- pain (https://github.com/agda/agda/issues/3209)
   data Tms[_] (q : Sort) : Ctx → Ctx → Set where
     ε   : Tms[ q ] Δ ε
     _,_ : Tms[ q ] Δ Γ → Tm[ q ] Δ A → Tms[ q ] Δ (Γ , A)
@@ -128,7 +176,6 @@ module Subst where
   vz[_] : ∀ q → Tm[ q ] (Γ , A) A
   vz[ V ] = vz
   vz[ T ] = ` vz
-
 
   suc[_] : ∀ q → Tm[ q ] Γ B → Tm[ q ] (Γ , A) B
   _⁺_    : Tms[ q ] Δ Γ → ∀ A → Tms[ q ] (Δ , A) Γ
@@ -157,9 +204,19 @@ module Subst where
   (` i)       [ δ ]     = tm⊑ ⊑T (i [ δ ])
   (t · u)     [ δ ]     = t [ δ ] · u [ δ ]
   (ƛ t)       [ δ ]     = ƛ (t [ δ ^ _ ])
+  ⟨⟩          [ δ ]     = ⟨⟩
   true        [ δ ]     = true
   false       [ δ ]     = false
   𝔹-rec c t u [ δ ]     = 𝔹-rec (c [ δ ]) (t [ δ ]) (u [ δ ])
+  inl t       [ δ ]     = inl (t [ δ ])
+  inr t       [ δ ]     = inr (t [ δ ])
+  +-rec s l r [ δ ]     = +-rec (s [ δ ]) (l [ δ ^ _ ]) (r [ δ ^ _ ])
+  fst t       [ δ ]     = fst (t [ δ ])
+  snd t       [ δ ]     = snd (t [ δ ])
+  ⟨ t , u ⟩   [ δ ]     = ⟨ t [ δ ] , u [ δ ] ⟩
+  ze          [ δ ]     = ze
+  su t        [ δ ]     = su (t [ δ ])
+  ℕ-rec n z s [ δ ]     = ℕ-rec (n [ δ ]) (z [ δ ]) (s [ δ ^ _ ]) 
   
   _[_]ne : Ne Γ A → Vars Δ Γ → Ne Δ A
   _[_]nf : Nf Γ A → Vars Δ Γ → Nf Δ A
@@ -186,8 +243,10 @@ module Subst where
   
   <_> : Tm Γ A → Tms[ T ] Γ (Γ , A)
   < t > = id[ T ] , t
-  
-open Subst public
 
-ƛ⁻¹_ : Tm Γ (A ⇒ B) → Tm (Γ , A) B
-ƛ⁻¹ t = t [ id ⁺ _ ] · (` vz)
+  ƛ⁻¹_ : Tm Γ (A ⇒ B) → Tm (Γ , A) B
+  ƛ⁻¹ t = t [ id ⁺ _ ] · (` vz)
+
+  wk : Tms[ V ] (Γ , A) Γ
+  wk = id ⁺ _
+  
