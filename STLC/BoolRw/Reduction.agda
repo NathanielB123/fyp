@@ -1,8 +1,10 @@
 {-# OPTIONS --prop --rewriting --show-irrelevant #-}
 
 open import Utils
-open import STLC.BoolRw.Syntax
-open import STLC.SubstEq
+-- open import STLC.BoolRw.Syntax
+-- open import STLC.SubstEq
+open import STLC.Syntax2
+open import STLC.SubstEq2
 open import STLC.BoolRw.BoolFlip
 
 module STLC.BoolRw.Reduction where
@@ -18,8 +20,7 @@ variable
 -- 'false' with no restrictions.
 --
 -- The idea is that accessibility w.r.t. this over-approximation implies
--- accessibility w.r.t. the "true" reduction relation, but the well-foundedness
--- proofs are easier.
+-- accessibility w.r.t. the "true" reduction relation.
 data _[_]→_ : Tm Γ A → Sort→ → Tm Γ A → Set where
   -- We do a little Fording
   β         : ∀ {ƛt t[u]} → ƛt ≡ ƛ t → t[u] ≡ t [ < u > ] → (ƛt · u) [ β ]→ t[u]
@@ -155,4 +156,4 @@ acc a [ δ ]sn = acc (λ p → let u⁻¹ Σ, q Σ, r = [ δ ]→⁻¹ p
 
 [_]sn⁻¹_ : (δ : Vars Δ Γ) → SN Δ A (t [ δ ]) → SN Γ A t
 [ δ ]sn⁻¹ acc a = acc (λ p → [ δ ]sn⁻¹ a (p [ δ ]→))
- 
+  

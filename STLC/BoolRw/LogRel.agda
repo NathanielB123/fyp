@@ -4,8 +4,11 @@
 open import Utils
 open import Common.Sort
 
-open import STLC.BoolRw.Syntax
-open import STLC.SubstEq
+-- open import STLC.BoolRw.Syntax
+-- open import STLC.SubstEq
+open import STLC.Syntax2
+open import STLC.SubstEq2
+
 open import STLC.BoolRw.Reduction
 
 -- Logical relation/reducibility candidate/computability predicate
@@ -17,7 +20,7 @@ data inl/inr : Tm Γ A → Prop where
   inl : inl/inr (inl {A = A} {B = B} t)
   inr : inl/inr (inr {B = B} {A = A} t)
 
-inl/inr? : (t : Tm Γ A) → DecProp (inl/inr t)
+inl/inr? : (t : Tm Γ A) → Dec∥ inl/inr t ∥
 inl/inr? (inl t)       = yes inl
 inl/inr? (inr t)       = yes inr
 inl/inr? (` _)         = no λ ()
@@ -55,7 +58,7 @@ inl/inr[] {t = t} {δ = δ} with inl/inr? t | inl/inr? (t [ δ ])
 𝔹Val Γ t = SN Γ 𝔹' t
 
 +ValRec : ∀ Γ A B (ValA : Tm Γ A → Set) (ValB : Tm Γ B → Set)
-            (t : Tm Γ (A +' B)) → DecProp (inl/inr t) → Set
+            (t : Tm Γ (A +' B)) → Dec∥ inl/inr t ∥ → Set
       
 record +ValStkRec (Γ : Ctx) (A B : Ty) 
                   (ValA : Tm Γ A → Set) (ValB : Tm Γ B → Set)
@@ -78,7 +81,7 @@ Val : ∀ Γ A → Tm Γ A → Set
 +ValStk : ∀ Γ A B → Tm Γ (A +' B) → Set
 +ValStk Γ A B t = +ValStkRec Γ A B (Val Γ A) (Val Γ B) t
 
-+Val∣ : ∀ Γ A B (t : Tm Γ (A +' B)) → DecProp (inl/inr t) → Set
++Val∣ : ∀ Γ A B (t : Tm Γ (A +' B)) → Dec∥ inl/inr t ∥ → Set
 +Val∣ Γ A B t i = +ValRec Γ A B (Val Γ A) (Val Γ B) t i
 
 +Val : ∀ Γ A B → Tm Γ (A +' B) → Set
@@ -107,7 +110,7 @@ data Env (Δ : Ctx) : ∀ Γ → Tms[ T ] Δ Γ → Set where
   _,_ : Env Δ Γ δ → Val Δ A t → Env Δ (Γ , A) (δ , t)
 
 Val→ : t [ q→ ]→ u → Val Γ A t → Val Γ A u
-+Val→ : (i : DecProp (inl/inr t)) → t [ q→ ]→ u → +Val∣ Γ A B t i → +Val Γ A B u
++Val→ : (i : Dec∥ inl/inr t ∥) → t [ q→ ]→ u → +Val∣ Γ A B t i → +Val Γ A B u
 
 +Val→ (yes _) (inl p) tⱽ       = Val→ p tⱽ
 +Val→ (yes _) (inr p) tⱽ       = Val→ p tⱽ
@@ -118,7 +121,7 @@ Val→ {A = A +' B} p tⱽ               = +Val→ (inl/inr? _) p tⱽ
 Val→ {A = A ⇒ B}  p tⱽ      δ uⱽ uˢⁿ = Val→ (l· (p [ δ ]→)) (tⱽ δ uⱽ uˢⁿ)
 
 _∋_[_]V : ∀ A {t} → Val Γ A t → ∀ (δ : Vars Δ Γ) → Val Δ A (t [ δ ])
-_∣_[_]+V : ∀ (i : DecProp (inl/inr t)) → +Val∣ Γ A B t i 
+_∣_[_]+V : ∀ (i : Dec∥ inl/inr t ∥) → +Val∣ Γ A B t i 
          → (δ : Vars Δ Γ) → +Val Δ A B (t [ δ ])
 
 no ¬i ∣ acc tⱽ [ δ ]+V

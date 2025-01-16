@@ -3,8 +3,11 @@
 open import Utils
 open import Common.Sort
 
-open import STLC.BoolRw.Syntax
-open import STLC.SubstEq
+-- open import STLC.BoolRw.Syntax
+-- open import STLC.SubstEq
+open import STLC.Syntax2
+open import STLC.SubstEq2
+
 open import STLC.BoolRw.BoolFlip
 open import STLC.BoolRw.Reduction
 

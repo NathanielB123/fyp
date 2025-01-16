@@ -3,7 +3,8 @@
 open import Utils
 open import Common.Sort
 
-open import STLC.BoolRw.Syntax
+-- open import STLC.BoolRw.Syntax
+open import STLC.Syntax2
 
 -- Equivalence relation on terms corresponding to syntactic equality modulo 
 -- flipping booleans

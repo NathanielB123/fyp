@@ -3,8 +3,11 @@
 open import Utils
 open import Common.Sort
 
-open import STLC.BoolRw.Syntax
-open import STLC.SubstEq
+-- open import STLC.BoolRw.Syntax
+-- open import STLC.SubstEq
+open import STLC.Syntax2
+open import STLC.SubstEq2
+
 open import STLC.BoolRw.BoolFlip
 open import STLC.BoolRw.Reduction
 open import STLC.BoolRw.LogRel
@@ -55,7 +58,7 @@ SN-str (acc tˢⁿ) = acc λ p → SN-str (tˢⁿ (p [ wk ]→))
 -- Strengthening of computability predicates
 Val-str : Val (Γ , A) B (t [ wk ]) → Val Γ B t
 
-+Val-str∣ : (i : DecProp (inl/inr (t [ wk ]))) → +Val∣ (Γ , A) B C (t [ wk ]) i
++Val-str∣ : (i : Dec∥ inl/inr (t [ wk ]) ∥) → +Val∣ (Γ , A) B C (t [ wk ]) i
           → +Val∣ Γ B C t (map-Dec [ wk ]i⁻¹_ _[ wk ]i i)
 
 Val-str {B = 𝔹'}     tⱽ          = SN-str tⱽ
@@ -115,7 +118,7 @@ SN-inl (acc tˢⁿ) = acc λ where (inl p) → SN-inl (tˢⁿ p)
 SN-inr : SN Γ B t → SN Γ (A +' B) (inr t)
 SN-inr (acc tˢⁿ) = acc λ where (inr p) → SN-inr (tˢⁿ p)
 
-+reify∣ : (i : DecProp (inl/inr t)) → +Val∣ Γ A B t i → SN Γ (A +' B) t
++reify∣ : (i : Dec∥ inl/inr t ∥) → +Val∣ Γ A B t i → SN Γ (A +' B) t
 +reify∣             (no  _) (acc tⱽ) = acc λ q → reify (tⱽ q)
 +reify∣ {t = inl _} (yes _) tⱽ       = SN-inl (reify tⱽ)
 +reify∣ {t = inr _} (yes _) tⱽ       = SN-inr (reify tⱽ)

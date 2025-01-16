@@ -2,7 +2,8 @@
 
 open import Utils
 
-open import STLC.BoolRw.Syntax
+-- open import STLC.BoolRw.Syntax
+open import STLC.Syntax2
 open import STLC.BoolRw.BoolFlip
 open import STLC.BoolRw.Reduction
 
