@@ -8,12 +8,12 @@ open import Common.Sort
 open import STLC.Syntax2
 open import STLC.SubstEq2
 
-open import STLC.BoolRw.BoolFlip
-open import STLC.BoolRw.Reduction
+open import STLC.BoolRw.Views
+open import STLC.BoolRw.SpontRed
 
 module STLC.BoolRw.Lemmas where
 
-rw* : ¬IsBool {A = A} t → IsBool {A = A} u → t [ rw ]→ u
+rw* : ¬ t/f {A = A} t → t/f {A = A} u → t [ rw ]→ u
 rw* {u = true}  = rw
 rw* {u = false} = rw
 
@@ -73,11 +73,11 @@ rfl≡ : t ≡ u → t →* u
 rfl≡ refl = rfl
 
 data Sub- : ∀ Δ Γ → Tms[ T ] Δ Γ → Tms[ V ] Γ Δ → Set where
-  <_>- : IsBool t → Sub- Γ (Γ , A) < t > wk
+  <_>- : t/f t → Sub- Γ (Γ , A) < t > wk
   _^-_ : Sub- Δ Γ δ σ → ∀ A → Sub- (Δ , A) (Γ , A) (δ ^ A) (σ ^ A)
 
 boolsub : ∀ (i : Var Γ A) → Sub- Δ Γ δ σ 
-        → IsBool (i [ δ ]) ⊎ ((` i) ≡ i [ δ ] [ σ ])
+        → t/f (i [ δ ]) ⊎ ((` i) ≡ i [ δ ] [ σ ])
 boolsub vz     < b >-    = inl b
 boolsub vz     (δσ ^- A) = inr refl
 boolsub (vs i) < b >-    = inr refl
@@ -87,7 +87,7 @@ boolsub (vs i) (δσ ^- A) with boolsub i δσ
 
 boolsub→ : ∀ (t : Tm Γ A) → Sub- Δ Γ δ σ → t →* (t [ δ ] [ σ ])
 boolsub→ {σ = σ} (` i) δσ with boolsub i δσ
-... | inl b  = rw* tt (b [ σ ]b) ∷ rfl
+... | inl b  = rw* (λ ()) (b [ σ ]b) ∷ rfl
 ... | inr eq = rfl≡ eq
 boolsub→ (t · u)       δσ = l·* (boolsub→ t δσ) ++ ·r* (boolsub→ u δσ)
 boolsub→ (ƛ t)         δσ = ƛ* (boolsub→ t (δσ ^- _))
@@ -105,17 +105,18 @@ boolsub→ (+-rec t u v) δσ
 -- Todo: Generalise to parallel substitutions (we don't actually need to, but
 -- I think it would be neater)
 data Sub+ : ∀ Δ Γ → Tms[ T ] Δ Γ → Set where
-  <_>+ : ¬IsBool t → Sub+ Γ (Γ , A) < t >
+  <_>+ : ¬ t/f t → Sub+ Γ (Γ , A) < t >
   _^+_ : Sub+ Δ Γ δ → ∀ A → Sub+ (Δ , A) (Γ , A) (δ ^ A)
 
-[_]b+⁻¹_ : Sub+ Δ Γ δ → IsBool (t [ δ ]) → IsBool t
-[_]b+⁻¹_ {t = true}    δ+       tt = tt
-[_]b+⁻¹_ {t = false}   δ+       tt = tt
-[_]b+⁻¹_ {t = ` vz}    < ¬b >+  b  = ¬bool← ¬b b
-[_]b+⁻¹_ {t = ` vs i} (δ+ ^+ _) b  = [_]b+⁻¹_ {t = (` i)} δ+ ([ wk ]b⁻¹ b)
+[_]b+⁻¹_ : Sub+ Δ Γ δ → t/f (t [ δ ]) → t/f t
+[_]b+⁻¹_ {t = true}    δ+       true  = true
+[_]b+⁻¹_ {t = false}   δ+       false = false
+[_]b+⁻¹_ {t = ` vz}    < ¬b >+  b     = ⊥-elim (¬b b)
+[_]b+⁻¹_ {t = ` vs i} (δ+ ^+ _) b     
+  with () ← [_]b+⁻¹_ {t = (` i)} δ+ ([ wk ]b⁻¹ b)
 
-_[_]¬b+ : ¬IsBool t → Sub+ Δ Γ δ → ¬IsBool (t [ δ ])
-¬b [ δ+ ]¬b+ = ¬bool→ λ b → ¬bool← ¬b ([ δ+ ]b+⁻¹ b)
+_[_]¬b+ : ¬ t/f t → Sub+ Δ Γ δ → ¬ t/f (t [ δ ])
+(¬b [ δ+ ]¬b+) b = ¬b ([ δ+ ]b+⁻¹ b)
 
 _[_]→+ : t [ q→ ]→ u → Sub+ Δ Γ δ → (t [ δ ]) [ q→ ]→ (u [ δ ])
 _[_]→+ {δ = δ} (rw ¬b b) δ+ = rw (¬b [ δ+ ]¬b+) (b [ δ ]b)
@@ -133,3 +134,4 @@ rec-false   [ δ+ ]→+ = rec-false
 (+-rec₃ p)  [ δ+ ]→+ = +-rec₃ (p [ δ+ ^+ _ ]→+)
 (inl p)     [ δ+ ]→+ = inl (p [ δ+ ]→+)
 (inr p)     [ δ+ ]→+ = inr (p [ δ+ ]→+)
+  

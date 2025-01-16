@@ -9,50 +9,12 @@ open import Common.Sort
 open import STLC.Syntax2
 open import STLC.SubstEq2
 
-open import STLC.BoolRw.Reduction
+open import STLC.BoolRw.Views
+open import STLC.BoolRw.SpontRed
 
 -- Logical relation/reducibility candidate/computability predicate
 -- Naming it 'Val' is a hold-over from NbE. I probably should change this...
-module STLC.BoolRw.LogRel where
-
--- Todo: Move these views on terms into a separate module
-data inl/inr : Tm Γ A → Prop where
-  inl : inl/inr (inl {A = A} {B = B} t)
-  inr : inl/inr (inr {B = B} {A = A} t)
-
-inl/inr? : (t : Tm Γ A) → Dec∥ inl/inr t ∥
-inl/inr? (inl t)       = yes inl
-inl/inr? (inr t)       = yes inr
-inl/inr? (` _)         = no λ ()
-inl/inr? (_ · _)       = no λ ()
-inl/inr? (ƛ _)         = no λ ()
-inl/inr? true          = no λ ()
-inl/inr? false         = no λ ()
-inl/inr? (𝔹-rec _ _ _) = no λ ()
-inl/inr? (+-rec _ _ _) = no λ ()
-
-_[_]i : inl/inr t → (δ : Vars Δ Γ) → inl/inr (t [ δ ])
-inl [ δ ]i = inl
-inr [ δ ]i = inr
-
-[_]i⁻¹_ : (δ : Vars Δ Γ) → inl/inr (t [ δ ]) → inl/inr t
-[_]i⁻¹_ {t = inl _} δ inl = inl
-[_]i⁻¹_ {t = inr _} δ inr = inr
-
-_[_]¬i : ∥¬∥ inl/inr t → (δ : Vars Δ Γ) → ∥¬∥ inl/inr (t [ δ ])
-(¬i [ δ ]¬i) i[] = ¬i ([ δ ]i⁻¹ i[])
-
-[_]¬i⁻¹_ : (δ : Vars Δ Γ) → ∥¬∥ inl/inr (t [ δ ]) → ∥¬∥ inl/inr t
-([ δ ]¬i⁻¹ ¬i[]) i = ¬i[] (i [ δ ]i)
-
-inl/inr[] : {δ : Vars Δ Γ} → inl/inr? (t [ δ ]) .does ≡ inl/inr? t .does
-inl/inr[] {t = t} {δ = δ} with inl/inr? t | inl/inr? (t [ δ ])
-... | yes i | yes i[] = refl
-... | no ¬i | yes i[] = ∥⊥∥-elim (¬i ([ δ ]i⁻¹ i[]))
-... | yes i | no ¬i[] = ∥⊥∥-elim (¬i[] (i [ δ ]i))
-... | no ¬i | no ¬i[] = refl
-
-{-# REWRITE inl/inr[] #-}
+module STLC.BoolRw.Pred where
 
 𝔹Val : ∀ Γ → Tm Γ 𝔹' → Set
 𝔹Val Γ t = SN Γ 𝔹' t
@@ -97,7 +59,7 @@ Val Γ (A ⇒ B) t
 {-# INJECTIVE_FOR_INFERENCE +ValRec #-}
 {-# INJECTIVE_FOR_INFERENCE Val #-}
 
-stk-val : ∥¬∥ inl/inr t → +ValStk Γ A B t → +Val Γ A B t
+stk-val : ¬∥ inl/inr t ∥ → +ValStk Γ A B t → +Val Γ A B t
 stk-val {t = ` _}         ¬i tⱽ = tⱽ
 stk-val {t = _ · _}       ¬i tⱽ = tⱽ
 stk-val {t = 𝔹-rec _ _ _} ¬i tⱽ = tⱽ

@@ -8,18 +8,18 @@ open import Common.Sort
 open import STLC.Syntax2
 open import STLC.SubstEq2
 
-open import STLC.BoolRw.BoolFlip
-open import STLC.BoolRw.Reduction
-open import STLC.BoolRw.LogRel
+open import STLC.BoolRw.Views
+open import STLC.BoolRw.SpontRed
+open import STLC.BoolRw.Pred
 open import STLC.BoolRw.Lemmas
 
--- Strong normalisation of STLC + Boolean rewrites
+-- Strong normalisation of spontaneous reduction
 -- Based on https://github.com/AndrasKovacs/misc-stuff/blob/master/agda/STLCStrongNorm/StrongNorm.agda
 module STLC.BoolRw.StrongNorm where
 
-bool-sn : IsBool t → SN Γ A t
-bool-sn {t = true}  tt = true-sn
-bool-sn {t = false} tt = false-sn
+t/f-sn : t/f t → SN Γ A t
+t/f-sn {t = true}  _ = true-sn
+t/f-sn {t = false} _ = false-sn
 
 ValAcc : ∀ Γ A → Tm Γ A → Set
 ValAcc Γ A t = ∀ {q→ u} → t [ q→ ]→ u → Val Γ A u
@@ -59,7 +59,7 @@ SN-str (acc tˢⁿ) = acc λ p → SN-str (tˢⁿ (p [ wk ]→))
 Val-str : Val (Γ , A) B (t [ wk ]) → Val Γ B t
 
 +Val-str∣ : (i : Dec∥ inl/inr (t [ wk ]) ∥) → +Val∣ (Γ , A) B C (t [ wk ]) i
-          → +Val∣ Γ B C t (map-Dec [ wk ]i⁻¹_ _[ wk ]i i)
+          → +Val∣ Γ B C t (map-Dec∥∥ [ wk ]i⁻¹_ _[ wk ]i i)
 
 Val-str {B = 𝔹'}     tⱽ          = SN-str tⱽ
 Val-str {B = B +' C} {t = t} tⱽ  = +Val-str∣ (inl/inr? (t [ wk ])) tⱽ  
@@ -77,11 +77,11 @@ Val→* (p ∷ q) tⱽ = Val→* q (Val→ p tⱽ)
 eval-lam tuⱽ tˢⁿ tⱽ uˢⁿ uⱽ = reflect tt (eval-lam→ tuⱽ tˢⁿ tⱽ uˢⁿ uⱽ)
 
 eval-lam→ tuⱽ tˢⁿ tⱽ uˢⁿ uⱽ (β refl refl) = tuⱽ uⱽ
-eval-lam→ tuⱽ tˢⁿ tⱽ uˢⁿ uⱽ (rw ¬b b)     = bool-sn b
+eval-lam→ tuⱽ tˢⁿ tⱽ uˢⁿ uⱽ (rw ¬b b)     = t/f-sn b
 eval-lam→ tuⱽ (acc tˢⁿ) tⱽ uˢⁿ uⱽ (l· (ƛ_ {t₂ = t₂} p)) 
-  = eval-lam (λ {u = u′} uⱽ′ → case bool? u′ of λ where 
-                (inl b)  → Val-str (Val→* (boolsub→ t₂ < b >-) (Val→ p tⱽ))
-                (inr ¬b) → Val→ (p [ < ¬b >+ ]→+) (tuⱽ uⱽ′)) 
+  = eval-lam (λ {u = u′} uⱽ′ → case t/f? u′ of λ where 
+                (yes b) → Val-str (Val→* (boolsub→ t₂ < b >-) (Val→ p tⱽ))
+                (no ¬b) → Val→ (p [ < ¬b >+ ]→+) (tuⱽ uⱽ′)) 
              (tˢⁿ p) (Val→ p tⱽ) uˢⁿ uⱽ
 eval-lam→ tuⱽ tˢⁿ tⱽ (acc uˢⁿ) uⱽ (·r p) 
   = eval-lam tuⱽ tˢⁿ tⱽ (uˢⁿ p) (Val→ p uⱽ)
@@ -100,17 +100,17 @@ reflect {A = A ⇒ B}  {t = t} n tⱽ δ uⱽ uˢⁿ
   where t[]ⱽ : ValAcc _ _ (t [ δ ])
         t[]ⱽ p σ uⱽ with _ Σ, p Σ, refl ← [ δ ]→⁻¹ p = tⱽ p (δ ⨾ σ) uⱽ
 
-reflect-app (rw ¬b b)      n  tⱽ uₛₙ     uⱽ = bool-sn b
+reflect-app (rw ¬b b)      n  tⱽ uₛₙ     uⱽ = t/f-sn b
 reflect-app (β refl refl)  () tⱽ uₛₙ     uⱽ
 reflect-app (l· p)         n  tⱽ uₛₙ     uⱽ = tⱽ p id uⱽ uₛₙ
 reflect-app (·r p)         n  tⱽ (acc a) uⱽ 
   = reflect tt (λ q → reflect-app q n tⱽ (a p) (Val→ p uⱽ))
 
 vz-val : Val (Γ , A) A (` vz)
-vz-val = reflect tt λ where (rw ¬b b) → bool-sn b
+vz-val = reflect tt λ where (rw ¬b b) → t/f-sn b
 
 vz-sn  : SN (Γ , A) A (` vz)
-vz-sn = acc λ where (rw ¬b b) → bool-sn b
+vz-sn = acc λ where (rw ¬b b) → t/f-sn b
 
 SN-inl : SN Γ A t → SN Γ (A +' B) (inl t)
 SN-inl (acc tˢⁿ) = acc λ where (inl p) → SN-inl (tˢⁿ p)
@@ -141,7 +141,7 @@ eval-𝔹-rec tⱽ uˢⁿ uⱽ vˢⁿ vⱽ = reflect tt (eval-𝔹-rec→ tⱽ u
 
 eval-𝔹-rec→ tⱽ uˢⁿ uⱽ vˢⁿ vⱽ rec-true  = uⱽ
 eval-𝔹-rec→ tⱽ uˢⁿ uⱽ vˢⁿ vⱽ rec-false = vⱽ
-eval-𝔹-rec→ tⱽ uˢⁿ uⱽ vˢⁿ vⱽ (rw tt b) = bool-sn b
+eval-𝔹-rec→ tⱽ uˢⁿ uⱽ vˢⁿ vⱽ (rw _ b) = t/f-sn b
 eval-𝔹-rec→ (acc tⱽ) uˢⁿ uⱽ vˢⁿ vⱽ (𝔹-rec₁ p) 
   = eval-𝔹-rec (tⱽ p) uˢⁿ uⱽ vˢⁿ vⱽ
 eval-𝔹-rec→ tⱽ (acc uˢⁿ) uⱽ vˢⁿ vⱽ (𝔹-rec₂ p) 
@@ -160,7 +160,7 @@ eval-+-rec→ : Val Γ (A +' B) t → SN Γ (A +' B) t
 
 eval-+-rec tⱽ tˢⁿ uⱽ uˢⁿ vⱽ vˢⁿ = reflect tt (eval-+-rec→ tⱽ tˢⁿ uⱽ uˢⁿ vⱽ vˢⁿ)
 
-eval-+-rec→ tⱽ tˢⁿ u₁ⱽ u₁ˢⁿ u₂ⱽ u₂ˢⁿ (rw tt b)  = bool-sn b
+eval-+-rec→ tⱽ tˢⁿ u₁ⱽ u₁ˢⁿ u₂ⱽ u₂ˢⁿ (rw _ b)  = t/f-sn b
 eval-+-rec→ tⱽ (acc tˢⁿ) u₁ⱽ u₁ˢⁿ u₂ⱽ u₂ˢⁿ (+-rec₁ p) 
   = eval-+-rec (Val→ p tⱽ) (tˢⁿ p) u₁ⱽ u₁ˢⁿ u₂ⱽ u₂ˢⁿ
 eval-+-rec→ tⱽ tˢⁿ u₁ⱽ (acc u₁ˢⁿ) u₂ⱽ u₂ˢⁿ (+-rec₂ p) 

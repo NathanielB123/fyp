@@ -5,9 +5,9 @@ open import Utils
 -- open import STLC.SubstEq
 open import STLC.Syntax2
 open import STLC.SubstEq2
-open import STLC.BoolRw.BoolFlip
+open import STLC.BoolRw.Views
 
-module STLC.BoolRw.Reduction where
+module STLC.BoolRw.SpontRed where
 
 data Sort→ : Set where
   β rw : Sort→ 
@@ -16,8 +16,8 @@ variable
   q→ r→ s→ : Sort→
 
 -- This relation is an over-approximation of the reduction rules we actually
--- plan on using. E.g. it allows rewriting arbitrary boolean terms to 'true' or 
--- 'false' with no restrictions.
+-- plan on using. E.g. it allows rewriting arbitrary boolean terms 
+-- "spontaneously" to 'true' or 'false' with no restrictions.
 --
 -- The idea is that accessibility w.r.t. this over-approximation implies
 -- accessibility w.r.t. the "true" reduction relation.
@@ -26,7 +26,7 @@ data _[_]→_ : Tm Γ A → Sort→ → Tm Γ A → Set where
   β         : ∀ {ƛt t[u]} → ƛt ≡ ƛ t → t[u] ≡ t [ < u > ] → (ƛt · u) [ β ]→ t[u]
   rec-true  : 𝔹-rec true u v [ β ]→ u
   rec-false : 𝔹-rec false u v [ β ]→ v
-  rw        : ¬IsBool {A = 𝔹'} t → IsBool {A = 𝔹'} u → t [ rw ]→ u
+  rw        : ¬ t/f {A = 𝔹'} t → t/f {A = 𝔹'} u → t [ rw ]→ u
 
   l·     : t₁ [ q→ ]→ t₂ → (t₁ · u) [ q→ ]→ (t₂ · u) 
   ·r     : u₁ [ q→ ]→ u₂ → (t · u₁) [ q→ ]→ (t · u₂)
@@ -120,8 +120,8 @@ inr p       [ δ ]→ = inr (p [ δ ]→)
   = let t⁻¹     Σ, p′     Σ, q = [_]→⁻¹_ {t = t} δ p
      in inr t⁻¹ Σ, inr p′ Σ, cong inr q
 
-[_]→⁻¹_ {u = true}  δ (rw ¬b tt) = true  Σ, rw ([ δ ]¬b⁻¹ ¬b) tt Σ, refl
-[_]→⁻¹_ {u = false} δ (rw ¬b tt) = false Σ, rw ([ δ ]¬b⁻¹ ¬b) tt Σ, refl
+[_]→⁻¹_ {u = true}  δ (rw ¬b _) = true  Σ, rw ([ δ ]¬b⁻¹ ¬b) true  Σ, refl
+[_]→⁻¹_ {u = false} δ (rw ¬b _) = false Σ, rw ([ δ ]¬b⁻¹ ¬b) false Σ, refl
 
 data SN Γ A : Tm Γ A → Set where
   acc : (∀ {q→ u} → t [ q→ ]→ u → SN Γ A u) → SN Γ A t
@@ -145,10 +145,10 @@ SN-𝔹-rec₃ : SN Γ A (𝔹-rec t u v) → SN Γ A v
 SN-𝔹-rec₃ (acc f) = acc (λ p → SN-𝔹-rec₃ (f (𝔹-rec₃ p)))
 
 true-sn : SN Γ 𝔹' true
-true-sn = acc (λ where (rw () _))
+true-sn = acc (λ where (rw ¬b _) → ⊥-elim (¬b true))
 
 false-sn : SN Γ 𝔹' false
-false-sn = acc (λ where (rw () _))
+false-sn = acc (λ where (rw ¬b _) → ⊥-elim (¬b false))
 
 _[_]sn : SN Γ A t → ∀ (δ : Vars Δ Γ) → SN Δ A (t [ δ ])
 acc a [ δ ]sn = acc (λ p → let u⁻¹ Σ, q Σ, r = [ δ ]→⁻¹ p 
