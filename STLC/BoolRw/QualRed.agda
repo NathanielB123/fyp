@@ -70,7 +70,7 @@ data _⊢SN_ (Ξ : Rws Γ) (t : Tm Γ A) : Set where
 ⊢sn-helper (acc a) = acc λ p → {!p  !}
 
 _⊢sn_ : ∀ Ξ (t : Tm Γ A) → Ξ ⊢SN t
-Ξ ⊢sn t = {!  !}
+Ξ ⊢sn t = {!   !}
 
 _⊢nf_ : ∀ Ξ (t : Tm Γ A) → Set
 Ξ ⊢nf t = ∀ {u} → ¬ Ξ ⊢ t →s u

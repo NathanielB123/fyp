@@ -7,6 +7,9 @@ module STLC.Syntax where
 
 record Extensions : Set where
   constructor ⟨ƛ≔_,⊤≔_,𝔹≔_,+≔_,×≔_,ℕ≔_⟩
+  -- We disable eta equality in a desparate attempt to bring typechecking time
+  -- down (it unfortunately does not help all that much...)
+  no-eta-equality
   field
     ƛ? : Bool
     ⊤? : Bool
@@ -131,11 +134,12 @@ module Syntax where
     true  : Nf 𝕏∪𝔹 Γ 𝔹'
     false : Nf 𝕏∪𝔹 Γ 𝔹'
 
+open Syntax 
+  renaming (Ctx to _⊢Ctx; Ty to _⊢Ty; Tm[_] to [_]_⊢Tm; Tm to _⊢Tm; Var to _⊢Var
+           ; Ne to _⊢Ne; Nf to _⊢Nf) 
+  public
+
 module Parameterised (𝕏 : Extensions) where
-  open Syntax renaming 
-    (Ctx to _⊢Ctx; Ty to _⊢Ty; Tm[_] to [_]_⊢Tm; Tm to _⊢Tm; Var to _⊢Var
-    ; Ne to _⊢Ne; Nf to _⊢Nf) 
-    public
   Ctx   = 𝕏 ⊢Ctx
   Ty    = 𝕏 ⊢Ty
   Tm[_] = [_] 𝕏 ⊢Tm

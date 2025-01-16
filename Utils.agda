@@ -13,7 +13,8 @@ open import Relation.Binary.PropositionalEquality
   renaming (trans to infixr 4 _∙_)
   public
 open import Relation.Binary.HeterogeneousEquality
-  using (_≅_; refl) 
+  using (_≅_; refl)
+  renaming (cong to hcong; cong₂ to hcong₂) 
   public
 open import Data.Bool using (Bool; true; false) public
 open import Data.Sum using (_⊎_) renaming (inj₁ to inl; inj₂ to inr) public
@@ -30,12 +31,6 @@ open import Relation.Binary.Construct.Closure.Transitive
 open import Data.Maybe using (Maybe; just; nothing) public
 open import Function using (_∘_; case_of_) public
 
--- TODO: Figure out how we want to expose 'Dec'idability of proof-relevant
--- stuff
--- open import Relation.Nullary.Reflects using (Reflects; ofʸ; ofⁿ) public
--- open import Relation.Nullary.Decidable 
---   using (Dec; _because_; does) public
-
 variable
   ℓ : Level
   ℓ₁ ℓ₂ ℓ₃ : Level
@@ -48,29 +43,43 @@ data ∥⊥∥ : Prop where
 ∥¬∥_ : Prop ℓ → Prop ℓ
 ∥¬∥ p = p → ∥⊥∥
 
-reflects : Prop ℓ → Bool → Prop ℓ
+-- I prefer this reducing definition of 'reflects' to the Agda Standard Library
+-- indexed definition
+reflects : Set ℓ → Bool → Set ℓ
 reflects p true  = p
-reflects p false = ∥¬∥ p
+reflects p false = ¬ p
 
-map-reflects : ∀ {P : Prop ℓ₁} {Q : Prop ℓ₂} {b : Bool} 
-             → (P → Q) → (Q → P) → reflects P b → reflects Q b
-map-reflects {b = true}  pq qp p    = pq p
-map-reflects {b = false} pq qp ¬p q = ¬p (qp q)
+-- Agda could really do with sort-polymorphism...
+∥reflects∥ : Prop ℓ → Bool → Prop ℓ
+∥reflects∥ p true  = p
+∥reflects∥ p false = ∥¬∥ p
 
-record DecProp (A : Prop ℓ) : Set ℓ where
+map-∥reflects∥ : ∀ {P : Prop ℓ₁} {Q : Prop ℓ₂} {b : Bool} 
+             → (P → Q) → (Q → P) → ∥reflects∥ P b → ∥reflects∥ Q b
+map-∥reflects∥ {b = true}  pq qp p    = pq p
+map-∥reflects∥ {b = false} pq qp ¬p q = ¬p (qp q)
+
+record Dec∥_∥ (A : Prop ℓ) : Set ℓ where
+  constructor _because_
+  field
+    does  : Bool
+    proof : ∥reflects∥ A does
+
+open Dec∥_∥ public
+
+record Dec (A : Set ℓ) : Set ℓ where
   constructor _because_
   field
     does  : Bool
     proof : reflects A does
-
-open DecProp public
+open Dec public
 
 pattern yes a = true  because a
 pattern no  a = false because a
 
 map-Dec : ∀ {P : Prop ℓ₁} {Q : Prop ℓ₂} 
-        → (P → Q) → (Q → P) → DecProp P → DecProp Q
-map-Dec pq qp (b because p) = b because map-reflects pq qp p
+        → (P → Q) → (Q → P) → Dec∥ P ∥ → Dec∥ Q ∥
+map-Dec pq qp (b because p) = b because map-∥reflects∥ pq qp p
 
 _≡[_]≡_ : ∀ {A B : Set ℓ} → A → A ≡ B → B 
         → Set ℓ
