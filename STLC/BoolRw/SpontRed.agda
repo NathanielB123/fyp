@@ -123,11 +123,13 @@ inr p       [ δ ]→ = inr (p [ δ ]→)
 [_]→⁻¹_ {u = true}  δ (rw ¬b _) = true  Σ, rw ([ δ ]¬b⁻¹ ¬b) true  Σ, refl
 [_]→⁻¹_ {u = false} δ (rw ¬b _) = false Σ, rw ([ δ ]¬b⁻¹ ¬b) false Σ, refl
 
-data SN Γ A : Tm Γ A → Set where
-  acc : (∀ {q→ u} → t [ q→ ]→ u → SN Γ A u) → SN Γ A t
-
-sn : SN Γ A t → t [ q→ ]→ u → SN Γ A u
-sn (acc a) p = a p
+record SN Γ A (t : Tm Γ A) : Set where
+  constructor acc
+  inductive
+  pattern
+  field
+    sn : t [ q→ ]→ u → SN Γ A u 
+open SN public
 
 SN-l· : SN Γ B (t · u) → SN Γ (A ⇒ B) t
 SN-l· (acc f) = acc (λ p → SN-l· (f (l· p)))

@@ -35,13 +35,26 @@ variable
   ℓ : Level
   ℓ₁ ℓ₂ ℓ₃ : Level
 
+private variable
+  A B : Set ℓ
+  P Q : Prop ℓ
+
+record Box (P : Prop ℓ) : Set ℓ where
+  constructor box
+  field
+    unbox : P
+open Box public
+
 data ∥⊥∥ : Prop where
 
-∥⊥∥-elim : ∀ {A : Set ℓ} → ∥⊥∥ → A
+∥⊥∥-elim : ∥⊥∥ → A
 ∥⊥∥-elim ()
 
-∥¬∥_ : Prop ℓ → Prop ℓ
-∥¬∥ p = p → ∥⊥∥
+∥⊥-elim_∥ : ∥⊥∥ → P
+∥⊥-elim_∥ ()
+
+¬∥_∥ : Prop ℓ → Prop ℓ
+¬∥ p ∥ = p → ∥⊥∥
 
 -- I prefer this reducing definition of 'reflects' to the Agda Standard Library
 -- indexed definition
@@ -52,12 +65,15 @@ reflects p false = ¬ p
 -- Agda could really do with sort-polymorphism...
 ∥reflects∥ : Prop ℓ → Bool → Prop ℓ
 ∥reflects∥ p true  = p
-∥reflects∥ p false = ∥¬∥ p
+∥reflects∥ p false = ¬∥ p ∥
 
-map-∥reflects∥ : ∀ {P : Prop ℓ₁} {Q : Prop ℓ₂} {b : Bool} 
-             → (P → Q) → (Q → P) → ∥reflects∥ P b → ∥reflects∥ Q b
+map-∥reflects∥ : ∀ {b} → (P → Q) → (Q → P) → ∥reflects∥ P b → ∥reflects∥ Q b
 map-∥reflects∥ {b = true}  pq qp p    = pq p
 map-∥reflects∥ {b = false} pq qp ¬p q = ¬p (qp q)
+
+map-reflects : ∀ {b} → (A → B) → (B → A) → reflects A b → reflects B b
+map-reflects {b = true}  f g x    = f x
+map-reflects {b = false} f g ¬x y = ¬x (g y)
 
 record Dec∥_∥ (A : Prop ℓ) : Set ℓ where
   constructor _because_
@@ -77,9 +93,11 @@ open Dec public
 pattern yes a = true  because a
 pattern no  a = false because a
 
-map-Dec : ∀ {P : Prop ℓ₁} {Q : Prop ℓ₂} 
-        → (P → Q) → (Q → P) → Dec∥ P ∥ → Dec∥ Q ∥
-map-Dec pq qp (b because p) = b because map-∥reflects∥ pq qp p
+map-Dec∥∥ : (P → Q) → (Q → P) → Dec∥ P ∥ → Dec∥ Q ∥
+map-Dec∥∥ pq qp (b because p) = b because map-∥reflects∥ pq qp p
+
+map-Dec : (A → B) → (B → A) → Dec A → Dec B
+map-Dec pq qp (b because p) = b because map-reflects pq qp p
 
 _≡[_]≡_ : ∀ {A B : Set ℓ} → A → A ≡ B → B 
         → Set ℓ
