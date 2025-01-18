@@ -1,0 +1,47 @@
+% Inspired by Loïc Pujet's thesis
+
+%\mdfsetup{skipabove=\topskip,skipbelow=0pt}
+\mdfdefinestyle{kaoboxstyle}{
+	skipabove=1.5\topskip,
+	skipbelow=.5\topskip,
+	rightmargin=0pt,
+	leftmargin=0pt,
+	innertopmargin=12pt,
+	%innerbottommargin=3pt,
+	innerrightmargin=7pt,
+	innerleftmargin=7pt,
+	topline=false,
+	bottomline=false,
+	rightline=false,
+	leftline=false,
+	%linewidth=1pt,
+	%roundcorner=0pt,
+	%font={},
+	%frametitlefont={},
+	frametitlerule=true,
+	linecolor=black,
+	%backgroundcolor=LightBlue,
+	fontcolor=black,
+	%frametitlebackgroundcolor=LightBlue,
+}
+
+\definecolor{remarkcolor}{rgb}{0.2,0.4,0.8}
+
+\newmdenv[
+	style=kaoboxstyle,
+	backgroundcolor=remarkcolor!25!White,
+	frametitlebackgroundcolor=remarkcolor!25!White,
+]{remarkbox}
+
+\NewDocumentCommand\sideremark{ o m }{%
+	\marginnote[#1]{\begin{remarkbox}#2\end{remarkbox}}
+}%
+
+\NewDocumentCommand\remarknote{ o o m }{%
+	\IfNoValueOrEmptyTF{#1}{%
+		\refstepcounter{sidenote}% This command has been moved here
+	}{%
+	}%
+	\sidenotemark[#1]%
+	\marginnote[#2]{\begin{remarkbox}\thesidenote: #3\end{remarkbox}}
+}

@@ -1,0 +1,83 @@
+% "\newunicodechar" and "%format" do similar but not exactly the same thing:
+% - "\newunicodechar" works outside of code blocks and is always required for 
+%   any characters not in "[utf8]{inputenc}". I'm not entirely sure why but 
+%   perhaps it errors before "%format" fires.
+%   Note that traditionally one would use "[utf8x]{inputenc}" which declares
+%   WAY more unicode characters, but this is sadly incompatible with biblatex...
+% - "%format" can replace strings of characters as well as individual ones (in
+%   fact, it only replaces if the entire LHS word matches) and overrides 
+%   "newunicodechar" (specifically, "\newunicodechar" doesn't actually replace 
+%   the unicode character - it only alters how it is displayed, while 
+%   "%format" actually does a replacement)
+
+% Based on this distinction, I am organising this file as follows:
+% - "\newunicodechar" declarations are intended to define as-close-as-possible
+%   translations to the original unicode symbol (even if we might actually
+%   desire it to be displayed a slightly different way in the final .pdf)
+%   i.e. "\newunicodechar"s basically should never change.
+% - "%format" declarations deal with fixing kerning on sequences of unicode, and
+%   perform aesthetic replacements (for example, removing the bar from "ƛ")
+
+% The main downside of this approach that I can think of is that inconsistencies
+% due to words not matching exactly can crop up silently (e.g. one could 
+% "%format ƛ λ" but forget "%format ƛ_ λ_"). I am hoping that ctrl+f-ing the
+% output "main.tex" file for unreplaced characters will be a good-enough
+% solution here.
+
+%seperation 2
+%latency 2
+
+\newunicodechar{β}{$\beta$}
+\newunicodechar{δ}{$\delta$}
+\newunicodechar{σ}{$\sigma$}
+\newunicodechar{ξ}{$\xi$}
+\newunicodechar{λ}{$\lambda$}
+\newunicodechar{ƛ}{$\lambdabar$}
+\newunicodechar{η}{$\eta$}
+\newunicodechar{ε}{$\varepsilon$}
+\newunicodechar{Γ}{$\Gamma$}
+\newunicodechar{Δ}{$\Delta$}
+
+\newunicodechar{∀}{$\forall$}
+\newunicodechar{≡}{$\equiv$}
+\newunicodechar{⇒}{$\Rightarrow$}
+\newunicodechar{⊎}{$\uplus$}
+\newunicodechar{⊤}{$\top$}
+\newunicodechar{⊥}{$\bot$}
+\newunicodechar{⊢}{$\vdash$}
+
+\newunicodechar{𝔹}{$\mathbb{B}$}
+\newunicodechar{ℕ}{$\mathbb{N}$}
+\newunicodechar{ℤ}{$\mathbb{Z}$}
+
+\newunicodechar{⊔}{$\sqcup$}
+\newunicodechar{↦}{$\mapsto$}
+
+\newunicodechar{∞}{$\infty$}
+
+\newunicodechar{₁}{$_{1}$}
+\newunicodechar{₂}{$_{2}$}
+\newunicodechar{₃}{$_{3}$}
+\newunicodechar{ᵢ}{$_{i}$}
+\newunicodechar{ₙ}{$_{n}$}
+
+% \newunicodechar{¹}{$^{1}$}
+\newunicodechar{ᵉ}{$^{e}$}
+\newunicodechar{⁻}{$^{-}$}
+\newunicodechar{⁺}{$^{+}$}
+\newunicodechar{ᶠ}{$_{f}$}
+\newunicodechar{ⁱ}{$^{i}$}
+\newunicodechar{ⁿ}{$^{n}$}
+
+%format ƛ    = λ
+%format ƛ⁻¹  = ƛ ⁻¹
+
+%format ƛ_   = λ _
+%format ƛ⁻¹_ = ƛ⁻¹ _ 
+
+%format `_ = "\texttt{\textasciigrave}" _
+%format ` = "\texttt{\textasciigrave}"
+
+%format Type = "\Keyword{Type}"
+%format data = " "
+%format Set = Type

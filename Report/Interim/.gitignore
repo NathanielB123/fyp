@@ -1,0 +1,14 @@
+*.toc
+*.out
+*.pdf
+*.log
+*.mw
+*.blg
+*.bcf
+*.aux
+*.bbl
+*.ptb
+*.run.xml
+
+_build/
+scraps/
