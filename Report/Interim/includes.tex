@@ -17,6 +17,16 @@
 %----------------------------------------------------------------------------------------
 %	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
 %----------------------------------------------------------------------------------------
+
+\usepackage[english]{babel}
+\usepackage{csquotes} % Wanted by babel/polglossia from biblatex
+
+\usepackage{kaobiblio}
+\let\openbox\relax
+\let\thmname\relax
+\usepackage[framed=true]{kaotheorems}
+\usepackage{kaorefs}
+
 \usepackage{textpos}
 \usepackage{tabularx,longtable,multirow,subfigure,caption}%hangcaption
 
@@ -27,11 +37,12 @@
 \usepackage{abstract}
 
 \usepackage{url} % URLs
-\usepackage[english]{babel}
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{graphicx}
 \usepackage{dsfont}
+\let\refeq\relax
+\usepackage{mathtools}
 
 % Not supported by pdflatex
 % \usepackage{fontspec}  
@@ -42,9 +53,6 @@
 
 \usepackage{tikz}
 \usepackage[framemethod=TikZ]{mdframed} % framing around side-notes
-
-\usepackage{csquotes} % Wanted by babel/polglossia from biblatex
-\usepackage{kaobiblio}
 
 \addbibresource{main.bib} % Bibliography file
 
@@ -90,9 +98,6 @@
 % \rendercommand*{\sfdefault}{???}
 % Code font
 % \renewcommand*{\ttdefault}{cmtt}
-
-% % Set fonts for LuaTeX (via fontspec package)
-% \setmainfont{xcharter}
 
 
 

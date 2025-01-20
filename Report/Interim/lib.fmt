@@ -37,6 +37,7 @@
 \newunicodechar{ε}{$\varepsilon$}
 \newunicodechar{Γ}{$\Gamma$}
 \newunicodechar{Δ}{$\Delta$}
+\newunicodechar{Π}{$\Pi$}
 
 \newunicodechar{∀}{$\forall$}
 \newunicodechar{≡}{$\equiv$}
@@ -45,6 +46,8 @@
 \newunicodechar{⊤}{$\top$}
 \newunicodechar{⊥}{$\bot$}
 \newunicodechar{⊢}{$\vdash$}
+\newunicodechar{∘}{$\circ$}
+\newunicodechar{∎}{$\blacksquare$}
 
 \newunicodechar{𝔹}{$\mathbb{B}$}
 \newunicodechar{ℕ}{$\mathbb{N}$}
@@ -52,8 +55,10 @@
 
 \newunicodechar{⊔}{$\sqcup$}
 \newunicodechar{↦}{$\mapsto$}
+\newunicodechar{⟶}{$\longrightarrow$}
 
 \newunicodechar{∞}{$\infty$}
+\newunicodechar{≥}{$\geq$}
 
 \newunicodechar{₁}{$_{1}$}
 \newunicodechar{₂}{$_{2}$}
@@ -68,16 +73,28 @@
 \newunicodechar{ᶠ}{$_{f}$}
 \newunicodechar{ⁱ}{$^{i}$}
 \newunicodechar{ⁿ}{$^{n}$}
+\newunicodechar{∙}{$\bullet$}
+
+\newunicodechar{′}{$'$}
 
 %format ƛ    = λ
 %format ƛ⁻¹  = ƛ ⁻¹
 
 %format ƛ_   = λ _
-%format ƛ⁻¹_ = ƛ⁻¹ _ 
+%format ƛ⁻¹_ = ƛ⁻¹ _
 
 %format `_ = "\texttt{\textasciigrave}" _
 %format ` = "\texttt{\textasciigrave}"
 
 %format Type = "\Keyword{Type}"
-%format data = " "
-%format Set = Type
+%format Set  = Type
+
+%format ≡   = "="
+%format _≡_ = _ "\!" "=" "\!" _
+%format ≡⟨  = "=" "\textit{by}" "\;" "\langle"
+%format =   = "\colonequiv"
+%format ==  = "\equiv"
+%format _=_ = _ "\!" == "\!" _
+%format ∀   = "\Pi"
+%format ⊎   = "+"
+%format _⊎_ = _ "\!" "+" "\!" _

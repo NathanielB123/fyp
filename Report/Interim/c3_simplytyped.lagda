@@ -5,7 +5,7 @@
 open import Utils
 open import Common.Sort
 
-module Report.Interim.chapters.simplytyped where
+module Report.Interim.c3_simplytyped where
 
 infixr 5 _⇒_
 infixl 4  _,_
@@ -15,7 +15,10 @@ infix  7  `_
 \end{code}
 %endif
 
+\setchapterpreamble[u]{\margintoc}
+
 \chapter{Simply Typed Lambda Calculus with Closed Boolean Rewrites}
+\labch{simply}
 
 \section{Syntax}
 
@@ -239,29 +242,30 @@ Spontaneous Reduction
 \begin{code}
 t/f : Tm Γ A → Set
 
-data _→!_ : Tm Γ A → Tm Γ A → Set where
+data _⟶!_ : Tm Γ A → Tm Γ A → Set where
 \end{code}
 
 Standard beta reductions
 \begin{code}
-  β         : ∀ {ƛt t[u]} → ƛt ≡ ƛ t → t[u] ≡ t [ < u > ] → (ƛt · u) →! t[u]
-  rec-true  : 𝔹-rec true u v →! u
-  rec-false : 𝔹-rec false u v →! v
+  β         : ∀ {ƛt t[u]} → ƛt ≡ ƛ t → t[u] ≡ t [ < u > ] → (ƛt · u) ⟶! t[u]
+  rec-true  : 𝔹-rec true u v ⟶! u
+  rec-false : 𝔹-rec false u v ⟶! v
 \end{code}
 
 Spontaneous reduction
 \begin{code}
-  rw        : ¬ t/f {A = 𝔹'} t → t/f {A = 𝔹'} u → t →! u
+  rw        : ¬ t/f {A = 𝔹'} t → t/f {A = 𝔹'} u → t ⟶! u
 \end{code}
 
 Congruence rules
+
 \begin{code}
-  -- l·     : t₁ [ q→ ]→ t₂ → (t₁ · u) [ q→ ]→ (t₂ · u) 
-  -- ·r     : u₁ [ q→ ]→ u₂ → (t · u₁) [ q→ ]→ (t · u₂)
-  -- ƛ_     : t₁ [ q→ ]→ t₂ → (ƛ t₁)   [ q→ ]→ (ƛ t₂)
-  -- 𝔹-rec₁ : t₁ [ q→ ]→ t₂ → 𝔹-rec t₁ u v [ q→ ]→ 𝔹-rec t₂ u v
-  -- 𝔹-rec₂ : u₁ [ q→ ]→ u₂ → 𝔹-rec t u₁ v [ q→ ]→ 𝔹-rec t u₂ v
-  -- 𝔹-rec₃ : v₁ [ q→ ]→ v₂ → 𝔹-rec t u v₁ [ q→ ]→ 𝔹-rec t u v₂
+  l·     : t₁ ⟶! t₂ → (t₁ · u) ⟶! (t₂ · u) 
+  ·r     : u₁ ⟶! u₂ → (t · u₁) ⟶! (t · u₂)
+  ƛ_     : t₁ ⟶! t₂ → (ƛ t₁)   ⟶! (ƛ t₂)
+  𝔹-rec₁ : t₁ ⟶! t₂ → 𝔹-rec t₁ u v ⟶! 𝔹-rec t₂ u v
+  𝔹-rec₂ : u₁ ⟶! u₂ → 𝔹-rec t u₁ v ⟶! 𝔹-rec t u₂ v
+  𝔹-rec₃ : v₁ ⟶! v₂ → 𝔹-rec t u v₁ ⟶! 𝔹-rec t u v₂
 \end{code}
 % ---------------------------------------------------------------------------- %
 

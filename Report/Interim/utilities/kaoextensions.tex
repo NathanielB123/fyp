@@ -26,12 +26,19 @@
 }
 
 \definecolor{remarkcolor}{rgb}{0.2,0.4,0.8}
+\definecolor{remarkcolor2}{rgb}{0.2,0.8,0.4}
 
 \newmdenv[
 	style=kaoboxstyle,
 	backgroundcolor=remarkcolor!25!White,
 	frametitlebackgroundcolor=remarkcolor!25!White,
 ]{remarkbox}
+
+\newmdenv[
+	style=kaoboxstyle,
+	backgroundcolor=remarkcolor2!25!White,
+	frametitlebackgroundcolor=remarkcolor2!25!White,
+]{remarkbox2}
 
 \NewDocumentCommand\sideremark{ o m }{%
 	\marginnote[#1]{\begin{remarkbox}#2\end{remarkbox}}
@@ -43,5 +50,5 @@
 	}{%
 	}%
 	\sidenotemark[#1]%
-	\marginnote[#2]{\begin{remarkbox}\thesidenote: #3\end{remarkbox}}
+	\marginnote[#2]{\begin{remarkbox2}\thesidenote: #3\end{remarkbox2}}
 }

@@ -9,14 +9,46 @@ module Report.Interim.chapters.background where
 \end{code}
 %endif
 
+\setchapterpreamble[u]{\margintoc}
 
 \chapter{Background and Related Work}
+\labch{background}
+
+\section{Dependent Pattern Matching and LHS Unification}
+
+Proof assistents like Agda that feature both metavariables and dependent pattern
+matching benefit from using two different unification algorithms 
+\sidecite{norell2007towards}: One often referred to as "RHS unification" 
+designed to solve metavariables and the other "LHS unification" to deal with
+pattern-matching.
+
+The motivation for this distinction is that the desired properties of each
+unification procedure are different. RHS unification is allowed to fill
+metavariables whenever they are unique up to definitional equality, meaning
+e.g. neutral equations like |f x = f ?0| can be solved with |?0 = x|.
+
+LHS unification needs to be more careful.
+
+In fact RHS unification can be even bolder: e.g. lossily solving 
+|pred x = pred ?0| with |?0 = x|
+
+Agda's approach the LHS unification then is to ...
+
+\subsection{Green Slime}
+
+....
+
+
 
 \section{Equality in Type Theory}
+
+
 
 % I think we need to move some of the conversion stuff to here because the
 % immediately below sections really rely on it...
 
+
+To further motivate
 
 \section{Smart Case}
 
@@ -213,8 +245,7 @@ dependent types \sidecite{altenkirch2020big}.
 
 
 Much of the original work on "Smart Case" attacked the problem using big step
-reduction (\sidecite{Agda mailing list 
-https://lists.chalmers.se/pipermail/agda/2009/001106.html}, private 
+reduction (\sidecite{altenkirch2009smart}, private 
 communication with Thorsten Altenkirch). Looking up a neutral expression
 in a set of constraints is not too tricky, but problems seem to occur when
 merging constraint sets (the main necessary case is adding one new constraint

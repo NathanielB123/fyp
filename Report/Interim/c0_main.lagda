@@ -7,7 +7,7 @@ module Report.Interim.c0_main where
 % \documentclass[12pt,twoside]{report}
 \documentclass[
     a4paper, % Page size
-    fontsize=11pt, % Base font size
+    fontsize=9.5pt, % Base font size
     twoside=false, % Use different layouts for even and odd pages (in particular, if twoside=true, the margin column will be always on the outside)
 	%open=any, % If twoside=true, uncomment this to force new chapters to start on any page, not only on right (odd) pages
 	%chapterentrydots=true, % Uncomment to output dots from the chapter name to the page number in the table of contents
@@ -36,7 +36,7 @@ module Report.Interim.c0_main where
 %include config.lagda
 
 %include lhs2TeX.fmt
-%include polycode.fmt
+%%include polycode.fmt
 %include agda_tweaked.fmt
 %include lib.fmt
 
@@ -69,7 +69,6 @@ module Report.Interim.c0_main where
 %--- table of contents
 % \fancyhead[RE,LO]{\sffamily {Table of Contents}}
 \tableofcontents 
-
 
 \clearpage{\pagestyle{empty}\cleardoublepage}
 \pagenumbering{arabic}

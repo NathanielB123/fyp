@@ -1,4 +1,7 @@
+\setchapterpreamble[u]{\margintoc}
+
 \chapter{Type Theory with Equational Assumptions}
+\labch{dependently}
 
 Unlike with the simply typed case, we will delay the settling on concrete syntax
 until we have examined several examples. One might find the lack of pinning down
