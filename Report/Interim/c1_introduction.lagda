@@ -17,7 +17,7 @@ module Report.Interim.c1_introduction where
 
 Dependent pattern matching is the common extension of pattern matching to 
 dependently-typed programming languages
-\sidecite[*6]{coquand1992pattern}, \sidecite[*8]{cockx2017dependent},
+\sidecite[*8]{coquand1992pattern}, \sidecite[*10]{cockx2017dependent},
 where on top of acting as syntax sugar for eliminating inductively-defined
 types, in the bodies of matches, each matched-on variable ("scrutinee") is 
 substituted for the corresponding pattern everywhere in the typing context.
@@ -25,14 +25,15 @@ substituted for the corresponding pattern everywhere in the typing context.
 It is this substituting that enables taking advantage of information learned
 over the course of a match. This allows, for example, defining equality testing
 functions that return actual evidence of the result of the test.
-\sideremark[*2]{
+\sideremark[*4]{
 In this report, our code snippets will generally follow Agda 
-\cite{norell2007towards} syntax (in fact,
+\sidecite[*9]{norell2007towards} syntax (in fact,
 this entire report is written in literate Agda!), but we take some liberties
 when typesetting. For example, writing $\forall$s as $\Pi$s and swapping 
 the equality
 symbols |_≡_| and |_=_| to align with their conventional meanings
 in on-paper type theory.}
+% \sideblankcite[*6]{norell2007towards} \phantom{a}
 
 \begin{example}[Boolean Equality Testing] \phantom{a}
 \begin{code}
@@ -42,9 +43,10 @@ test false  = inr refl
 \end{code}
 \end{example}
 
-Where |_≡_| is the identity type introduced with reflexivity |refl : x ≡ x| and
+Where |_≡_| is the identity type introduced with reflexivity |refl : x ≡ x|,
 |A ⊎ B| is a sum type, introduced with injections |inl : A → A ⊎ B| and 
-|inr : B → A ⊎ B|. 
+|inr : B → A ⊎ B| and |Bool| is the type of booleans introduced with
+literals |true : Bool| and |false : Bool|. 
 
 Note that in the |test true| branch, for example,
 the substitutions |true / b| and |true / b| are applied to the context,
@@ -53,10 +55,11 @@ typechecks successfully.
 
 In mainstream functional programming languages, it is common to allow pattern
 matching not just on the direct arguments of a function, but also on arbitrary
-expressions (e.g. via |case ... of ...| expressions). Extending dependent pattern-matching
+expressions (e.g. via |case_of_| expressions). Extending dependent 
+pattern-matching
 accordingly would have direct utility: consider this concise proof that for
 any boolean function |f : Bool → Bool|, |f b ≡ f (f (f b))|:
-\sideremark{This example is originally from the Agda mailing list \cite
+\sideremark{This example is originally from the Agda mailing list \sidecite[*2]
 {altenkirch2009smart}.}.
 
 \begin{example}[|f b ≡ f (f (f b))|, Concisely] \phantom{a}
@@ -74,19 +77,19 @@ bool-lemma f false  = case f false of
   false  → refl
 \end{spec}
 \end{example}
-
+\pagebreak
 Unfortunately, mainstream proof assistants generally do not support such a
 construct
 \remarknote{Some proof assistants do allow matching on expressions to some
-extent via "|with|-abstractions" \cite{mcbride2004view}, \cite{agda2024with}. 
+extent via "|with|-abstractions" \sidecite[*5]{mcbride2004view},
+\sidecite[*7.5]{agda2024with}. 
 We will cover why this feature is not quite satisfactory (including for this 
 example) in \refch{background}.}, and we are instead forced to do the 
 equational reasoning manually:
-\pagebreak
-\phantom{a}
-\sideremark{We can shorten these equational proofs via "code golfing"
-instead of using the more readable equational-reasoning syntax provided 
-by the Agda standard library \cite{2024eqreasoning}, but for example,
+\sideremark[*12]{We can shorten these equational proofs by "code golfing"
+and avoiding the more readable, but also more verbose equational reasoning 
+syntax provided 
+by the Agda standard library \sidecite[*5]{2024eqreasoning}, but for example,
 the third case reduces down to |p ∙ sym (cong f (cong f p ∙ q) ∙ q)| - still
 pretty complicated! }
 \begin{example}[|f b ≡ f (f (f b))|, Manually] \phantom{a}
@@ -136,28 +139,151 @@ The trickyness with supporting matching on arbitrary expressions is that
 there
 may not exist a unique unification solution between the scrutinee and pattern.
 Dependent pattern matching must modify the typing context in the branch of a
-match so the result is kept track of, but we cannot make |f b| equal |true|
-on-the-nose by substituting individual variables, without making any 
+match to make the scrutinee and pattern equal, but we cannot make |f b| equal 
+|true| on-the-nose by substituting individual variables, without making any 
 assumptions about the behaviour of |f| on closed booleans.
 
-This project explores type theories with local ground equational assumptions,
-a setting which should enable this extended version of pattern matching.
-\sideremark{We will explain this connection in detail in
-\refch{background}.}
-The full benefits of such a theory are perhaps non-obvious, so to motivate
-this work further, we note that it is a small jump from 
+This project explores type theories with local, ground, equational assumptions:
+a setting designed to enable this extended version of pattern matching.
+The idea is not novel, Thorsten Altenkirch et al. named this extended
+pattern-matching construct "smart case" and did some investigating how to
+justify it theoretically \sidecite{altenkirch2011case}. However, this work
+was never published, and both completeness and decidability (among other
+metatheoretical properties) remain open.
+
+The full benefits of "smart case" are perhaps non-obvious, so to motivate
+this work further, we will next elaborate on the small jump from 
 extending pattern-matching in this way to a local version
 of the equality reflection rule from extensional type theory (ETT), which has
-potential to simplify almost all equational proofs in modern intensional
+potential to simplify many equational proofs written in modern intensional
 type theory (ITT) based proof assistants.
 
-Consider the simple inductive proof that |0| is a right-identity of |ℕ , _+_|
-(i.e. |n + 0 ≡ n|), where |_+_| is addition of natural numbers defined by 
-recursion on the left argument.
+\section{Equality in Type Theory and Indexed Pattern Matching}
 
-In the base case, it remains to prove |0 + 0 ≡ 0| which is true by definition
-of |_+_|. In the inductive case, it remains to prove |(n + 1) + 0 ≡ n + 1|,
-which can be proved via using the definition of |_+_| and the IH.
+\begin{remark}[Definitional vs Propositional Equality] \phantom{a}
+
+Before proceeding, it is probably important to clarify our understanding of 
+equality
+in type theory. In ITT (the foundation of modern proof assistants/dependently
+typed programming languages Agda \sidecite{norell2007towards}, 
+Rocq \sidecite[*2]{rocq2024}, Lean \sidecite[*4]{moura2021lean},
+Idris2 \sidecite[*6]{brady2021idris}), 
+equality judgements are
+split into definitional (denoted with |_==_|) and propositional (denoted with
+|_≡_|). 
+
+Definitional equality (also called "conversion") judgements are made the 
+meta-level, and typing relations in ITT are given with types always equated up 
+to convertibility. Conversion is usually comprised of syntactic equality 
+plus computation rules ($\beta$ and sometimes $\eta$) but there are other 
+options, which we shall examine in \refch{background}.
+
+Propositional equality judgements, on the other hand, are made at the level
+of the (object) type theory itself. i.e. |_≡_ : A → A → Set| is a type 
+constructor (forming the "identity type") and terms of type |t ≡ u| can be 
+introduced with |refl : t ≡ t|
+and eliminated with the |J| rule (|J : (P : A → Set) → x ≡ y → P x → P y|).
+Since Martin-Löf's first characterisation of intensional type theory
+\sidecite[*0]{martin1975intuitionistic}, 
+propositional equality has
+been extended in numerous ways (the |K| rule 
+\sidecite[*1]{streicher1993investigations}, 
+OTT \sidecite[*3]{altenkirch2007observational}, 
+CTT \sidecite[*5]{cohen2016cubical}), but all major 
+presentations retain the ability to introduce it with |refl| and eliminate with 
+|J| (even if such operations are no longer primitive). Inspired by the homotopy 
+interpretation of type theory, coercing with |J| 
+is often called "transporting", and in Agda is written |subst|.
+
+The equality reflection rule that defines ETT is simply an equating of
+propositional and definitional equality. Specifically, adding the typing rule
+|Tm Γ (t ≡ u) → t == u| (read as: the existence of a proof of propositional
+equality between |t| and |u| implies |t| and |u| are convertible) is sufficient
+to turn an intensional type theory into an extensional one.
+\end{remark}
+
+If we consider propositional equality |t ≡ u| to be an 
+inductively defined type with one canonical element |refl : x ≡ x|, it
+seems reasonable to allow pattern-matching on it like other inductive types. 
+Eliminating equality proofs is only really \textit{useful} though 
+\remarknote{Assuming the user is not interested in proving equality of equality
+proofs. In fact, to prevent deriving the |K| rule (which is sometimes
+desirable), one must actively
+prevent matching on |t ≡ u| when |t| and |u| are convertible \cite{cockx2017dependent}.} if the LHS and 
+RHS are not already definitionally equal 
+(|J′ : ∀ (P : A → Set) → x ≡ x → P x → P x| is just a fancy identity function).
+
+This observation motivates "indexed pattern-matching": the extension to
+dependent pattern matching where arbitrary expressions are admitted as 
+"forced patterns", and matching on elements of the identity type is allowed
+exactly when variables on the LHS/RHS are simultaneously matched with forced 
+patterns such that in the substituted typing context, the propositional 
+equation now holds definitionally \sidecite{cockx2017dependent}. 
+With this feature, one can easily prove, 
+for example |b ≡ true → not b ≡ false|:
+
+\begin{example}[b ≡ true → not b ≡ false] \phantom{a}
+\begin{code}
+not : Bool → Bool
+not true   = false
+not false  = true
+
+not-true : ∀ b → b ≡ true → not b ≡ false
+not-true .true refl = refl
+\end{code} 
+\end{example}
+
+|.t| is Agda's notation for forced patterns. Note that we do not need to
+provide any case for |b == false|; conceptually, we are making use of 
+|_≡_|'s  elimination rule here, not |Bool|'s. 
+Type theory implementations can actually
+go one step further and infer insertion of forced matches, including
+on implicit arguments (marked with |{}|), allowing the even more concise:
+
+\begin{code}
+not-true′ : ∀ {b} → b ≡ true → not b ≡ false
+not-true′ refl = refl
+\end{code}
+
+We have effectively turned a propositional equality into a definitional one,
+simply by pattern matching! The downside of course, is that this can only
+work when one side of the |_≡_| is a variable. If it instead an application:
+\begin{spec}
+not-true′′ : ∀ {f : Bool → Bool} {b} → f b ≡ true → not (f b) ≡ false
+not-true′′ refl = refl
+\end{spec}
+We get an error:
+\begin{spec}
+[SplitError.UnificationStuck]
+I'm not sure if there should be a case for the constructor refl,
+because I get stuck when trying to solve the following unification
+problems (inferred index ≟ expected index):
+  f b ≟ true
+when checking that the pattern refl has type f b ≡ true
+\end{spec}
+
+\textbf{This} is what makes a principled way of
+matching on expressions so exciting (and also hints at it's difficulty
+\remarknote{Indeed, the fully general version of this feature is
+undecidable; we will aim to find a decidable fragment.}):
+a proof assistant with this feature could start inferring forced matches on 
+those expressions, providing a general way to turn propositional equalities
+(which typically have to be manipulated and applied manually) into
+definitional ones - i.e. manually invoked equality reflection.
+
+As an example of how manual equality reflection can simplify many 
+equational proofs, we consider the simple inductive proof that |0| is a 
+right-identity  of |ℕ , _+_|
+(i.e. |n + 0 ≡ n|), where |_+_| is addition of natural numbers defined by 
+recursion on the left argument, first in a mathematical style:
+
+\begin{theorem}[|0| is a right identity of |ℕ , _+_|] \phantom{a}
+
+In the base case, it remains to prove |0 + 0 ≡ 0|, which is true by definition
+of |_+_|. 
+
+In the inductive case, it remains to prove |(n + 1) + 0 ≡ n + 1|,
+which is true by definition of |_+_| and IH.
 
 \begin{spec}
 (n + 1) + 0
@@ -166,138 +292,105 @@ which can be proved via using the definition of |_+_| and the IH.
 ≡ -- \textit{by} inductive hypothesis (|(n + 0) ≡ n|)
 n + 1     
 \end{spec}
+\end{theorem}
 
-Of course, in practice it is rare to articulate a proof in so much detail. In
-a larger mathematical work, such a proof might be reduced to "trivial by 
-induction on ℕ" or even skipped entirely.
+In Agda, the same proof is expressed as follows:
 
-In the Agda proof assistant, the same proof is expressed as follows:
-
+\begin{example}[|0| is a right identity of |ℕ , _+_| , in Agda] \phantom{a}
 \begin{code}
-+0 : (n : ℕ) → n + ze ≡ n
++0 : Π n → n + ze ≡ n
 +0 ze      = refl
 +0 (su n)  = cong su (+0 n)
 \end{code}
+\end{example}
 
-I think it is interesting to observe what Agda (and other ITT-based proof
-assistants) are willing to automate, and what they are not. For example, we
-never needed to explicitly appeal to the definition of |_+_| - these 
-simplifications were entirely automatic, justified by how Agda only allows
-structurally recursive definitions (so unfolding definitions until we get stuck
-must terminate). In fact, this unfolding (or β-reducing) is exactly the basis
-of so-called "definitional" equality.
+As Agda's definitional equality automatically unfolds/$\beta$-reduces 
+pattern-matching definitions (justified by Agda only allowing
+structurally recursive definitions, so unfolding must terminate), so we 
+don't need to explicitly appeal to the definition of |_+_|.
 
 On the other hand, though the syntax makes it concise, we have actually had to
-more detailed in one place in our Agda proof here than in our mathematical one.
-'cong su' represents that in the inductive case, we cannot apply the inductive
-hypothesis directly: we have |(n + ze) ≡ n| but need |su (n + ze) ≡ su n| -
-we need to apply |su| to both sides.
+add more detail in one place in our Agda proof here than in our mathematical 
+one. |cong su| represents that in the inductive case, we cannot apply the 
+inductive hypothesis directly: we have |(n + ze) ≡ n| but need 
+|su (n + ze) ≡ su n|:
+we need to apply |su| to both sides. In a type theory supporting
+|case_of_| expressions with inferred forced matches, this appeal to 
+congruence would be unnecessary.
 
-This might seem minor: the particular proof here still came out very
-concisely, but soon we will move onto trickier examples where this sort of
-manual equational reasoning starts causing immense pain. 
+\begin{spec}
++0′ : Π n → n + ze ≡ n
++0′ ze      = refl
++0′ (su n)  = case +0 n of
+  refl → refl
+\end{spec}
 
+The difference might seem small: indeed |case_of_| is perhaps overly 
+heavyweight syntax
+and so the original |+0| definition could be argued more concise, 
+but soon we will examine at trickier examples where 
+manual equational reasoning (in the form of |cong| and, later,
+|subst|) starts causing immense pain. 
 
+\section{Current Progress, Aims, Plan}
 
+% If we are going to have this note, why not just move this section to the end?
+Note: I put this section in the introduction because I thought it fit, but
+after writing it now I realise (especially past the first paragraph) it really
+does assume a lot of background only covered in \refch{background}. Skipping
+this section and returning to it later is encouraged.
 
+As of the interim report, I have collected a few examples of situations
+where "smart case" is useful (mostly given in this introduction), I have
+mechanised a proof of strong normalisation for STLC + closed boolean rewrites
+in Agda and I have spent considerable time figuring out a promising path
+towards extending this result to dependent types (both collecting/analysing 
+tricky examples, and reading up on the literature with respect to normalisation 
+proofs). I also have done a bit of experimenting with implementation: I have
+implemented equality saturation for first-order terms via rewriting to
+completion and e-graphs, and I have started working on an NbE (Normalisation
+by Evaluation) typechecker.
 
+I think in the immediate future, focussing on implementation is a good
+idea. and I don't actually think implementation is likely to be all that
+difficult; the main extension to NbE is just to lookup neutral terms in
+some map of neutrals to values when reflecting/unquoting. Dealing with
+extending context of equational assumptions is likely to be the trickiest
+part, but I think iterating normalising every LHS/RHS with respect to
+all others until a fixpoint is reached (i.e. analgously to rewriting
+to completion) is reasonable.
 
+After I have some primitive implementation, I want to return to the theory-side.
+I want to give extending my simply-typed proof to dependent types a shot,
+though this will be non-trivial, due to how reduction and conversion in
+dependent type theories are so tightly linked. e.g. spontaneously replacing a 
+neutral |Bool|-typed term |t| with |true| risks breaking typeability, if |t| and
+|true| not already convertible. I am hoping a definition of (non-transitive)
+spontaneous conversion will be enough to deal with this, but I think the
+details will be tricky.
 
+An alternative direction could be to focus on semantic approaches to
+normalisation. I currently am unsure how to justify termination of adding
+new equational assumptions in this setting, but I think Altenkirch et al.'s 
+work on NbE for STLC + coproducts with strict η-laws
+\sidecite{altenkirch2001normalization} must have run into similar
+problems, so perhaps learning some basic sheaf theory (with the help of
+\sidecite{pedrot2021debunking}) will provide insight.
 
+Outside of dependent types, I could also work more on the theory of the
+simply-typed analogue. For example, building on the strong normalisation result
+to mechanise a verified conversion-checker, or looking at 
+confluence and completeness. I think this is likely to be easier, but perhaps
+less exciting.
 
-
-
-
-
-
-
-
-
-
-
-
-% So one way we an phrase this introduction is that smart case is part of some
-% grand effort to replicate on-paper ETT convenience in ITT proof assistants.
-% I think this is a justifiable perspective, but I'm not convinced I am the
-% one to justify this... I don't use ETT.
-
-% Another way is to focus right in on the critical part of ITT: transports
-% and why these are painful. I think I like this more.
-
-- Division in type theories: extensional/intensional
-Much of the recent work in type theory has examined questions about many
-properties of ETT can be replicated in ITT without breaking it's core
-metatheoretic properties.
-% TODO: Cite OTT, CTT etc...
-Such attempts at bringing ideas from ETT into the intensional world can be
-crudely categorised into two camps:
-- Those that focus on extending what is propositionally provable, providing
-a more expressive propositional equality.
-- Those that examine how to replicate the convenience of equational reasoning
-  in ETT.
-This work is placed sole-y in the second camp, but focusses on an aspect.
-
-
-
-
-Much of the recent work in type theory has explored the question: how
-
-
-
-% \begin{figure}[tb]
-% \centering
-% \includegraphics[width = 0.4\hsize]{./figures/imperial}
-% \caption{Imperial College Logo. It's nice blue, and the font is quite stylish. But you can choose a different one if you don't like it.}
-% \label{fig:logo}
-% \end{figure}
-
-% Figure~\ref{fig:logo} is an example of a figure. 
-
-
-
-% TYPESETTING TODO: We need to decide on standard formatting for variables,
-% constructors, reducing functions
-% This can actually resolve confusion such as in "f x" is "f" a defined symbol
-% or variable?
-
-\section{Main Contributions/Aims}
-
-This interim
-
-This interim report begins with a few example use-cases as motivation and a
-review of related work. 
-
-After this, I give the essentially single (so far) 
-technical result: strong normalisation for STLC + rewrites into closed values.
-This isn't really a new result (it is a small extension over termination for 
-STLC + rewrites into closed booleans, which is described as having been shown
-in the canonical Smart Case reference and also more-or-less a corollary 
-of SN for STLC + boolean eta rules), but I am unawhere of a similar 
-presentation which focusses on the
-core changes to ordinary SN proofs (specifically around retaining monotonicity
-of substitution) in the literature.
-
-I then spend a considerable amount of time looking at how to extend these ideas
-towards the aim of this project: a dependently-typed theory with rewrites into 
-arbitrary first-order (ground) terms. Essentially, I focus on examples, building
-intuition for where I have found the theory to be tricky and discussing the
-options (as I currently see them) for how to proceed.
-The discussion here is obviously not yet polished, but I hope it will be
-a similarly exciting journey to read along as it was directly finding these
-edge-cases.
-
-Finally, I will end with some details surrounding implementation that I have 
-investigated, specifically relating to efficient ground completion (revealing
-a potential exciting additional avenue on the theory-side in the process!).
-
-
-
-
-
+Beyond a simple implementation and progressing the core metatheory, I still 
+believe that most of the potential extensions I listed
+in the original project proposal would be exciting to look into. I think what
+is actually feasible will depend heavily on what progress I can make on the
+aforementioned main tasks though, so I don't think I
+can make a concrete plan with respect to these yet.
 
 \section{A Larger Example: First-order Unification}
-
-
 
 Inspired by \sidecite{sjoberg2015programming}, we present the use-case of
 a verified first-order unification algorithm for a syntax containing variables, 
@@ -309,7 +402,7 @@ detail now for a few reasons:
   \sidecite{cockx2020type}, so it will be
   interesting to examine where these can and cannot help.
   \item It's just a nice example: relatively self-contained while presenting a
-  strong case for improved equational automation.
+  reasonably strong case for improved equational automation.
   \item The results of this project are all given in terms of a type-theoretic
   (approximately MLTT) metatheory. In fact, where possible, I aim to mechanise
   proofs in Agda. Implementing first-order unification for untyped terms should
@@ -322,8 +415,8 @@ We shall "index" terms by the number of variables in scope (the "context"). For
 example |Tm 3| will represent a term with three different free variables 
 available.
 
-For this example we could easily restrict ourselves to a concrete
-number, or even infinite, number of variables, but parameterising like this 
+For this example, we could easily restrict ourselves to a concrete (potentially
+infinitate) collection of variables, but parameterising like this 
 makes substitutions easier to define and lines up better with the syntaxes 
 (containing binders) that we will look at later.
 
@@ -402,8 +495,9 @@ substitutions is nice for two reasons:\newline
 1. Substitutions can be composed while staying canonical. i.e. unlike sequences
 of single substitutions.\newline
 2. Higher-order encodings of substitutions (i.e. as functions) don't scale to 
-dependently-typed syntax (without "very-dependent types" \cite{hickey1996formal} 
-\cite{altenkirch2023munchhausen})}
+dependently-typed syntax (without "very-dependent types" 
+\sidecite[*2]{hickey1996formal} 
+\sidecite[*4.5]{altenkirch2023munchhausen})}
 
 
 
@@ -449,7 +543,7 @@ lookup (vs i)  (δ , u) = lookup i δ
 \end{definition}
 % ---------------------------------------------------------------------------- %
 
-We can now define the goal of first-order unifiers (the goal of first-order
+We can now define first-order unifiers (the goal of first-order
 unification).
 
 % ---------------------------------------------------------------------------- %
@@ -470,18 +564,19 @@ Unifier : Tm Γ → Tm Γ → Set
 \end{definition}
 % ---------------------------------------------------------------------------- %
 
-Unification can now be specified as a function that takes two terms and attempts
-to find a unifier (using the standard |Maybe| type to deal possible failure):
 \sideremark{Note that this is only a partial specification of unification. In a
 perfect world, we would require evidence in the failure case that there really
-is no unifier, but attempting this would add significant clutter to the
+is no unifier, but requiring this would add significant clutter to the
 example.\newline
-In fact, one could go even further: in the successful cases our specification
+In fact, one could go even further: in the successful cases, our specification
 allows returning to any old unifier, of which there might be many. 
 One could instead aim for the minimal/ most general unifier as in 
-\cite{martelli1982efficient}, but, again, the machinery necessary to prove
+\sidecite[*6]{martelli1982efficient}, but, again, the machinery necessary to 
+prove
 a particular unifier is indeed the most general one is out of the scope of this 
 example.}
+Unification can now be specified as a function that takes two terms and attempts
+to find a unifier (using the standard |Maybe| type to deal possible failure):
 %if False
 \begin{code}
 interleaved mutual
@@ -614,7 +709,7 @@ Here, we need to perform an "occurs check" on |u|
 % much of the groundwork.
 
 
-\section{One More Example: Instrinsically-typed System F}
+\section{One More Example: Mechanising Type Theory}
 
 The prior section gave an example where automating congruence simplifies
 equational reasoning. Cases like this admittedly still might not be fully
@@ -630,4 +725,4 @@ heavily-indexed types. The general pattern is that as follows:
   propositional equations relating different index expression.
   \item One now attempts to prove equations about these indexed types, and has
   to deal with explicitly shifting transports around.
-\end{itemize}
+\end{itemize} 

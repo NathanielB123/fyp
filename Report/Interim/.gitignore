@@ -9,6 +9,7 @@
 *.bbl
 *.ptb
 *.run.xml
+main.tex
 
 _build/
 scraps/

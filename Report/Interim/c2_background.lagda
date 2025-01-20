@@ -18,7 +18,7 @@ module Report.Interim.chapters.background where
 
 Proof assistents like Agda that feature both metavariables and dependent pattern
 matching benefit from using two different unification algorithms 
-\sidecite{norell2007towards}: One often referred to as "RHS unification" 
+\sidecite[*6]{norell2007towards}: One often referred to as "RHS unification" 
 designed to solve metavariables and the other "LHS unification" to deal with
 pattern-matching.
 

@@ -27,6 +27,8 @@
 %seperation 2
 %latency 2
 
+%subst comment a = "{\text{\rmfamily-{}-} \textit{" a "}}"
+
 \newunicodechar{β}{$\beta$}
 \newunicodechar{δ}{$\delta$}
 \newunicodechar{σ}{$\sigma$}
@@ -48,6 +50,7 @@
 \newunicodechar{⊢}{$\vdash$}
 \newunicodechar{∘}{$\circ$}
 \newunicodechar{∎}{$\blacksquare$}
+\newunicodechar{≟}{$\stackrel{?}{=}$}
 
 \newunicodechar{𝔹}{$\mathbb{B}$}
 \newunicodechar{ℕ}{$\mathbb{N}$}
@@ -76,6 +79,9 @@
 \newunicodechar{∙}{$\bullet$}
 
 \newunicodechar{′}{$'$}
+
+% Override formatting of "not" as "¬"
+%format not  = "\Varid{ not }"
 
 %format ƛ    = λ
 %format ƛ⁻¹  = ƛ ⁻¹

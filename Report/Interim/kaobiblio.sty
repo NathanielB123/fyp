@@ -200,6 +200,35 @@
 	\fi%
 }
 
+% Command to add a citation in the margin without adding a citation in text
+
+\NewDocumentCommand{\sideblankcite}{o o o m}{%
+	\RenewDocumentCommand{\kaobiblio@marginnote}{m}{%
+		\marginnote[#1]{##1}%
+	}%
+	\DeclareCiteCommand{\kaobiblio@sideblankcite}[\kaobiblio@marginnote]{%
+	}{%
+		\formatmargincitation{\thefield{entrykey}}%
+	}{%
+	\\% separator between multiple citations
+	}{%
+	}%
+	\IfNoValueOrEmptyTF{#2}%
+	{\def\@tempa{\phantom{\cite{#4}\kaobiblio@sideblankcite{#4}}}}%
+	{\IfNoValueOrEmptyTF{#3}%
+		{\IfNoValueTF{#3}%
+			{\def\@tempa{\phantom{\cite[#2]{#4}\kaobiblio@sideblankcite{#4}}}}%
+			{\def\@tempa{\phantom{\cite[#2][]{#4}\kaobiblio@sideblankcite{#4}}}}% postnote is empty, so pass empty postnote
+		}%
+		{\def\@tempa{\phantom{\cite[#2][#3]{#4}\kaobiblio@sideblankcite{#4}}}}%
+	}%
+	\ifkaobiblio@addspace%
+		\unskip~\@tempa%
+	\else%
+		\@tempa%
+	\fi%
+}
+
 % Command to \supercite and print a citation in the margin
 % First optional argument: vertical shift
 % Second optional argument: postnote if the third argument isn't specified; prenote if the third argument is specified (same pattern as the \textcite command)
