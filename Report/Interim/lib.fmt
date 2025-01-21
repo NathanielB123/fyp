@@ -40,6 +40,7 @@
 \newunicodechar{Γ}{$\Gamma$}
 \newunicodechar{Δ}{$\Delta$}
 \newunicodechar{Π}{$\Pi$}
+\newunicodechar{Σ}{$\Sigma$}
 
 \newunicodechar{∀}{$\forall$}
 \newunicodechar{≡}{$\equiv$}
@@ -94,6 +95,10 @@
 
 %format Type = "\Keyword{Type}"
 %format Set  = Type
+
+% Some Haskell keywords
+%format type   = "\Keyword{type}"
+%format family = "\Keyword{family}"
 
 %format ≡   = "="
 %format _≡_ = _ "\!" "=" "\!" _

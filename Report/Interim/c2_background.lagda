@@ -5,7 +5,7 @@
 open import Utils
 open import Common.Sort
 
-module Report.Interim.chapters.background where
+module Report.Interim.c2_background where
 \end{code}
 %endif
 
@@ -14,54 +14,290 @@ module Report.Interim.chapters.background where
 \chapter{Background and Related Work}
 \labch{background}
 
-\section{Dependent Pattern Matching and LHS Unification}
+% Plan
+% - Eta conversion vs extensionality vs equational assumptions
+%   - Eta for STLC
+%   - Eta for dependent types
+% - Type theories with equational assumptions
+%   - GHC Haskell
+%   - Zombie
+%   - Andromeda
+% - Global Rewrite Rules
+%   - Dedukti
+%   - Agda
+% - Decidability of Conversion
+%   - Normalisation approaches
 
-Proof assistents like Agda that feature both metavariables and dependent pattern
-matching benefit from using two different unification algorithms 
-\sidecite[*6]{norell2007towards}: One often referred to as "RHS unification" 
-designed to solve metavariables and the other "LHS unification" to deal with
-pattern-matching.
+% Higher order rewrite systems??? Most of the research here doesn't look
+% at ground systems though
 
-The motivation for this distinction is that the desired properties of each
-unification procedure are different. RHS unification is allowed to fill
-metavariables whenever they are unique up to definitional equality, meaning
-e.g. neutral equations like |f x = f ?0| can be solved with |?0 = x|.
+% Mentioning RHS/LHS unification might be nice but I don't think it is
+% strictly necessary
 
-LHS unification needs to be more careful.
-
-In fact RHS unification can be even bolder: e.g. lossily solving 
-|pred x = pred ?0| with |?0 = x|
-
-Agda's approach the LHS unification then is to ...
-
-\subsection{Green Slime}
-
-....
+% Green slime should probably go in the introduction...
 
 
 
-\section{Equality in Type Theory}
 
+% \section{Dependent Pattern Matching and LHS Unification}
+% 
+% Proof assistents like Agda that feature both metavariables and dependent pattern
+% matching benefit from using two different unification algorithms 
+% \sidecite[*6]{norell2007towards}: One often referred to as "RHS unification" 
+% designed to solve metavariables and the other "LHS unification" to deal with
+% pattern-matching.
+% 
+% The motivation for this distinction is that the desired properties of each
+% unification procedure are different. RHS unification is allowed to fill
+% metavariables whenever they are unique up to definitional equality, meaning
+% e.g. neutral equations like |f x = f ?0| can be solved with |?0 = x|.
+% 
+% LHS unification needs to be more careful.
+% 
+% In fact RHS unification can be even bolder: e.g. lossily solving 
+% |pred x = pred ?0| with |?0 = x|
+% 
+% Agda's approach the LHS unification then is to ...
+% 
+% \subsection{Green Slime}
+% 
+% ....
 
+We begin this section looking at related type-system features and end with
+a discussion on different approaches to proving decidability of conversion.
 
-% I think we need to move some of the conversion stuff to here because the
-% immediately below sections really rely on it...
+\section{Related Systems}
 
+\subsection{Type Theories with Local Equational Assumptions}
 
-To further motivate
+As mentioned in the introduction, this work is largely inspired by, and is
+intended as a continuation of, Altenkirch
+et al.'s work on Smart Case \sidecite[*2]{altenkirch2011case}. This work
+primarily
+focussed on pattern matching on |Bool|eans (i.e. only introducing equations
+from neutral\remarknote[][*2]{A "neutral" term is one comprising of a spine
+of elimination forms blocked on a variable.} |Bool|-typed terms to closed 
+boolean values). Even in this
+limited form, the metatheory is non-trivial, with subtleties arising from 
+how extending the set of equational assumptions (called 
+"constraint sets") with new equations requires renormalising all equations
+with respect to each other. For example:
 
-\section{Smart Case}
+\begin{example}[Coverage Checking in the Presense of Smart Case] \phantom{a}
 
-This work was primarily inspired by a presentation 
-\sidecite{altenkirch2011case}. The hope is that 
-recent advances in the meta-theory of type theory (i.e. a renewed interest in 
-semantic approaches to normalisation)
+Consider the program (in a dependent type theory with Smart Case).
+\begin{spec}
+foo : Bool → ...
+foo b = case not b of
+  true   → case b of
+    true   → ?0
+    false  → ...
+  false  → ... 
+\end{spec}
 
-This work focusses on a type theory with ground "equational assumptions".
+A proper implementation of Smart Case should rule that the case |?0| is
+impossible as the constraint set as the impossible equation |false ≡ true|
+is derivable from the constraints |not b ~ true| and |b ~ true| plus
+β-conversion:
 
-\section{η and Extensionality}
+\begin{spec}
+false
+≡ -- by def |not| (|not true ≡ false|)
+not true
+≡ -- by constraint |b ~ true|
+not b
+≡ -- by constraint |not b ~ true|
+true
+\end{spec}
 
-Extensionality has a very concrete definition in dependent type theories
+Note that the equation being added: |b ~ true| is, by itself, completely sound, 
+and the term |b| cannot be reduced further even in the presense of the 
+|not b ≡ false| constraint. Seemingly, any algorithm capable of detecting
+impossibility here must iterate normalising all equations until
+a fixpoint (or impossible equation) is reached.
+\end{example}
+
+Note that ruling out these impossible cases is not just a convenience to
+avoid forcing the programmer to write code for situations that could never
+occur. Avoiding these cases is \textit{necessary} to retain normalisation of
+the type theory.
+
+\begin{remark}[Equality Collapse and Consequences for Normalisation] \phantom{a}
+
+In ITT, definitionally identifying non-neutral terms is dangerous as it can
+lead to "equality collapse" \sidecite{conor2010wtypes}. For example,
+assuming conversion is a congruence relation (which is highly
+desirable for definitional equality to behave intuitively), and large
+elimination (being able to eliminate from terms to types - a feature which gives 
+dependent type theory much of its
+expressivity and power) from booleans, one can derive definitional equality 
+between arbitrary types
+|A| and |B| in the presense of |true ≡ false|:
+\begin{spec}
+A
+≡ -- \textit{by} def |if_then_else_| (|if true then t else u ≡ t|)
+if true then A else B
+≡ -- \textit{by} assumption |true ≡ false|
+if false then A else B
+≡ -- \textit{by} def |if_then_else_| (|if false then t else u ≡ u|)
+B
+\end{spec}
+Once all types are definitionally equal, it is easy to
+type self-application (e.g. |Bool ≡ (Bool → Bool)|) and so looping
+terms like the classic |(λ x → x x) (λ x → x x)| are typeable, and
+normalisation of open terms is lost.
+\end{remark}
+
+Despite these difficulties, some systems do implement similar features, to
+varying levels of success. GHC Haskell, is based on a System F$_\text{C}$
+core type theory, but layers on many surface features such as 
+type-level equality constraints, automatically applied during the
+"constraint solving" phase of typechecking \sidecite{sulzmann2007system}. 
+Combined with type families, which enable real computation at the type
+level, we can actually "prove"\remarknote{There are a couple caveats 
+here:\newline
+1. Haskell does not allow types to directly depend on values, so we have to
+encode dependently-typed functions with so-called "singleton" encodings 
+\sidecite[*2]{lindley2013hasochism,  eisenberg2020stitch}. \newline
+2. Haskell is a partial language, so a "proof" of any type can be written
+as |undefined|. Manual inspection is required to check totality/ termination.
+\newline
+3. Haskell does not yet support unsaturated type families
+\sidecite[*4]{kiss2019higher}. We simulate such a feature here with a 
+concrete type family with no cases, but of course this cannot be instantiated
+with a "real" type function on booleans later.} 
+the |bool-lemma| example from the introduction (\refexample{bool-lemma}).
+
+\begin{example}[|f b ≡ f (f (f b))|, in Haskell] \phantom{a}
+\begin{spec}
+type data Bool = True | False
+type SBool :: Bool -> Type
+data SBool b where
+  STrue  :: SBool True
+  SFalse :: SBool False
+
+type F :: Bool -> Bool
+type family F b where 
+
+boolLemma  :: (  forall b. SBool b -> SBool (F b)) 
+           ->    forall b. SBool b -> F b :~: F (F (F b))
+boolLemma  f STrue   = case f STrue of
+  STrue   -> Refl
+  SFalse  -> case f SFalse of
+    STrue   -> Refl
+    SFalse  -> Refl
+boolLemma f SFalse  = case f SFalse of
+  STrue  -> case f STrue of
+    STrue   -> Refl
+    SFalse  -> Refl
+  SFalse  -> Refl
+\end{spec}
+\end{example}
+
+Unfortunately, Haskell's constraint solving is undecidable and in practice many
+desirable properties of conversion (such as congruence) do not hold.
+
+\begin{example}[Conversion is not Congruent in GHC Haskell] \phantom{a}
+
+In GHC 9.8.2, we can try to derive equations between arbitrary types
+from the constraint |True ~ False|:
+\begin{spec}
+type IF :: Bool -> a -> a -> a
+type family IF b t u where
+  IF True  t u = t
+  IF False t u = u
+
+bad :: True ~ False => IF True () (() -> ()) :~: IF False () (() -> ())
+bad = Refl
+\end{spec}
+
+But this produces the following type error:
+
+\begin{spec}
+• Couldn't match type ‘()’ with ‘() -> ()’
+  Expected: IF True () (() -> ()) :~: IF False () (() -> ())
+    Actual: () :~: ()
+• In the expression: Refl
+  In an equation for bad: bad = Refl
+\end{spec}
+\end{example}
+
+Haskell is not the only language to support a "Smart Case"-like feature.
+The dependently-typed language "Zombie" builds congruence closure right into the
+definitional equality of 
+the surface
+language and implements Smart Case in full, while retaining decidable 
+typechecking
+and congruent conversion \sidecite{sjoberg2015programming}. 
+The sacrifice is β-conversion: 
+Zombie does not automatically apply computation rules, requiring manual
+assistance to unfold definitions during typechecking.
+
+This is certainly an interesting point in the design-space of dependently-typed
+languages, coming with additional advantages such as accepting non-total
+definitions without endangering decidability of typechecking. However, the focus
+\sideremark{One could view traditional definitional equality as a hack, but it
+is undeniably effective.}
+of this project is justifying extending definitional equality of 
+existing mainstream proof assistants, which unanimously build β-equality
+into typechecking.
+
+Sixty \sidecite{sixty} is a dependent typechecker which
+also implements a form of Smart Case along with β-conversion, but there is 
+no published work justifying it's implementation theoretically.
+
+Andromeda 2 \sidecite{komel2021meta} is a proof assistant that supports
+local equational assumptions via rewriting and indeed goes beyond ground 
+equations,
+with the goal of supporting user-specified type theories. They focus
+primarily on provising soundness of the algorithm, and leave confluence/
+termination checking and completeness results as future work.
+
+\subsection{Type Theories with Global Equational Assumptions}
+
+In the vein on Andromeda 2, there has been a significant body of work examining
+type theories extended with more general global rewrite rules, plus 
+implementations in Dedukti \sidecite{assaf2016dedukti}, 
+Agda \sidecite{cockx2020type} and Rocq \sidecite{leray2024rewster} (though at
+the time of writing, the Rocq implementation is still a work-in-progress). 
+Work in the area has examined confluence
+\sidecite{cockx2021taming} and termination
+\sidecite{genestier2019sizechangetool} checking of rewrite rules. As we will
+explore later in this report, Smart Case for infinitary and higher-order
+types must necessarily be an approximation (as previously mentioned,
+fully general Smart Case is equivalent to manual equality reflection, which is
+undecidable), but we will aim for a more tailored criteria on accepted
+equations than these works, taking advantage of the ground-ness of equations.
+
+\subsection{Elaboration}
+
+A principled and increasingly popular way to design and implement
+programming languages
+\sidecite{eisenberg2015system, brady2024yaflle, ullrich2023extensible}
+is by "elaboration" into a minimal core syntax. A significant benefit of
+this approach is modularity \sidecite{cockx2024core}: multiple extensions to
+the surface language can be formalised and implemented without having to worry
+about their interactions. Elaboration can also increase trust in the
+resulting system, as it acts as evidence that all extensions are ultimately
+conservative over the core, perhaps better-justfied, theory.
+
+\sideremark{Note that automation around equality is still desirable even in
+HoTT settings. Even implicit proof-relevant transports could be useful as a
+principled route towards implicit coercions where there is an "obvious"
+mapping between types.}
+\sidecite{winterhalter2019eliminating, blot2024rewrite} have investigated
+elaborating ETT and an ITT with rewrite rules respectively to an ITT
+with explicit transports. However, both of these rely on Uniqueness of Identity
+Proofs (UIP)/ axiom |K|, which is
+undesirable in type theories with proof-relevant equality (e.g. Homotopy Type
+Theory).
+
+\subsection{Coproducts with Strict η-conversion Laws}
+
+A strongly-related but subtly different type-system extension to Smart Case is
+η-rules for positive types.
+
+% Extensionality has a very concrete definition in dependent type theories
 
 
 Note that even in ETT with equality reflection, conversion is not necessarily
@@ -78,18 +314,18 @@ notions start to coincide.
 
 % Formal proof that observational equality of functions on booleans is provable
 % from η
-\begin{code}
--- We assume f true = f true, f false = g false
+We assume f true = f true, f false = g false
+\begin{spec}
 
--- f
--- ≡ λ b → f b
--- ≡ λ b → f (if b then True else False)
--- ≡ λ b → if b then f True else f False
--- ≡ λ b → if b then g True else g False
--- ≡ λ b → g (if b then True else False)
--- ≡ λ b → g b
--- ≡ g
-\end{code}
+f
+≡ λ b → f b
+≡ λ b → f (if b then True else False)
+≡ λ b → if b then f True else f False
+≡ λ b → if b then g True else g False
+≡ λ b → g (if b then True else False)
+≡ λ b → g b
+≡ g
+\end{spec}
 
 
 
