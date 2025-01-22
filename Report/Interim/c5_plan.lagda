@@ -3,12 +3,6 @@
 \chapter{Current Progress, Aims, Plan}
 \labch{plan}
 
-% If we are going to have this note, why not just move this section to the end?
-Note: I put this section in the introduction because I thought it fit, but
-after writing it now I realise (especially past the first paragraph) it really
-does assume a lot of background only covered in \refch{background}. Skipping
-this section and returning to it later is encouraged.
-
 As of the interim report, I have collected a few examples of situations
 where "smart case" is useful (most of which have been given in the
 introduction chapter) and I have

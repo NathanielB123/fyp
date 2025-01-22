@@ -1,10 +1,12 @@
 %if False
 \begin{code}
-{-# OPTIONS --prop #-}
+{-# OPTIONS --prop --rewriting --local-confluence #-}
 
 open import Utils renaming (_+ℕ_ to _+_)
 import Relation.Binary.PropositionalEquality as EQ
 open EQ.≡-Reasoning using (begin_; step-≡; _≡⟨⟩_; _∎)
+
+import Agda.Builtin.Equality.Rewrite
 
 module Report.Interim.c1_introduction where
 \end{code}
@@ -17,8 +19,8 @@ module Report.Interim.c1_introduction where
 
 Dependent pattern matching is the common extension of pattern matching to 
 dependently-typed programming languages
-\sidecite[*8]{coquand1992pattern}, \sidecite[*10]{cockx2017dependent},
-where on top of acting as syntax sugar for eliminating inductively-defined
+\sidecite[*8]{coquand1992pattern, cockx2017dependent},
+where, on top of acting as syntax sugar for eliminating inductively-defined
 types, in the bodies of matches, each matched-on variable ("scrutinee") is 
 substituted for the corresponding pattern everywhere in the typing context.
 
@@ -43,10 +45,11 @@ test false  = inr refl
 \end{code}
 \end{example}
 
-Where |_≡_| is the identity type introduced with reflexivity |refl : x ≡ x|,
+\textit{Where |_≡_| is the identity type introduced with reflexivity
+|refl : x ≡ x|,
 |A ⊎ B| is a sum type, introduced with injections |inl : A → A ⊎ B| and 
 |inr : B → A ⊎ B| and |Bool| is the type of booleans introduced with
-literals |true : Bool| and |false : Bool|. 
+literals |true : Bool| and |false : Bool|.}
 
 Note that in the |test true| branch, for example,
 the substitutions |true / b| and |true / b| are applied to the context,
@@ -79,13 +82,13 @@ bool-lemma f false  = case f false of
 \end{spec}
 \end{example}
 \pagebreak
-Unfortunately, mainstream proof assistants generally do not support such a
-construct
-\remarknote{Some proof assistants do allow matching on expressions to some
-extent via "|with|-abstractions" \sidecite[*5]{mcbride2004view},
-\sidecite[*7.5]{agda2024with}. 
+Unfortunately, mainstream proof assistants (such as Agda) generally do not
+support such a
+construct\remarknote{Some proof assistants do allow matching on expressions to
+some
+extent via "|with|-abstractions" \sidecite[*5]{mcbride2004view, agda2024with}. 
 We will cover why this feature is not quite satisfactory (including for this 
-example) in \refch{background}.}, and we are instead forced to do the 
+example) in \refsec{with}.}, and we are instead forced to do the 
 equational reasoning manually:
 \sideremark[*12]{We can shorten these equational proofs by "code golfing"
 and avoiding the more readable, but also more verbose equational reasoning 
@@ -145,8 +148,8 @@ match to make the scrutinee and pattern equal, but we cannot make |f b| equal
 assumptions about the behaviour of |f| on closed booleans.
 
 This project explores type theories with local, ground\remarknote{A "ground"
-equation is one which does not quantify over any variables.}
-, equational assumptions:
+equation is one which is not quantified over any variables.}, equational
+assumptions:
 a setting designed to enable this extended version of pattern matching.
 The idea is not novel, Altenkirch et al. first investigated such 
 a theory during the development of ΠΣ \sidecite{altenkirch2008pisigma}
@@ -157,26 +160,42 @@ was never published, ΠΣ eventually moved away from Smart Case,
 and both completeness and decidability (among other
 metatheoretical properties) remain open.
 
-The full benefits of Smart Case are perhaps non-obvious, so to motivate
+The full benefits of Smart Case are perhaps non-obvious. To motivate
 this work further, we will next elaborate on the small jump from 
-extending pattern-matching in this way to a local version
-of the equality reflection rule from extensional type theory (ETT), which has
-potential to simplify many equational proofs written in modern intensional
-type theory (ITT) based proof assistants.
+extending pattern-matching in this way to a manual version
+of the equality reflection rule from Extensional Type Theory (ETT).
+Such a feature has
+potential to simplify a huge number of equational proofs written in modern
+Intensional Type Theory (ITT) based proof assistants.
 
 \section{Equality in Type Theory and Indexed Pattern Matching}
 
-\begin{remark}[Definitional vs Propositional Equality] \phantom{a}
-
 Before proceeding, it is probably important to clarify our understanding of 
-equality
-in type theory. In ITT (the foundation of modern proof assistants/dependently
+equality in type theory.
+
+\sideremark[*11]{Since Martin-Löf's first characterisation of intensional type
+theory \sidecite[*13]{martin1975intuitionistic}, 
+propositional equality has
+been extended in numerous ways (the |K| rule 
+\sidecite[*12]{streicher1993investigations}, 
+OTT \sidecite[*14]{altenkirch2007observational}, 
+CTT \sidecite[*16]{cohen2016cubical}), but all major 
+presentations retain the ability to introduce it with |refl| and eliminate with 
+|J| (even if such operations are no longer primitive).\newline
+Inspired by the homotopy 
+interpretation of type theory, coercing with |J| 
+is often called "transporting", and in Agda is written |subst|.
+}
+\begin{remark}[Definitional vs Propositional Equality] \phantom{a}
+\labremark{defprop}
+
+In ITT, the foundation of modern proof assistants/dependently
 typed programming languages Agda \sidecite{norell2007towards}, 
-Rocq \sidecite[*2]{rocq2024}, Lean \sidecite[*4]{moura2021lean},
-Idris2 \sidecite[*6]{brady2021idris}), 
+Rocq \sidecite[*2.5]{rocq2024}, Lean \sidecite[*4.5]{moura2021lean},
+Idris2 \sidecite[*6.5]{brady2021idris}, 
 equality judgements are
-split into definitional (denoted with |_==_|) and propositional (denoted with
-|_≡_|). 
+split into definitional (denoted with |_=_|) and propositional (denoted with
+|_≡_|).
 
 Definitional equality (also called "conversion") judgements are made the 
 meta-level, and typing relations in ITT are given with types always equated up 
@@ -185,21 +204,20 @@ plus computation rules ($\beta$ and sometimes $\eta$) but there are other
 options, which we shall examine in \refch{background}.
 
 Propositional equality judgements, on the other hand, are made at the level
-of the (object) type theory itself. i.e. |_≡_ : A → A → Set| is a type 
+of the (object) type theory itself. i.e. |_≡_ : A → A → Set| is an
+object-theory type 
 constructor (forming the "identity type") and terms of type |t ≡ u| can be 
 introduced with |refl : t ≡ t|
-and eliminated with the |J| rule (|J : (P : A → Set) → x ≡ y → P x → P y|).
-Since Martin-Löf's first characterisation of intensional type theory
-\sidecite[*0]{martin1975intuitionistic}, 
-propositional equality has
-been extended in numerous ways (the |K| rule 
-\sidecite[*1]{streicher1993investigations}, 
-OTT \sidecite[*3]{altenkirch2007observational}, 
-CTT \sidecite[*5]{cohen2016cubical}), but all major 
-presentations retain the ability to introduce it with |refl| and eliminate with 
-|J| (even if such operations are no longer primitive). Inspired by the homotopy 
-interpretation of type theory, coercing with |J| 
-is often called "transporting", and in Agda is written |subst|.
+and eliminated with the |J| rule (|J : (P : A → Set) → x ≡ y → P x → P y|,
+representing the principle of "indiscernibility of identicals").
+
+The motivation for this division is that in dependently-typed systems, types can
+contain terms that perform real computation, but typechecking requires
+comparing types for equality (e.g. when checking function application is
+valid). To retain decidability of typechecking, while enabling programmers
+to write non-trivial
+equational proofs, restricting the typechecker to a decidable approximation
+of equality is required.
 
 The equality reflection rule that defines ETT is simply an equating of
 propositional and definitional equality. Specifically, adding the typing rule
@@ -211,11 +229,11 @@ to turn an intensional type theory into an extensional one.
 If we consider propositional equality |t ≡ u| to be an 
 inductively defined type with one canonical element |refl : x ≡ x|, it
 seems reasonable to allow pattern-matching on it like other inductive types. 
-Eliminating equality proofs is only really \textit{useful} though 
-\remarknote{Assuming the user is not interested in proving equality of equality
+Eliminating equality proofs is only really \textit{useful}\remarknote{
+Assuming the user is not interested in proving equality of equality
 proofs. In fact, to prevent deriving the |K| rule (which is sometimes
 desirable), one must actively
-prevent matching on |t ≡ u| when |t| and |u| are convertible \cite{cockx2017dependent}.} if the LHS and 
+prevent matching on |t ≡ u| when |t| and |u| are convertible \cite{cockx2017dependent}.} though if the LHS and 
 RHS are not already definitionally equal 
 (|J′ : ∀ (P : A → Set) → x ≡ x → P x → P x| is just a fancy identity function).
 
@@ -239,12 +257,13 @@ not-true .true refl = refl
 \end{code} 
 \end{example}
 
-|.t| is Agda's notation for forced patterns. Note that we do not need to
+|.pat| is Agda's notation for forced patterns. Note that we do not need to
 provide any case for |b == false|; conceptually, we are making use of 
 |_≡_|'s  elimination rule here, not |Bool|'s. 
 Type theory implementations can actually
 go one step further and infer insertion of forced matches, including
-on implicit arguments (marked with |{}|), allowing the even more concise:
+on implicit arguments (denoted with |{}| in Agda), allowing the even more
+concise:
 
 \begin{code}
 not-true′ : ∀ {b} → b ≡ true → not b ≡ false
@@ -253,7 +272,9 @@ not-true′ refl = refl
 
 We have effectively turned a propositional equality into a definitional one,
 simply by pattern matching! The downside of course, is that this can only
-work when one side of the |_≡_| is a variable. If it instead an application:
+work unifying both sides of the equality provides a set of single-variable
+substitutions which can be turned into forced matches. If we replace |b| with
+an application |f b|:
 \begin{spec}
 not-true′′ : ∀ {f : Bool → Bool} {b} → f b ≡ true → not (f b) ≡ false
 not-true′′ refl = refl
@@ -267,10 +288,19 @@ problems (inferred index ≟ expected index):
   f b ≟ true
 when checking that the pattern refl has type f b ≡ true
 \end{spec}
+Failures of indexed pattern-matching like this are often referred to by
+dependently-typed programmers as 
+examples of 
+"green slime" \sidecite{mcbride2012polynomial}. While there are various
+work-arounds (helper functions that abstract over one side of the equation with
+a fresh variable, manual coercing with |subst|, defining functions as inductive
+relations and inducting on the "graph" of the function 
+\sidecite{mcbride2025double} etc...), they all require the programmer to
+write some form of boilerplate.
 
 \textbf{This} is what makes a principled way of
-matching on expressions so exciting (and also hints at it's difficulty
-\remarknote{Indeed, the fully general version of this feature is
+matching on general expressions so exciting (and also hints at its
+difficulty\remarknote{Indeed, the fully general version of this feature is
 undecidable; we will aim to find a decidable fragment.}):
 a proof assistant with this feature could start inferring forced matches on 
 those expressions, providing a general way to turn propositional equalities
@@ -279,11 +309,11 @@ definitional ones - i.e. manually invoked equality reflection.
 
 As an example of how manual equality reflection can simplify many 
 equational proofs, we consider the simple inductive proof that |0| is a 
-right-identity  of |ℕ , _+_|
-(i.e. |n + 0 ≡ n|), where |_+_| is addition of natural numbers defined by 
-recursion on the left argument, first in a mathematical style:
+right-identity |_+_| on |ℕ|s.
+(i.e. |n + 0 ≡ n|, where |_+_| is addition of natural numbers defined by 
+recursion on the left argument, first in a mathematical style):
 
-\begin{theorem}[|0| is a right identity of |ℕ , _+_|] \phantom{a}
+\begin{theorem}[|0| is a right identity of |_+_|] \phantom{a}
 
 In the base case, it remains to prove |0 + 0 ≡ 0|, which is true by definition
 of |_+_|. 
@@ -310,13 +340,13 @@ In Agda, the same proof is expressed as follows:
 \end{code}
 \end{example}
 
-As Agda's definitional equality automatically unfolds/$\beta$-reduces 
+As Agda's definitional equality automatically unfolds ($\beta$-reduces) 
 pattern-matching definitions (justified by Agda only allowing
-structurally recursive definitions, so unfolding must terminate), so we 
+structurally recursive definitions, so reduction must terminate), we 
 don't need to explicitly appeal to the definition of |_+_|.
 
 On the other hand, though the syntax makes it concise, we have actually had to
-add more detail in one place in our Agda proof here than in our mathematical 
+add more detail in one part of our Agda proof here than the mathematical 
 one. |cong su| represents that in the inductive case, we cannot apply the 
 inductive hypothesis directly: we have |(n + ze) ≡ n| but need 
 |su (n + ze) ≡ su n|:
@@ -346,11 +376,11 @@ application and constants. The example is a bit involved, but we repeat it in
 detail now for a few reasons:
 \begin{itemize}
   \item Since the publication of this work, Agda has had a significant extension
-  to it's automation of equational reasoning: global |REWRITE| rules
+  to its automation of equational reasoning: global |REWRITE| rules
   \sidecite{cockx2020type}, so it will be
   interesting to examine where these can and cannot help.
-  \item It's just a nice example: relatively self-contained while presenting a
-  reasonably strong case for improved equational automation.
+  \item It is just a nice example: relatively self-contained while presenting a
+  strong case for improved equational automation.
   \item The results of this project are all given in terms of a type-theoretic
   (approximately MLTT) metatheory. In fact, where possible, I aim to mechanise
   proofs in Agda. Implementing first-order unification for untyped terms should
@@ -387,7 +417,7 @@ Tm   : ℕ → Set
 %if False
 \begin{code}
 variable
-  Γ Δ : ℕ
+  Γ Δ Θ : ℕ
 \end{code}
 %endif
 Terms themselves are easy. We have no binding constructs, so the context
@@ -423,6 +453,11 @@ data Var where
   vz : Var (su Γ)
   vs : Var Γ → Var (su Γ)
 \end{code}
+Indexed typed like |Var|/|Fin| can be justified in dependent type theories
+with a propositional identity type by "Fording"
+\sidecite{mcbride2000dependently}. 
+e.g. for |vz| we could have instead written isomorphic signature
+|vz : Δ ≡ su Γ → Var Δ| - you can have any context, as long as it is |su Γ|! 
 \end{definition}
 % ---------------------------------------------------------------------------- %
 
@@ -453,6 +488,7 @@ dependently-typed syntax (without "very-dependent types"
 % ---------------------------------------------------------------------------- %
 \begin{definition}{Parallel Substitions} \phantom{a}
 
+\labdef{par-subst}
 We define substitutions in terms of lists of terms |Tms|, indexed first by the
 context each of the terms in the list are in, and second by the length of the
 list.
@@ -560,19 +596,91 @@ incremented and |` vz| appended to the end).
   ε        ⁺ = ε
   (δ , t)  ⁺ = (δ ⁺) , inc t
 
+  wk : Tms (su Γ) Γ
+  wk = id ⁺
+
   id {Γ = ze}   = ε
-  id {Γ = su Γ} = (id ⁺) , (` vz)
+  id {Γ = su Γ} = wk , (` vz)
 
   variable
     t u v : Tm Γ
     i j k : Var Γ
+    δ σ   : Tms Δ Γ
 
   data Occurs (i : Var Γ) : Tm Γ → Set where
     eq : Occurs i (` i)
     l· : Occurs i t → Occurs i (t · u)
     ·r : Occurs i u → Occurs i (t · u)
   
+  ¬Occursπ₁ : ¬ Occurs i (t · u) → ¬ Occurs i t
+  ¬Occursπ₁ p q = p (l· q)
+
+  ¬Occursπ₂ : ¬ Occurs i (t · u) → ¬ Occurs i u
+  ¬Occursπ₂ p q = p (·r q)
+
+  _≡v?_ : (i j : Var Γ) → Dec (i ≡ j)
+  vz   ≡v? vz   = yes refl
+  vz   ≡v? vs j = no λ ()
+  vs i ≡v? vz   = no λ ()
+  vs i ≡v? vs j = map-Dec (cong vs) (λ where refl → refl) (i ≡v? j)
+
   occurs? : (i : Var Γ) (t : Tm Γ) → Dec (Occurs i t)
+  occurs? i (` j) with i ≡v? j
+  ... | yes refl = yes eq
+  ... | no  ¬p   = no λ where eq → ¬p refl
+  occurs? i (t · u) with occurs? i t
+  ... | yes p = yes (l· p)
+  ... | no ¬p with occurs? i u
+  ... | yes q = yes (·r q)
+  ... | no ¬q = no λ where (l· p) → ¬p p
+                           (·r q) → ¬q q
+  occurs? i ⟨⟩      = no λ ()
+
+  _[_↦_] : Tms Δ Γ → Var Γ → Tm Δ → Tms Δ Γ
+  (δ , u) [ vz   ↦ t ] = δ , t
+  (δ , u) [ vs i ↦ t ] = (δ [ i ↦ t ]) , u
+
+  _⨾_ : Tms Δ Γ → Tms Θ Δ → Tms Θ Γ
+  ε        ⨾ σ = ε
+  (δ , t)  ⨾ σ = (δ ⨾ σ) , (t [ σ ])
+  
+  []lookup : lookup i δ [ σ ] ≡ lookup i (δ ⨾ σ)
+  []lookup {i = vz}   {δ = δ , u} = refl
+  []lookup {i = vs i} {δ = δ , u} = []lookup {i = i} {δ = δ}
+
+  [][] : t [ δ ] [ σ ] ≡ t [ δ ⨾ σ ]
+  [][] {t = ` i}   = []lookup {i = i}
+  [][] {t = t · u} = cong₂ _·_ ([][] {t = t}) ([][] {t = u})
+  [][] {t = ⟨⟩}    = refl
+
+  i[i↦] : lookup i (δ [ i ↦ t ]) ≡ t
+  i[i↦] {i = vz}   {δ = δ , _} = refl
+  i[i↦] {i = vs i} {δ = δ , _} = i[i↦] {i = i} {δ = δ}
+
+  i[j↦] : ¬ i ≡ j → lookup i (δ [ j ↦ u ]) ≡ lookup i δ
+  i[j↦] {i = vz}   {j = vz}               p = ⊥-elim (p refl)
+  i[j↦] {i = vs i} {j = vz}   {δ = δ , _} p = refl
+  i[j↦] {i = vz}   {j = vs j} {δ = δ , _} p = refl
+  i[j↦] {i = vs i} {j = vs j} {δ = δ , _} p 
+    = i[j↦] {i = i} {j = j} {δ = δ} λ where refl → p refl
+
+  i[⁺] : inc (lookup i δ) ≡ lookup i (δ ⁺)
+  i[⁺] {i = vz}   {δ = δ , t} = refl
+  i[⁺] {i = vs i} {δ = δ , t} = i[⁺] {i = i} {δ = δ}
+
+  i[id] : lookup i id ≡ (` i)
+  i[id] {i = vz}   = refl
+  i[id] {i = vs i} = sym (i[⁺] {i = i}) ∙ cong inc (i[id] {i = i})
+
+  t[i↦] : ¬ (Occurs i t) → t [ id [ i ↦ u ] ] ≡ t
+  t[i↦]            {t = t · u}  p 
+    = cong₂ _·_ (t[i↦] (¬Occursπ₁ p)) (t[i↦] (¬Occursπ₂ p))
+  t[i↦]            {t = ⟨⟩}     p = refl
+  t[i↦] {i = i}    {t = ` j}    p 
+    = (i[j↦] {i = j} {j = i} {δ = id} λ where refl → p eq) ∙ i[id] {i = j}
+
+  sym-unifier : Unifier t u → Unifier u t
+  sym-unifier (success δ p) = success δ (sym p)
 \end{code}
 %endif
 
@@ -589,9 +697,8 @@ We also have a couple easy failure cases:
 
 %if False
 \begin{code}
-  unify (t₁ · t₂)     (` j) = {!   !}
-  unify (t₁ · t₂) (u₁ · u₂) = {!   !}
-  unify ⟨⟩ (` i) = {!   !}
+  unify (t₁ · t₂)  (` j)  = map-maybe sym-unifier (unify (` j) (t₁ · t₂))
+  unify ⟨⟩ (` i)          = map-maybe sym-unifier (unify (` i) ⟨⟩)
 \end{code}
 %endif
 
@@ -601,32 +708,246 @@ A more interesting case crops up when |t| is a variable:
   unify (` i) u = ?0
 \end{spec}
 
+To implement this case, we need to perform an "occurs check" to find whether
+|i| occurs in |u|.
 
-Here, we need to perform an "occurs check" on |u|
+We define variables occuring free in first-order terms inductively as:
+\begin{spec}
+  Occurs : Var Γ → Tm Γ → Set
+
+  eq : Occurs i (` i)
+  l· : Occurs i t → Occurs i (t · u)
+  ·r : Occurs i u → Occurs i (t · u)
+\end{spec}
+
+And define occurs checking itself 
+|occurs? : (i : Var Γ) (t : Tm Γ) → Dec (Occurs i t)| by recursion on
+terms/variables.
+
+We also need a way to construct substitutions in which a single variable
+is replaced with a particular term:
+
+\begin{spec}
+  _[_↦_] : Tms Δ Γ → Var Γ → Tm Δ → Tms Δ Γ
+  (δ , u) [ vz   ↦ t ] = δ , t
+  (δ , u) [ vs i ↦ t ] = (δ [ i ↦ t ]) , u
+\end{spec}
+
+Now, along with the |i[i↦] : lookup i (δ [ i ↦ t ]) ≡ t| and
+|t[i↦] : ¬ (Occurs i t) → t [ id [ i ↦ u ] ] ≡ t| (provable by induction
+on terms, variables and substitutions), and the help of |with|-abstractions
+to match on the result of the occurs check (the limitations of this
+feature vs Smart Case are detailed in \refsec{with}), we can implement this
+case (if |i| does not occur in |u|, the substition |id [ i ↦ u ]| is a valid
+unifier, if |u| equals |` i|, |id| is a valid unifier, otherwise unification
+fails).
 
 \begin{code}
   unify (` i) u with occurs? i u 
-  unify (` i) u  | no   p       = just (success {! !} (sym {! !}))
-  unify (` i) u  | yes  eq      = just (success id refl)
-  unify (` i) u  | yes  (l· _)  = nothing
-  unify (` i) u  | yes  (·r _)  = nothing
+  ... | no   p       = just (success (id [ i ↦ u ]) (
+    lookup i (id [ i ↦ u ])
+    ≡⟨ i[i↦] {i = i} ⟩
+    u
+    ≡⟨ sym (t[i↦] p) ⟩
+    u [ id [ i ↦ u ] ] ∎)) 
+  ...  | yes  eq      = just (success id refl)
+  ...  | yes  (l· _)  = nothing
+  ...  | yes  (·r _)  = nothing
 \end{code}
 
+Note the manual equational reasoning required to prove |id [ i ↦ u ]| is valid.
+Agda |REWRITE| rules (\refsec{rewrites}) can turn |i[i↦]| into a definitional
+law, reducing the proof to |sym (t[i↦] p)|, but |t[i↦]| has a pre-condition 
+(|¬ (Occurs i t)|) and so cannot be turned into a global |REWRITE|.
+With Smart Case, we could merely match on |i[i↦] {i = i} {δ = δ} {t = u}| and 
+|t[i↦] {u = t} p|, and write the proof itself as |refl|.
+
+The remaining case (ignoring flipping of arguments) is application.
+Here, we attempt to unify the LHSs, and
+if that succeeds, unify the RHSs with the LHS-unifying substitution applied.
+If this unification also succeeds, we can compose the two unifiers, and again do
+some equational reasoning to prove this is a valid unifier.
+
+We define composition of substitutions as:
+\begin{spec}
+  _⨾_ : Tms Δ Γ → Tms Θ Δ → Tms Θ Γ
+  ε        ⨾ σ = ε
+  (δ , t)  ⨾ σ = (δ ⨾ σ) , (t [ σ ])
+\end{spec}
+
+And prove the composition law |[][] : t [ δ ] [ σ ] ≡ t [ δ ⨾ σ ]| by
+induction on terms, variables and substitutions. This enables us to
+finish the implementation of |unify|.
+
+\sideremark{This implementation is unfortunately not structurally recursive 
+(|t₂ [ δ ]| is not structurally smaller than |t₁ · t₂|). 
+For the purposes of this example,
+we just assert termination, though algorithms which Agda will accept more
+directly do exist \sidecite[*2]{mcbride2003first}.}
+\begin{code}
+  unify (t₁ · t₂) (u₁ · u₂) with unify t₁ u₁
+  ... | nothing             = nothing
+  ... | just (success δ p)  with unify (t₂ [ δ ]) (u₂ [ δ ])
+  ... | nothing             = nothing
+  ... | just (success σ q)  = just (success (δ ⨾ σ) (
+    (t₁ [ δ ⨾ σ ]) · (t₂ [ δ ⨾ σ ]) 
+    ≡⟨ sym (cong₂ (_·_) ([][] {t = t₁}) ([][] {t = t₂})) ⟩
+    (t₁ [ δ ] [ σ ]) · (t₂ [ δ ] [ σ ]) 
+    ≡⟨ cong₂ _·_ (cong _[ σ ] p) q ⟩
+    (u₁ [ δ ] [ σ ]) · (u₂ [ δ ] [ σ ])
+    ≡⟨ cong₂ (_·_) ([][] {t = u₁}) ([][] {t = u₂}) ⟩
+    (u₁ [ δ ⨾ σ ]) · (u₂ [ δ ⨾ σ ]) ∎))
+\end{code}
+
+Manually applying congruence rules here has gotten quite tedious. Smart Case
+would simplify this, by enabling matching on |p|, |q| and the four
+instantiations of the composition law, reducing the equational proof to
+|refl|exivity.
+
+Agda's |REWRITE| rules are also quite effective here: turning |[][]| into
+a definitional equation reduces the proof to |cong₂ _·_ (cong _[ σ ] p) q|
+(its support for non-ground equations making all possible instantiations hold
+definitionally).
+\sideremark{
+Specifically, |t [ δ ] [ σ ] [ ξ ]| could reduce via |[][]| to
+|t [ (δ ⨾ σ) ⨾ ξ ]| or |t [ δ ⨾ (σ ⨾ ξ) ]|, which are not definitionally equal.
+}
+However, |[][]| alone is not confluent (and indeed Agda with
+|--local-confluence| checking enabled catches this). Non-confluent |REWRITE|
+rules risk breaking subject reduction \sidecite{cockx2020type}, so
+this is somewhat unfortunate.
+
+Turning associativity of |_⨾_| (|⨾⨾ : (δ ⨾ σ) ⨾ ξ ≡ δ ⨾ (σ ⨾ ξ)|)
+into a |REWRITE|s simultaneously fixes
+this\remarknote{Technically, we also need 
+|[]lookup : lookup i δ [ σ ] ≡ lookup i (δ ⨾ σ)| but this is a necessary
+lemma to prove |[][]| so is less onerous to add.}, 
+but of course requires proving this additional equation that isn't
+directly necessary for our result. The situation is complicated even further
+when we try to combine these rewrites with |i[i↦]| (which simplified the prior
+case): |lookup i (δ [ i ↦ t ]) [ σ ]| can rduce to either 
+|lookup i (δ [ i ↦ t ] ⨾ σ)| (by |[]lookup|) or |t [ σ ]| (by |i[i↦]|); we
+need to prove additional laws about how |_[_↦_]| and |_⨾_| interact to
+resolve this. 
+
+In general, a particular algebraic structure one may wish to work with in a
+proof assistant may not have a terminating and confluent presentation of its
+equations (let alone such a presentation that a conservative, automatic
+checker could identify as such). Global
+|REWRITE| rules force the programmer to make careful decisions as to which
+\sideremark{One could, of course, imagine a proof assistant with support for
+rewrite rules that can be locally enabled/disabled, but the state-of-the-art
+in this area \sidecite[*3]{komel2021meta} leaves confluence/termination checking
+for future work.}
+laws should be made definitional |REWRITE|s and which which should be kept 
+propositional.
 
 \section{One More Example: Mechanising Type Theory}
+\labsec{indexed-example}
 
 The prior section gave an example where automating congruence simplifies
-equational reasoning. Cases like this admittedly still might not be fully
-convincing though: couldn't we just create a small automation script (a 
-"tactic") to automatically generate such proofs?
+equational reasoning. 
+\sideremark{Indeed, Lean features such a tactic for exactly these sorts
+of situations \sidecite[*2]{selsam2016congruence}.}
+Cases like this admittedly still might not be fully
+convincing though: couldn't we just create a small proof-generating
+script (a 
+"tactic") to automatically generate such congruence proofs?
 
 The real pain of not being able to reflect propositional equality proofs into
-definitional assumptions starts to rear it's head when one works with
-heavily-indexed types. The general pattern is that as follows:
+definitional assumptions starts to rear its head when one works with
+heavily-indexed types. A common pattern (commonly known amonst dependently typed
+programmers "coherence" problems or "transport hell")
+is as follows:
 \begin{itemize}
-  \item some operations on an indexed
-  type |A : I → Set| are forced to explicitly coerce ("transport") along
+  \item Some operations on an indexed
+  type are forced to explicitly coerce (transport) along
   propositional equations relating different index expression.
-  \item One now attempts to prove equations about these indexed types, and has
-  to deal with explicitly shifting transports around.
-\end{itemize} 
+  \item Equational proofs about these operations now need to deal with
+  these transports, for example, explicitly using lemmas that push them 
+  inside/outside of function applications.
+\end{itemize}    
+
+This situation is especially common when mechanising type theories with
+some form of type dependency - e.g. System F
+\sidecite{saffrich2024intrinsically} or dependent type theory. 
+
+For example, using the technique of \sidecite{mcbride2010outrageous} to define
+dependently-typed syntax (indexed by the interpretation of types), we can
+attempt to define parallel substitutions analagous to \refdef{par-subst} and
+prove the composition law. 
+Even in the
+raw recursive definition of the operation, heavy manual equational reasoning
+is required to prove type preservation.
+
+\remarknote{The details here are mostly irrelevant. The main important
+thing to note is that the terms here are indexed by context and type
+(so-called "intrinsically-typed" syntax) and |subst| is Agda's syntax for
+transporting along equations (necessary to make the type of the substituted
+term match up with the goal)}
+
+\begin{spec}
+_[_]tm : Tm Γ A → (δ : Objs s Δ Γ) → Tm Δ (A ∘ ⟦ δ ⟧os)
+var x                  [ δ ]tm = obj→tm _ (x [ δ ]v)
+app {B = B} M N        [ δ ]tm 
+  = subst (λ N[] → Tm _ (B ∘ (⟦ δ ⟧os ,sub N[]))) (N [ δ ]tm≡) 
+          (app (M [ δ ]tm) (N [ δ ]tm))
+lam {A = A} {B = B} M  [ δ ]tm 
+  = subst (Tm _) (dcong₂⁻¹ Πsem A≡ (cong (B ∘_) (to-coe≡⁻¹ _ (δ ↑os≡ A) 
+  ∙ ↑[]-helper _ A≡ ∙ cong (_ ,sub_) (sym (semvz-helper A≡)))
+  ∙ []-helper B ⟦ δ ⟧os A≡)) (lam (M [ δ ↑os _ ]tm))
+  where A≡ = A [ δ ]≡
+\end{spec}
+
+When attempting to prove the composition law, things get completely
+out-of-hand.
+
+\begin{spec}
+[]tm-comp : (M : Tm Γ A) (δ : Objs s Δ Γ) (σ : Objs t θ Δ) 
+          → M [ δ ]tm [ σ ]tm ≡ M [ δ ∘os σ ]tm
+[]tm-comp {s = s} {t = t} (var x) δ σ 
+  = cong (obj→tm (max s t)) ([]v-comp x δ σ)
+[]tm-comp (app M N) δ σ = app≡ refl refl refl M≡ N≡
+  where M≡ = []tm-comp M δ σ
+        N≡ = []tm-comp N δ σ
+[]tm-comp {s = s} {t = t} (lam {A = A} {B = B} M) δ σ 
+  = sym rm-subst ∙ coes-cancel2 ∙ sym coes-cancel 
+  ∙ cong (subst (Tm _) prf) 
+         (to-coe≡ _ (lam≡ refl A[]≡ B[]≡ (_∙P_ {p = refl} M[]≡ ↑[]≡)))
+  where M[]≡   = []tm-comp M (δ ↑os _) (σ ↑os _)
+        A[]≡   = []-comp A δ σ
+        B[]≡   = cong (B ∘_) (cong ((⟦ δ ⟧os ∘ ⟦ σ ⟧os ∘ semwk _) ,sub_)  
+                 (cong₂  (λ v₁ v₂ → v₁ ∘ ((⟦ σ ⟧os ∘ semwk _) ,sub v₂)) 
+                         (vzo≡ {A = A [ δ ]} s) (vzo≡ {A = A [ δ ] [ σ ]} t)
+               ∙ sym (vzo≡ {A = A [ δ ∘os σ ]} (max s t))  ))
+        ↑[]≡   = []tm≡ refl (refl ,≡ A[]≡) refl (erefl M) (↑∘os≡ A δ σ)
+        A≡     = A [ δ ∘os σ ]≡
+        M≡     = M [ (δ ∘os σ) ↑os _ ]tm≡
+        lamM≡  = lamsem≡ refl refl refl M≡
+        prf    = dcong₂⁻¹ Πsem A≡ (cong (B ∘_) (((δ ∘os σ) ↑os≡ A) 
+               ∙ ↑[]-helper _ A≡ ∙ cong (_ ,sub_) (sym (semvz-helper A≡)))
+               ∙ []-helper B ⟦ δ ∘os σ ⟧os A≡)
+        Aδ≡    = A [ δ ]≡
+        prfδ   = dcong₂⁻¹ Πsem Aδ≡ (cong (B ∘_) ((δ ↑os≡ A) 
+               ∙ ↑[]-helper _ Aδ≡ ∙ cong (_ ,sub_) (sym (semvz-helper Aδ≡)))
+               ∙ []-helper B ⟦ δ ⟧os Aδ≡)
+        
+        coes-cancel  = coe-coe _ (cong (Tm _) prf) 
+                                (cong (Tm _) (Πsem≡ refl (⟦⟧T≡ refl A[]≡) B[]≡))
+        coes-cancel2 = coe-coe (lam (M [ wkos (A [ δ ]) δ , vzo s ]tm 
+                                       [ wkos (A [ δ ] [ σ ]) σ , vzo t ]tm)) 
+                               (cong (Tm _ ∘ (_∘ ⟦ σ ⟧os)) prfδ) _
+        rm-subst     = subst-application′ (Tm _) (λ _ → _[ σ ]tm) prfδ
+\end{spec}
+
+Along with the huge amount of congruence reasoning, a few of the steps here
+(|coes-cancel|, |coes-cancel2|, |rm-subst|) don't even correspond to 
+"meaningful"\remarknote{Defining "meaningful" here as equations which don't
+trivially hold on untyped syntax/after erasing transports.} laws and only
+exist to move around or cancel out transports.
+
+Experiencing this pain when mechanising type theory was a significant
+motivation in my selecting the topic of this project. The development
+these examples originate from is available at
+\url{https://github.com/NathanielB123/dep-ty-chk/tree/trunk}
+Hopefully, Smart Case will help.

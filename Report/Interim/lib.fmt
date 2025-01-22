@@ -33,6 +33,7 @@
 \newunicodechar{δ}{$\delta$}
 \newunicodechar{σ}{$\sigma$}
 \newunicodechar{ξ}{$\xi$}
+\newunicodechar{θ}{$\theta$}
 \newunicodechar{λ}{$\lambda$}
 \newunicodechar{ƛ}{$\lambdabar$}
 \newunicodechar{η}{$\eta$}
@@ -41,6 +42,7 @@
 \newunicodechar{Δ}{$\Delta$}
 \newunicodechar{Π}{$\Pi$}
 \newunicodechar{Σ}{$\Sigma$}
+\newunicodechar{Θ}{$\Theta$}
 
 \newunicodechar{∀}{$\forall$}
 \newunicodechar{≡}{$\equiv$}
@@ -52,6 +54,10 @@
 \newunicodechar{∘}{$\circ$}
 \newunicodechar{∎}{$\blacksquare$}
 \newunicodechar{≟}{$\stackrel{?}{=}$}
+
+\newunicodechar{⨾}{$;$}
+\newunicodechar{⟦}{$\llbracket$}
+\newunicodechar{⟧}{$\rrbracket$}
 
 \newunicodechar{𝔹}{$\mathbb{B}$}
 \newunicodechar{ℕ}{$\mathbb{N}$}
@@ -82,7 +88,9 @@
 \newunicodechar{′}{$'$}
 
 % Override formatting of "not" as "¬"
-%format not  = "\Varid{ not }"
+%format not       = "\Varid{ not }"
+%format undefined = "\Varid{ undefined }"
+%format .         = "\Varid{ . }"
 
 %format ƛ    = λ
 %format ƛ⁻¹  = ƛ ⁻¹
@@ -103,6 +111,7 @@
 %format ≡   = "="
 %format _≡_ = _ "\!" "=" "\!" _
 %format ≡⟨  = "=" "\textit{by}" "\;" "\langle"
+%format ≡⟨⟩ = "=" "\textit{by}" "\;"
 %format =   = "\colonequiv"
 %format ==  = "\equiv"
 %format _=_ = _ "\!" == "\!" _
