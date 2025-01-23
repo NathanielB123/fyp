@@ -39,19 +39,20 @@ of the reductions we actually care about.
 In my opinion, the most interesting part of the
 proof ended-up being getting around the usual requirement for reduction
 to respect substitution\remarknote{Spontaneous reduction fails here as it
-allows |(` i) >> true|, but applying the substitution |true / i| to both
+enables |(` i) >> true|, but applying the substitution |true / i| to both
 sides results in |true >> true| which cannot be allowed if we want
-reduction to be well-founded.} (i.e. |t >> u → t [ δ ] >> u [ δ ]|).
-This is usually required while proving the fundamental theorem for
-lambda abstractions (to get from computability of |t₁ : Tm (Γ , A) B| and
-|u : Tm Γ A|, plus |t₁ >> t₂| to computability of |t₂ [ < u ? ] : Tm Γ B|),
+reduction to be well-founded.} (i.e. |t₁ >> t₂ → t₁ [ δ ] >> t₂ [ δ ]|).
+This property usually required while proving the fundamental theorem in
+the case of lambda abstractions
+(to go from computability of |t₁ : Tm (Γ , A) B| and
+|u : Tm Γ A| to computability of |t₂ [ < u > ] : Tm Γ B| using |t₁ >> t₂|),
 and can be expressed with the following diagram:
 
 \begin{tikzcd}[scaleedge cd=1.25, sep=huge]
-|t| \arrow[r, "|_>>_|"] \arrow[d, swap, "|_[ δ ]|"]
-& |u| \arrow[d, "|_[ δ ]|"] \\
-|t [ δ ]| \arrow[r, swap, dashrightarrow, "|_>>_|"]
-& |u [ δ ]|
+|t₁| \arrow[r, "|_>>_|"] \arrow[d, swap, "|_[ δ ]|"]
+& |t₂| \arrow[d, "|_[ δ ]|"] \\
+|t₁ [ δ ]| \arrow[r, swap, dashrightarrow, "|_>>_|"]
+& |t₂ [ δ ]|
 \end{tikzcd}
 
 I solved this by categorising single-variable substitutions into ones that 
@@ -63,28 +64,28 @@ It is then becomes to prove:
 single-substitutions applying anywhere in the context rather than only on
 the first variable, but the idea is the same.}
 \begin{spec}
-_[_]→+ : t >> u → Sub+ Δ Γ < v > → (t [ < v > ]) >> (u [ < v > ])
+_[_]→+ : t₁ >> t₂ → Sub+ Δ Γ < u > → (t₁ [ < u > ]) >> (t₂ [ < u > ])
 \end{spec}
 and
 \begin{spec}
-boolsub→ : Sub- Δ Γ < b > → t >>* t [ < b > ] [ wk ]
+boolsub→ : Sub- Δ Γ < u > → t₁ >>* t₁ [ < u > ] [ wk ]
 \end{spec}
 \textit{Where |_>>*_| is the reflexive, transitive closure of spontaneous
 reduction.}
 
+\pagebreak
 Or, as a diagram:
 
 \begin{tikzcd}[scaleedge cd=1.25, sep=huge]
-|t [ < b >- ]| \arrow[r, "|_[ wk ]|"]
-& |t [ < b >- ] [ wk ]| \\
-|t| \arrow[u, "|_[ < b >- ]|"] 
+|t₁ [ < b >- ]| \arrow[r, "|_[ wk ]|"]
+& |t₁ [ < b >- ] [ wk ]| \\
+|t₁| \arrow[u, "|_[ < u >- ]|"] 
     \arrow[ur, dashrightarrow, "|_>>*_|"]
     \arrow[r, "|_>>_|"]
-    \arrow[d, swap, "|_[ < v >+ ]|"]
-& |u| \arrow[d, "|_[ < v >+ ]|"] \\
-|t [ < v >+ ]| \arrow[r, swap, dashrightarrow, "|_>>_|"]
-& |u [ < v >+ ]|
-|t [ δ- ]| \\
+    \arrow[d, swap, "|_[ < u >+ ]|"]
+& |t₂| \arrow[d, "|_[ < u >+ ]|"] \\
+|t₁ [ < u >+ ]| \arrow[r, swap, dashrightarrow, "|_>>_|"]
+& |t₂ [ < u >+ ]|
 \end{tikzcd}
 
 And it turns out this is
@@ -101,7 +102,7 @@ one top-down (rewriting to completion) and one bottom-up (e-graphs),
 and begun working on an NbE (Normalisation
 by Evaluation) typechecker.
 
-\section{Plan}
+\section{The Plan}
 
 I think in the immediate future, focussing on implementation is a good
 idea, and I hope that a simple proof-of-concept will not actually be too
@@ -135,7 +136,7 @@ normalisation. I currently am unsure how to justify termination when adding
 new equational assumptions in this setting, but I think Altenkirch et al.'s 
 work on NbE for STLC + coproducts with strict η-laws
 \sidecite{altenkirch2001normalization} must have run into similar
-problems, so perhaps learning some basic sheaf theory (with the help of
+problems, so perhaps learning some basic sheaf theory (maybe with the help of
 \sidecite{pedrot2021debunking}) will provide insight.
 
 Outside of dependent types, I could also work more on the theory of the

@@ -26,7 +26,7 @@ substituted for the corresponding pattern everywhere in the typing context.
 
 It is this substituting that enables taking advantage of information learned
 over the course of a match. This allows, for example, defining equality testing
-functions that return actual evidence of the result of the test.
+functions that return actual evidence for the result of the test.
 \sideremark[*2]{
 In this report, our code snippets will generally follow Agda 
 \sidecite[*11]{norell2007towards} syntax (in fact,
@@ -58,8 +58,8 @@ refining the goal type to |(true ≡ true) ⊎ (true ≡ false)|, at which |inl 
 typechecks successfully.
 
 In mainstream functional programming languages, it is common to allow pattern
-matching not just on the direct arguments of a function, but also on arbitrary
-expressions (e.g. via |case_of_| expressions). Extending dependent 
+matching not just on the direct arguments of functions, but also on intermediary
+expressions (e.g. via a |case_of_| construct). Extending dependent 
 pattern-matching
 accordingly would have direct utility: consider this concise proof that for
 any boolean function |f : Bool → Bool|, |f b ≡ f (f (f b))|:
@@ -82,10 +82,11 @@ bool-lemma f false  = case f false of
   false  → refl
 \end{spec}
 \end{example}
-\pagebreak
+
 Unfortunately, mainstream proof assistants (such as Agda) generally do not
 support such a
-construct\remarknote{Some proof assistants do allow matching on expressions to
+construct\remarknote[][*-6]{Some proof assistants do allow matching on 
+expressions to
 some
 extent via "|with|-abstractions" \sidecite[*5]{mcbride2004view, agda2024with}. 
 We will cover why this feature is not quite satisfactory (including for this 
@@ -140,21 +141,21 @@ bool-lemma f b = bool-lemma′ f b (test (f true)) (test (f false))
 \end{code}
 \end{example}
 
-The trickyness with supporting matching on arbitrary expressions is that
+The trickyness with supporting matching on intermediary expressions is that
 there
 may not exist a unique unification solution between the scrutinee and pattern.
 Dependent pattern matching must modify the typing context in the branch of a
 match to make the scrutinee and pattern equal, but we cannot make |f b| equal 
-|true| on-the-nose by substituting individual variables, without making any 
-assumptions about the behaviour of |f| on closed booleans.
+|true| on-the-nose by substituting individual variables (without making any 
+assumptions about the behaviour of |f| on closed booleans).
 
 This project explores type theories with local, ground\remarknote{A "ground"
 equation is one which is not quantified over any variables.}, equational
 assumptions:
 a setting designed to enable this extended version of pattern matching.
 The idea is not novel, Altenkirch et al. first investigated such 
-a theory during the development of ΠΣ \sidecite{altenkirch2008pisigma}
-\sidecite{altenkirch2010pisigma}, naming this extended
+a theory during the development of ΠΣ \sidecite{altenkirch2008pisigma,
+altenkirch2010pisigma}, naming this extended
 pattern-matching construct "Smart Case" \sidecite{altenkirch2011case}. 
 However, this work
 was never published, ΠΣ eventually moved away from Smart Case,
@@ -240,12 +241,14 @@ RHS are not already definitionally equal
 This observation motivates "indexed pattern-matching": the extension to
 dependent pattern matching where arbitrary expressions are admitted as 
 "forced patterns", and matching on elements of the identity type is allowed
-exactly when variables on the LHS/RHS are simultaneously matched with forced 
+exactly when variables occuring in LHS/RHS are simultaneously matched with
+forced 
 patterns such that in the substituted typing context, the propositional 
 equation now holds definitionally \sidecite{cockx2017dependent}. 
 With this feature, one can easily prove, 
 for example |b ≡ true → not b ≡ false|:
 
+\pagebreak
 \begin{example}[|b ≡ true → not b ≡ false|] \phantom{a}
 \begin{code}
 not : Bool → Bool
@@ -311,8 +314,9 @@ As an example of how manual equality reflection can simplify many
 equational proofs, we consider the simple inductive proof that |0| is a 
 right-identity |_+_| on |ℕ|s.
 (i.e. |n + 0 ≡ n|, where |_+_| is addition of natural numbers defined by 
-recursion on the left argument, first in a mathematical style):
+recursion on the left argument), first in an informal mathematical style:
 
+\pagebreak
 \begin{theorem}[|0| is a right identity of |_+_|] \phantom{a}
 
 In the base case, it remains to prove |0 + 0 ≡ 0|, which is true by definition
@@ -345,14 +349,14 @@ pattern-matching definitions (justified by Agda only allowing
 structurally recursive definitions, so reduction must terminate), we 
 do not need to explicitly appeal to the definition of |_+_|.
 
-On the other hand, though the syntax makes it concise, we have actually had to
-add more detail in one part of our Agda proof here than the mathematical 
+On the other hand, though the syntax makes it concise, we have did have to
+add more detail in one part of our Agda proof here than the informal 
 one. |cong su| represents that in the inductive case, we cannot apply the 
 inductive hypothesis directly: we have |(n + ze) ≡ n| but need 
 |su (n + ze) ≡ su n|:
-we need to apply |su| to both sides. In a type theory supporting
-|case_of_| expressions with inferred forced matches, this appeal to 
-congruence would be unnecessary.
+we must to apply |su| to both sides. In a type theory supporting
+|case_of_| expressions with inferred forced matches, this manual appeal to 
+congruence of propositional equality would be unnecessary.
 
 \begin{spec}
 +0′ : Π n → n + ze ≡ n
@@ -364,7 +368,7 @@ congruence would be unnecessary.
 The difference might seem small: indeed |case_of_| is perhaps overly 
 heavyweight syntax
 and so the original |+0| definition could be argued more concise, 
-but soon we will examine at trickier examples where 
+but soon we will examine trickier examples where 
 manual equational reasoning (in the form of |cong| and, later,
 |subst|) starts causing immense pain. 
 
@@ -857,6 +861,7 @@ checker could identify as such). Global
 laws should be made definitional |REWRITE|s and which which should be kept 
 propositional.
 
+\pagebreak
 \section{One More Example: Mechanising Type Theory}
 \labsec{indexed-example}
 

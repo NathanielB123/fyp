@@ -17,7 +17,7 @@ module Report.Interim.c2_background where
 \labch{background}
 
 We begin this section looking at related type-system features and end with
-a discussion on different approaches to proving decidability of conversion.
+a discussion on different approaches for proving decidability of conversion.
 
 \section{Related Systems/Features}
 
@@ -44,7 +44,7 @@ bool-lemma f true with f true
 bool-lemma f true | true = ?0
 \end{spec}
 
-At |?0|, Agda has replaced every occurence of |f b| in the goal with |true|
+At |?0|, Agda replaces every occurence of |f b| in the goal with |true|
 and so expects a proof of |true ≡ f (f true)|, but it is not obvious
 how to prove this (we could match on |f true| again, but Agda will force us
 to cover both the |true| and |false| cases, with no memory of the prior
@@ -102,13 +102,17 @@ still ends up more verbose than that with Smart Case.
 the one-off nature of the rewrite can produce ill-typed contexts. Specifically,
 it might be the case that for a context to typecheck, some neutral expression
 (such as |n + m|) must definitionally be of that neutral form, and replacing it
-with some pattern (like |su l|) causes a type error.
+with some pattern (like |su l|), without "remembering" their equality,
+causes a type error.
 
 In practice, this forces implementations to re-check validity of the context
-after a |with|-abstraction and potentially throw an error.
+after a |with|-abstraction and throw errors if anything goes
+wrong.
 
 \begin{example}[Ill-typed |with|-abstraction Involving |Fin|] \phantom{a}
 
+\textit{|Fin| is the standard name for |Var| from \refdef{terms},
+introduced with |ze : Fin (su n)| and |su : Fin n → Fin (su n)|.}
 \begin{spec}
 Pred : ∀ n m → Fin (n + m) → Set
 
@@ -136,7 +140,7 @@ types like those in \refsec{indexed-example}.
 
 As mentioned in the introduction, this work is largely inspired by, and is
 intended as a continuation of, Altenkirch
-et al.'s work on Smart Case \sidecite{altenkirch2011case}. This work
+et al.'s work on Smart Case \sidecite[*-1.5]{altenkirch2011case}. This work
 primarily
 focussed on pattern matching on booleans (i.e. only introducing equations
 from neutral\remarknote{A "neutral" term is one comprising of a spine
@@ -215,11 +219,13 @@ normalisation of open terms is lost.
 
 Despite these difficulties, some systems do implement similar features, to
 varying levels of success. GHC Haskell, is based on a System F$_\text{C}$
-core type theory, but layers on many surface features such as 
-type-level equality constraints, automatically applied during the
-"constraint solving" phase of typechecking \sidecite{sulzmann2007system}. 
+core type theory, but layers on many surface features, including
+automation of its 
+type-level equality constraints \sidecite{sulzmann2007system}
+(implemented in the
+"constraint solving" typechecking phase). 
 Combined with type families, which enable real computation at the type
-level, we can actually "prove"\remarknote{There are a couple caveats 
+level, we can actually "prove"\remarknote{There are a few caveats 
 here:\newline
 1. Haskell does not allow types to directly depend on values, so we have to
 encode dependently-typed functions with so-called "singleton" encodings 
@@ -230,7 +236,7 @@ as |undefined|. Manual inspection is required to check totality/ termination.
 3. Haskell does not yet support unsaturated type families
 \sidecite[*12.5]{kiss2019higher}. We simulate such a feature here using a 
 concrete type family with no cases, but of course this cannot be instantiated
-with a "real" type function on booleans later.} 
+with a "real" type-level function on booleans later.} 
 the |f b ≡ f (f (f b))| example from the introduction (\refexample{bool-lemma}).
 
 \begin{example}[|f b ≡ f (f (f b))|, in Haskell] \phantom{a}
@@ -272,7 +278,8 @@ type family IF b t u where
   IF True  t u = t
   IF False t u = u
 
-bad :: True ~ False => IF True () (() -> ()) :~: IF False () (() -> ())
+bad  :: True ~ False 
+     => IF True () (() -> ()) :~: IF False () (() -> ())
 bad = Refl
 \end{spec}
 
@@ -287,6 +294,7 @@ But this produces the following type error:
 \end{spec}
 \end{example}
 
+\pagebreak
 Haskell is not the only language to support a "Smart Case"-like feature.
 The dependently-typed language "Zombie" builds congruence closure right into the
 definitional equality of 
@@ -299,64 +307,65 @@ Zombie does not automatically apply computation rules, requiring manual
 assistance to unfold definitions during typechecking.
 
 This is certainly an interesting point in the design-space of dependently-typed
-languages, coming with additional advantages such as accepting non-total
+languages, coming with additional advantages such as the possibility of
+accepting non-total
 definitions without endangering decidability of typechecking. However, the focus
 \sideremark{One could view traditional definitional equality as a hack, but
 it is undeniably effective.}
-of this project is justifying extensions to the definitional equality of 
+of this project is justifying extending the definitional equality of 
 existing mainstream proof assistants, which unanimously build in β-equality.
 
 The Lean proof assistant features a tactic for automatically discharing
 equality proofs following from congruence closure
 \sidecite{selsam2016congruence}, but their algorithm is not
-capable of interleaving congruence and reduction (required for a transitive
-definitional equality).
+capable of interleaving congruence and reduction (which is required
+in our setting to ensure transitivity of conversion).
 
 Sixty \sidecite{sixty} is a dependent typechecker which
-also implements a form of Smart Case along with β-conversion, but there is 
+also implements a form of Smart Case along with full β-conversion, but there is 
 no published work justifying its implementation theoretically.
 
 Andromeda 2 \sidecite{komel2021meta} is a proof assistant that supports
 local equational assumptions via rewriting and indeed goes beyond ground 
 equations,
 with the goal of supporting user-specified type theories. They focus
-primarily on provising soundness of the algorithm, and leave confluence/
-termination checking and completeness results as future work.
+primarily on provising soundness of the algorithm, and leave 
+confluence/termination checking and completeness results for future work.
 
 \subsection{Type Theories with Global Equational Assumptions}
 \labsec{rewrites}
 
 In the vein on Andromeda 2, there has been a significant body of work examining
 type theories extended with more general global rewrite rules, plus 
-implementations in Dedukti \sidecite[*-5]{assaf2016dedukti}, 
-Agda \sidecite[*-2.5]{cockx2020type} and Rocq
-\sidecite[*0]{leray2024rewster} (though at
+implementations in Dedukti \sidecite{assaf2016dedukti}, 
+Agda \sidecite{cockx2020type} and Rocq
+\sidecite{leray2024rewster} (though at
 the time of writing, the Rocq implementation is still a work-in-progress). 
-Work in the area has examined automatic, conservative confluence
-\sidecite[*0.5]{cockx2021taming} and termination
-\sidecite[*3]{genestier2019sizechangetool} checking of these rewrites.
-Agda's implementation of |REWRITE| rules checks confluence, but not
-termination.
+Work in the area has examined automatic (albeit necessarily conservative)
+confluence
+\sidecite{cockx2021taming} and termination
+\sidecite{genestier2019sizechangetool} checking of these rewrites.
+Agda's implementation of |REWRITE| rules specifically checks confluence, but
+not termination.
 
-As we will
-explore later in this report, Smart Case for infinitary and higher-order
+Smart Case for infinitary and higher-order
 types must necessarily be somewhat conservative and reject dangerous cases (as
 previously mentioned,
 fully general Smart Case is equivalent to manual equality reflection, which is
-undecidable), but we will aim for a more tailored criteria on accepted
+undecidable), but we will aim for a more tailored criteria for accepting
 equations than these works, taking advantage of the ground-ness of equations.
 
 \subsection{Elaboration}
 
 A principled and increasingly popular way to design and implement
 programming languages
-\sidecite[*-4]{eisenberg2015system, brady2024yaflle, ullrich2023extensible}
+\sidecite{eisenberg2015system, brady2024yaflle, ullrich2023extensible}
 is by "elaboration" into a minimal core syntax. A significant benefit of
 this approach is modularity \sidecite{cockx2024core}: multiple extensions to
 the surface language can be formalised and implemented without having to worry
 about their interactions. Elaboration can also increase trust in the
-resulting system, as it acts as evidence that all extensions are ultimately
-conservative over the core, perhaps better-justfied, theory.
+resulting system, ensuring that all extensions are ultimately
+conservative over the, perhaps more-rigorously justfied, core theory.
 
 \pagebreak
 \sideremark{Note that implicit transporting along equivalences between
@@ -366,13 +375,15 @@ mapping, so restricting equations to those on datatypes
 with trivial equality is limiting.\newline
 Such use-cases in fact seem impossible to handle properly without an 
 elaboration-like 
-process inserting transports, as term-level computation is required
+process inserting transports, given some sort of term-level computation is
+ultimately required
 to map between distinct types.}
 \sidecite[*12]{winterhalter2019eliminating, blot2024rewrite} have investigated
-elaborating ETT and an ITT with rewrite rules respectively to an ITT
-with explicit transports. However, both of these rely on Uniqueness of Identity
-Proofs (UIP)/ axiom |K|, which is
-undesirable in type theories with proof-relevant equality (e.g. Homotopy Type
+elaborating ETT and ITT with global rewrites respectively to an ITT
+with explicit transports. Both of these works rely on Uniqueness of Identity
+Proofs (UIP)/axiom |K|, which is
+incompatible with type theories that feature proof-relevant equality 
+(e.g. Homotopy Type
 Theory).
 
 \subsection{Coproducts with Strict η}
@@ -391,7 +402,7 @@ This convention is known
 as "de-Bruijn indices" after \sidecite[*2.5]{de1972lambda}
 and lets us avoid dealing with variable-freeness
 conditions.}: any function-typed term can
-be expanded into a lambda abstraction followed by the old term immediately
+be expanded into a lambda abstraction over the old term immediately
 applied to the new variable.
 
 Extending
@@ -404,10 +415,11 @@ by η-expanding neutral terms immediately before comparing syntactically).
 Such types are often collectively referred to as "negative" given they
 are characterised primarily by their elimination rules.
 
-η laws can also be stated for "positive" types (types where the introduction
-rules are primary, such as the empty type, coproducts, booleans, 
-natural numbers etc...). It turns out that strict η for these types
-is strongly-related to Smart Case. In fact, presentations of coproduct
+η laws can also be given for "positive" types (types where the introduction
+rules, or lack thereof, are primary, such as the empty type, coproducts,
+booleans,  natural numbers etc...). It turns out that strict η for these types
+is strongly-related, and is actually more powerful than, Smart Case. 
+In fact, presentations of coproduct
 η \sidecite{dougherty2000equality, altenkirch2001normalization} often include 
 analagous constructions to Smart Case constraint sets.
 
@@ -438,9 +450,10 @@ an |if_then_else_| expression, with the sub-expression replaced by
 |true| in the
 |true| branch and |false| in the |false| branch.
 
-We can, of course, prove such a law internally (even if our theory, like Agda 
+We can, of course, prove such a law internally (even if our theory, like Agda,
 does not implement η for such types definitionally) by induction on booleans
-(or pattern-matching), replacing substitutions with function application:
+(or pattern-matching), replacing explicit substitutions with function
+application:
 
 \begin{code}
   Bool-η-prop  : ∀ t (u : Bool → A)
@@ -450,14 +463,36 @@ does not implement η for such types definitionally) by induction on booleans
 \end{code}
 \end{definition}
 
-Some intuition fo increase in power that η for booleans provides vs Smart Case 
-can be found in the fact that η-rules admit so-called "commuting conversions".
+Like the local equational assumptions of Smart Case, η for booleans enables
+reducing repeated matches on the same neutral expression. We can show an
+example of this using our internal |Bool-η-prop| law:
 
-\pagebreak
+\begin{code}
+  collapse-if  :  ∀ (f : Bool → Bool) b 
+               →  if f b then (if f b then true else false) else false
+               ≡  if f b then true else false
+  collapse-if f b 
+    = Bool-η-prop (f b) 
+    λ fb → if fb then (if fb then true else false) else false
+\end{code}
+
+In fact, Boolean η can reduce this even further:
+
+\begin{code}
+  collapse-again  :  ∀ (f : Bool → Bool) b 
+                  →  if f b then true else false ≡ f b
+  collapse-again f b = sym (Bool-η-prop (f b) λ fb → fb)
+\end{code}
+
+Some further intuition for increase in power that η for booleans provides vs
+Smart Case 
+can be found in the way the η-rule admits so-called "commuting conversions".
+
 \begin{example}[Commuting Conversions] \phantom{a}
 
 Commuting conversions express the principle that case-splits on positive
-types can be lifted upwards as long as the scrutinee remains in scope. i.e.
+types can be lifted upwards as long as the variables occuring in the scrutinee
+remain in scope. i.e.
 \begin{spec}
   comm  : ∀ (f : Tm (Γ , A) B) (t : Tm Γ 𝔹') (u v : Tm Γ A)
         → f [ < if t then u else v > ] 
@@ -467,11 +502,11 @@ We can show an analagous rule follows internally from η as follows.
 \begin{code}
   comm-internal  : ∀ (f : A → B) (t : Bool) (u v : A)
                  → f (if t then u else v) ≡ if t then f u else f v
-  comm-internal f t u v = Bool-η-prop t (λ b → f (if b then u else v))
+  comm-internal f t u v = Bool-η-prop t λ b → f (if b then u else v)
 \end{code}
 \end{example}
 
-η-equality is quite powerful: in a system with strict η for functions and
+In a system with strict η for functions and
 another type |A|, definitional equality of functions on |A|
 is observational\remarknote{Observational equality in type theory
 refers to the idea that evidence of equality of terms at a particular type
@@ -573,6 +608,7 @@ to solve the halting problem (consider the |ℕ → 𝔹| function that runs a
 particular Turing machine for the input number of steps and returns whether
 it halts).
 
+\pagebreak
 \section{Decidability of Conversion}
 
 As mentioned in \refremark{defprop}, decidability of typechecking dependent
@@ -580,33 +616,32 @@ types hinges on decidability of conversion, so this property is quite
 important for type theories intended to be used as programming languages.
 
 The standard approach to proving decidability of conversion is to define
-a normalisation function (reducing terms to so-called "normal-forms"), and then
-prove it sound and complete.
-There is quite a wide variety of techniques
-to prove normalisation, however, and so we will go over the main ones.
+a normalisation function (reducing terms to "normal forms"), and then
+prove this procedure sound and complete. There are multiple distinct
+approaches to specifying normalisation, and so we will go over the main ones.
 
 Note that all techniques listed below rely to some extent on
-defining an intermediary predicate by recursion on types
+defining an intermediary term-predicate by recursion on types,
 showing the predicate holds for all terms by induction on syntax, and
 then proving the final result by simultaneous induction on types and the
 predicate (a technique
 that goes by the names
-"logical relations", "computability predicates" and "reducibility candidates"). 
+"logical relations", "computability predicates" and "reducibility candidates"
+in the literature). 
 There are alternative approaches to showing normalisation based
 purely on rewriting theory, but these have not been shown to scale to
 dependent types.
 
 \subsection{Reduction-based}
 
-Reduction-based techniques define normalisation in terms of reduction rules,
+Reduction-based techniques specify normalisation in terms of reduction rules,
 and normal forms as terms that cannot be reduced further.
 
 When using a congruent small-step reduction relation (the "operational
 semantics"), one can justify
-termination of naively reducing with respect to it by showing the
+termination of naively reducing with respect to it by proving the
 reduction relation is well-founded. This technique is called
 "strong normalisation".
-
 
 \begin{definition}[Strong Normalisation] \phantom{a}
 
@@ -630,20 +665,19 @@ module SNDef (Tm : Set) (_>>_ : Tm → Tm → Set) where
   SN = ∀ t → Acc (λ u v → v >> u) t
 \end{code}
 
-|Acc| is defined inductively:
+Intuitively, |Acc _<_ x| is the type of trees of finite height, where each
+branch
+represents a step along the |_<_| relation, with |x| at the top
+and the smallest elements (with respect to |_<_|) at the bottom.
+Induction on |Acc| allows us to step down the tree, one layer at a time.
+It is defined inductively:
 \begin{spec}
 Acc  : (A → A → Set) → A → Set
 
 acc  : (∀ {y} → y < x → Acc _<_ y) → Acc _<_ x
 \end{spec}
 
-Intuitively, |Acc _<_ x| is the type of trees of finite height, where each
-branch
-represents a step along the |_<_| relation, with |x| at the top
-and the smallest elements (with respect to |_<_|) at the bottom.
-Induction on |Acc| allows us to step down the tree, one layer at a time.
-
-Classically, strong normalisation can be equivalently represented an the
+Classically, strong normalisation can be equivalently encoded as the
 non-existence of infinite chains of reductions:
 %if False
 \begin{code}
@@ -680,24 +714,28 @@ We can easily prove |SN → SN-classical|:
 \end{code}
 \end{definition}
 
-A downside with working with a fully congruent small-step reduction relation
+A downside of working with a fully congruent small-step reduction relation
 is that proving confluence is non-trivial.
 Furthermore, some type theories lack obvious terminating
 operational semantics but 
 still have decidable conversion (e.g. type theories with η-rules
-or explicit substitutions \sidecite{altenkirch2009big}). 
+or explicit substitutions \sidecite{altenkirch2009big} and potentially
+type theories with a sort of impredicative strict propositions 
+\sidecite{abel2020failure}). 
 
-One can instead define a \textit{deterministic} small-step reduction relation
-which
-reduces terms only until up until they are neutral or introduction-rule headed.
+To handle such theories,
+one can instead define a \textit{deterministic} small-step reduction relation
+without congruence rules (except those that reduce scrutinees
+of elimination forms), and therefore
+reduces terms only up until they are neutral or introduction-rule headed.
 Such a relation is known as "weak-head reduction" and justifying its
 termination goes by the name "weak-head normalisation". The downside is that
 weak-head normalisation alone does not imply decidability of conversion
-(e.g. consider how function-typed terms can be soundly η-expanded to
-|t ~ ƛ t · (` vz)|, putting them into intro-headed form, without making
+(e.g. consider how function-typed terms |t| can be soundly η-expanded to
+|ƛ (t [ wk ]) · (` vz)|, putting them into intro-headed form, without making
 any "real" progress reducing anything). Conversion checking and weak-head
 normalisation must be interleaved, and termination of this interleaving
-must be proved through a logical relations argument 
+must itself be proved through a logical relations argument 
 \sidecite{abel2016decidability}.
 
 Finally, normalisation can also be defined with respect to a big-step
@@ -748,7 +786,7 @@ is justified merely by the number of e-classes decreasing during
 congruence-repairing iterations. 
 
 Unfortunately, while equations between neutral terms could likely be reasonably
-handled by e-graphs, rewriting to introduction-headed terms are trickier
+handled by e-graphs, rewrites targetting introduction-headed terms are trickier
 as these can unblock β-reductions, so we really do need to rewrite eagerly
 (instead of delaying until conversion checking).
 \end{remark}

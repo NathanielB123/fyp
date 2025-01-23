@@ -155,6 +155,9 @@
 %format tt          = "\langle" "\rangle"
 %format ⊥           = "\mathbb{0}"
 %format ⊥-elim      = "\mathbb{0}" "\Varid{-elim }"
+%format ⊤'          = ⊤
+%format 𝔹'          = 𝔹
+%format ℕ'          = ℕ
 
 %format >>*   = >> "^*"
 %format _>>_  = _ "\!" >> "\!" _
@@ -163,8 +166,8 @@
 %format δ-    = δ "^-"
 %format δ+    = δ "^+"
 
-%format +Sub  = Sub "^+"
-%format -Sub  = Sub "^-"
+%format Sub+  = Sub "^+"
+%format Sub-  = Sub "^-"
 %format >+    = >   "^+"
 %format >-    = >   "^-"
 
