@@ -83,8 +83,8 @@ module Report.Interim.c0_main where
 
 %include c1_introduction.lagda
 %include c2_background.lagda
-%include c3_simplytyped.lagda
-%include c4_dependentlytyped.lagda
+%%include c3_simplytyped.lagda
+%%include c4_dependentlytyped.lagda
 %include c5_plan.lagda
 
 

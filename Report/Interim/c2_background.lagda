@@ -16,55 +16,6 @@ module Report.Interim.c2_background where
 \chapter{Background and Related Work}
 \labch{background}
 
-% Plan
-% - Eta conversion vs extensionality vs equational assumptions
-%   - Eta for STLC
-%   - Eta for dependent types
-% - Type theories with equational assumptions
-%   - GHC Haskell
-%   - Zombie
-%   - Andromeda
-% - Global Rewrite Rules
-%   - Dedukti
-%   - Agda
-% - Decidability of Conversion
-%   - Normalisation approaches
-
-% Higher order rewrite systems??? Most of the research here doesn't look
-% at ground systems though
-
-% Mentioning RHS/LHS unification might be nice but I don't think it is
-% strictly necessary
-
-% Green slime should probably go in the introduction...
-
-
-
-
-% \section{Dependent Pattern Matching and LHS Unification}
-% 
-% Proof assistents like Agda that feature both metavariables and dependent pattern
-% matching benefit from using two different unification algorithms 
-% \sidecite[*6]{norell2007towards}: One often referred to as "RHS unification" 
-% designed to solve metavariables and the other "LHS unification" to deal with
-% pattern-matching.
-% 
-% The motivation for this distinction is that the desired properties of each
-% unification procedure are different. RHS unification is allowed to fill
-% metavariables whenever they are unique up to definitional equality, meaning
-% e.g. neutral equations like |f x = f ?0| can be solved with |?0 = x|.
-% 
-% LHS unification needs to be more careful.
-% 
-% In fact RHS unification can be even bolder: e.g. lossily solving 
-% |pred x = pred ?0| with |?0 = x|
-% 
-% Agda's approach the LHS unification then is to ...
-% 
-% \subsection{Green Slime}
-% 
-% ....
-
 We begin this section looking at related type-system features and end with
 a discussion on different approaches to proving decidability of conversion.
 
@@ -143,11 +94,11 @@ bool-lemma′′ f true  with f true in p
 ... | true           rewrite p 
                      rewrite p = refl
 \end{spec}
-But by now we are up to four different syntactic constructs, and the full proof
-is still more verbose than that with "smart case".
+But by now we are up to four distinct syntactic constructs, and the full proof
+still ends up more verbose than that with Smart Case.
 \end{example}
 
-|with|-abstractions also have a second critical issue that "smart case" solves:
+|with|-abstractions also have a second critical issue that Smart Case solves:
 the one-off nature of the rewrite can produce ill-typed contexts. Specifically,
 it might be the case that for a context to typecheck, some neutral expression
 (such as |n + m|) must definitionally be of that neutral form, and replacing it
@@ -161,10 +112,10 @@ after a |with|-abstraction and potentially throw an error.
 \begin{spec}
 Pred : ∀ n m → Fin (n + m) → Set
 
-foo : ∀ n m (i : Fin (n + m)) → Pred n m i → ...
+foo : ∀ n m (i : Fin (n + m)) → Pred n m i → ⊤
 foo n m i       p  with n + m
-foo n m ze      p  | .(su _) = ...
-foo n m (su i)  p  | .(su _) = ...
+foo n m ze      p  | .(su _) = tt
+foo n m (su i)  p  | .(su _) = tt
 \end{spec}
 
 Errors with:
@@ -185,10 +136,10 @@ types like those in \refsec{indexed-example}.
 
 As mentioned in the introduction, this work is largely inspired by, and is
 intended as a continuation of, Altenkirch
-et al.'s work on Smart Case \sidecite[*2]{altenkirch2011case}. This work
+et al.'s work on Smart Case \sidecite{altenkirch2011case}. This work
 primarily
 focussed on pattern matching on booleans (i.e. only introducing equations
-from neutral\remarknote[][*2]{A "neutral" term is one comprising of a spine
+from neutral\remarknote{A "neutral" term is one comprising of a spine
 of elimination forms blocked on a variable.} boolean-typed terms to closed 
 boolean values). Even in this
 limited form, the metatheory is non-trivial, with subtleties arising from 
@@ -228,7 +179,7 @@ Note that the equation being added: |b ~ true| is, by itself, completely sound,
 and the term |b| cannot be reduced further even in the presense of the 
 |not b ≡ false| constraint. Seemingly, any algorithm capable of detecting
 impossibility here must iterate normalising all equations until
-a fixpoint (or impossible equation) is reached.
+a fixed-point (or impossible equation) is reached.
 \end{example}
 
 Note that ruling out these impossible cases is not just a convenience to
@@ -350,8 +301,8 @@ assistance to unfold definitions during typechecking.
 This is certainly an interesting point in the design-space of dependently-typed
 languages, coming with additional advantages such as accepting non-total
 definitions without endangering decidability of typechecking. However, the focus
-\sideremark{One could view traditional definitional equality as a hack, but it
-is undeniably effective.}
+\sideremark{One could view traditional definitional equality as a hack, but
+it is undeniably effective.}
 of this project is justifying extensions to the definitional equality of 
 existing mainstream proof assistants, which unanimously build in β-equality.
 
@@ -407,14 +358,17 @@ about their interactions. Elaboration can also increase trust in the
 resulting system, as it acts as evidence that all extensions are ultimately
 conservative over the core, perhaps better-justfied, theory.
 
-\sideremark[*-5]{Note that implicit transporting along equivalences between
-distinct types
+\pagebreak
+\sideremark{Note that implicit transporting along equivalences between
+completely distinct types (such as ℕ and ℤ)
 could be used to implement coercions/subtyping where there is an "obvious"
 mapping, so restricting equations to those on datatypes
 with trivial equality is limiting.\newline
-Such use-cases in fact seem impossible to handle without an elaboration-like 
-process inferring applications of transports.}
-\sidecite[*7.5]{winterhalter2019eliminating, blot2024rewrite} have investigated
+Such use-cases in fact seem impossible to handle properly without an 
+elaboration-like 
+process inserting transports, as term-level computation is required
+to map between distinct types.}
+\sidecite[*12]{winterhalter2019eliminating, blot2024rewrite} have investigated
 elaborating ETT and an ITT with rewrite rules respectively to an ITT
 with explicit transports. However, both of these rely on Uniqueness of Identity
 Proofs (UIP)/ axiom |K|, which is
@@ -425,8 +379,9 @@ Theory).
 \labsec{strict}
 
 η-equations on type introduction/elimination forms express 
-uniqueness principles and are those obtained
-through "dual" β-laws. For example, η for the unit type |⊤| can be written
+uniqueness principles and can be seen as
+"dual" to β-laws (the connection can be made concrete with category theory). 
+For example, η for the unit type |⊤| can be written
 as |∀ (t : Tm Γ ⊤') → t ~ tt|; that is, any |⊤|-typed term is
 convertible to |tt|. η for non-dependent functions is written
 |∀ (t : Tm Γ (A ⇒' B)) → t ~ ƛ t · (` vz)|: any function-typed term can
@@ -484,15 +439,16 @@ does not implement η for such types definitionally) by induction on booleans
 
 \begin{code}
   Bool-η-prop  : ∀ t (u : Bool → A)
-          → u t ≡ if t then u true else u false
+               → u t ≡ if t then u true else u false
   Bool-η-prop true   u = refl
   Bool-η-prop false  u = refl
 \end{code}
 \end{definition}
 
-The increase in power from η for booleans vs "Smart Case" is that η-rules
-admit so-called "commuting conversions".
+Some intuition fo increase in power that η for booleans provides vs Smart Case 
+can be found in the fact that η-rules admit so-called "commuting conversions".
 
+\pagebreak
 \begin{example}[Commuting Conversions] \phantom{a}
 
 Commuting conversions express the principle that case-splits on positive
@@ -512,9 +468,15 @@ We can show an analagous rule follows internally from η as follows.
 
 η-equality is quite powerful: in a system with strict η for functions and
 another type |A|, definitional equality of functions on |A|
-is observational\remarknote{Observational equality on functions means
-pointwise equality (i.e. functions are equal exactly when they agree on
-all inputs).}.
+is observational\remarknote{Observational equality in type theory
+refers to the idea that evidence of equality of terms at a particular type
+can follow the structure of that type
+\sidecite[*8]{altenkirch2007observational}.
+For functions |f| and |g|, observational equality takes the form of a function
+from evidence of
+equal inputs |x ≡ y| to evidence of equal
+outputs |f x ≡ f y| - i.e. pointwise equality (functions are equal precisely 
+when they agree on all inputs).}.
 
 \begin{theorem}[Strict η for Functions and Booleans Implies Definitional
 Observational Equality of Boolean Functions] \phantom{a}
@@ -539,15 +501,15 @@ f
 g
 \end{spec}
 
-Subtly, propositional observational equality of boolean functions 
-|f true ≡ g true → f false ≡ g false → f ≡ g| is not
+Subtly, propositional, observational equality of boolean functions 
+(|f true ≡ g true → f false ≡ g false → f ≡ g|) is not
 provable internally
 using the propositional |Bool-η-prop| principle given above (without
-function extensionality). We don't have any boolean term |b| to pass to it.
+function extensionality). We do not have any boolean term |b| to pass to it!
 
 This makes some sense, given propositional η-laws for inductive types can 
 be proven merely by induction, but observational equality of functions (also
-known as "function extensionality" in the general case) is known to not be
+known as "function extensionality" in the general case) is not
 provable in intensional MLTT \sidecite{streicher1993investigations}. 
 \end{theorem}
 
@@ -559,8 +521,9 @@ booleans, |Σ| types and large elimination, via the encoding
 There are a couple downsides to implementing η-conversion for finite
 coproducts/booleans:
 \begin{itemize}
-  \item First, the meta-theory gets quite complicated. Normalisation for
-  STLC with of strict η for binary coproducts seems to require quite
+  \item First, the meta-theory gets quite complicated. Previous proofs of
+  normalisation for
+  STLC with of strict η for binary coproducts have relied on
   somewhat sophisticated rewriting \sidecite{lindley2007extensional} or sheaf
   \sidecite{altenkirch2001normalization} theory.
   Normalisation for dependent type theory with boolean η remains open (though
@@ -570,7 +533,7 @@ coproducts/booleans:
   Algorithms such as \cite{altenkirch2001normalization} aggressively
   introduce case-splits on all neutral subterms of coproduct-type and lift the
   splits
-  as high as possible, in an effort to prevent the building-up of stuck
+  as high as possible, in an effort to prevent the build-up of stuck
   terms. 
   \cite{maillard2024splitting} proposes an similar algorithm for
   typechecking dependent types with strict boolean η, using a monadic
@@ -639,13 +602,13 @@ termination of naively reducing with respect to it by showing the
 reduction relation is well-founded. This technique is called
 "strong normalisation".
 
-\sideremark{Note the reduction relation is on untyped terms |Tm| here.
-The extension to typed terms |Tm Γ A| is easy as long as reduction is
-type-preserving (obeys "subject reduction").}
 
 \begin{definition}[Strong Normalisation] \phantom{a}
 
 For a given reduction relation on terms |_>>_ : Tm → Tm → Set|, we can define
+\sideremark{Note the reduction relation defined on untyped terms |Tm| here.
+The extension to typed terms |Tm Γ A| is easy as long as reduction is
+type-preserving (obeys "subject reduction").}
 strong normalisation constructively in terms of the accessibility predicate
 |Acc|:
 %if False
@@ -662,14 +625,15 @@ module SNDef (Tm : Set) (_>>_ : Tm → Tm → Set) where
   SN = ∀ t → Acc (λ u v → v >> u) t
 \end{code}
 
-|Acc| can be defined inductively:
+|Acc| is defined inductively:
 \begin{spec}
 Acc  : (A → A → Set) → A → Set
 
 acc  : (∀ {y} → y < x → Acc _<_ y) → Acc _<_ x
 \end{spec}
 
-Intuitively, |Acc _<_ x| encodes trees of finite height, where each branch
+Intuitively, |Acc _<_ x| is the type of trees of finite height, where each
+branch
 represents a step along the |_<_| relation, with |x| at the top
 and the smallest elements (with respect to |_<_|) at the bottom.
 Induction on |Acc| allows us to step down the tree, one layer at a time.
@@ -712,7 +676,7 @@ We can easily prove |SN → SN-classical|:
 \end{definition}
 
 A downside with working with a fully congruent small-step reduction relation
-is that proving congruence is non-trivial.
+is that proving confluence is non-trivial.
 Furthermore, some type theories lack obvious terminating
 operational semantics but 
 still have decidable conversion (e.g. type theories with η-rules
@@ -721,22 +685,22 @@ or explicit substitutions \sidecite{altenkirch2009big}).
 One can instead define a \textit{deterministic} small-step reduction relation
 which
 reduces terms only until up until they are neutral or introduction-rule headed.
-Such a relation is known as "weak-head reduction" and justifying it's
+Such a relation is known as "weak-head reduction" and justifying its
 termination goes by the name "weak-head normalisation". The downside is that
 weak-head normalisation alone does not imply decidability of conversion
 (e.g. consider how function-typed terms can be soundly η-expanded to
 |t ~ ƛ t · (` vz)|, putting them into intro-headed form, without making
-any "real" progress reducing the term). Conversion checking and weak-head
-normalisation must be interleaved, and termination of this process must
-be additionally proved \sidecite{abel2016decidability}.
+any "real" progress reducing anything). Conversion checking and weak-head
+normalisation must be interleaved, and termination of this interleaving
+must be proved through a logical relations argument 
+\sidecite{abel2016decidability}.
 
 Finally, normalisation can also be defined with respect to a big-step
-reduction relation \sidecite{altenkirch2020big}.
-
-Much of the original work on "Smart Case" attacked the problem using big step
-reduction \sidecite{altenkirch2009smart}. Representing constraint sets as
+reduction relation \sidecite{altenkirch2020big}. In fact, much of the
+original work on Smart Case attacked the problem using this approach
+\sidecite{altenkirch2009smart}. Representing constraint sets as
 mappings from neutral terms to normalised expressions enables extending
-normalisation algorithms with a step that looks up stuck neutrals in the map.
+normalisation with a step that looks up stuck neutrals in the map.
 
 Unfortunately, but problems start to occur when
 defining merging of constraint sets (i.e. to justify adding new constraints
@@ -750,11 +714,39 @@ obtain fully normalised constraint mappings is to iterate reducing all
 constraints
 with respect to others until a fixed-point is reached (i.e. analagously to
 ground completion). 
-The only technique I am aware of to show such a fixed-point
-exists
+The only technique I am aware of to show a fixed-point
+like this exists
 is to demonstrate that there exists some well-founded ordering on constraint
-sets that continues to decrease over iterations: in other words
-we end up requiring a small-step reduction relation anyway.
+sets that continues to decrease across iterations: in other words
+we appear to end up needing a small-step reduction relation anyway.
+
+\begin{remark}[Termination of Ground Completion and E-Graphs] \phantom{a}
+
+Rewriting-to-completion also relies on having some total order
+on terms, and ensuring rewrites consistently respect it (i.e. by
+reversing them when necessary). I think any
+ordering that 
+places closed values like |true|/|false| at the bottom and acts like
+a term encompassment ordering on neutrals should be sufficient to support
+Smart Case on booleans and coproducts. Rewrites to non-neutral
+infinitary-typed (e.g. ℕ) terms are trickier, and I think some sort of
+"occurs check" will be necessary (the rewrite |t → su t| cannot be reversed,
+as we can only justify rewriting neutral terms, but it also clearly
+would lead to loops if left as-is).
+
+Note that rewriting-to-completion is not the only algorithm for
+deciding equivalence modulo a set of ground equations: bottom-up techniques
+such as e-graphs \sidecite{nelson1980techniques, willsey2021egg} are also
+applicable. These algorithms
+can be seen as extending the union-find algorithm to terms, and termination
+is justified merely by the number of e-classes decreasing during
+congruence-repairing iterations. 
+
+Unfortunately, while equations between neutral terms could likely be reasonably
+handled by e-graphs, rewriting to introduction-headed terms are trickier
+as these can unblock β-reductions, so we really do need to rewrite eagerly
+(instead of delaying until conversion checking).
+\end{remark}
 
 \subsection{Reduction-free Normalisation}
 

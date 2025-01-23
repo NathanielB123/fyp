@@ -22,7 +22,7 @@ infix  7  `_
 
 \section{Syntax}
 
-Before we begin to prove anything, we must define an object theory.
+Before we begin to prove anything, we must define our object theory.
 Unlike many traditional approaches to meta-theory, inspired by so-called 
 "semantic" \remarknote{also called "algebraic", "reduction-free"} 
 approaches, we consider only well-typed terms. 

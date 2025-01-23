@@ -118,3 +118,46 @@
 %format ∀   = "\Pi"
 %format ⊎   = "+"
 %format _⊎_ = _ "\!" "+" "\!" _
+
+%format tm≡       = tm     "_="
+%format A≡        = A      "_="
+%format B≡        = B      "_="
+%format A[]≡      = A[]    "_="
+%format B[]≡      = B[]    "_="
+%format Aδ≡       = Aδ     "_="
+%format M≡        = M      "_="
+%format N≡        = N      "_="
+%format M[]≡      = M[]    "_="
+%format ,≡        = ,      "_="
+%format Πsem≡     = Πsem   "_="
+%format lamM≡     = lamM   "_="
+%format vzo≡      = vzo    "_="
+%format app≡      = app    "_="
+%format lam≡      = lam    "_="
+%format lamsem≡   = lamsem "_="
+%format _[_]≡     = _[_]   "_="
+%format ]≡        = ]      "_="
+%format _[_]tm≡   = _[_]tm "_="
+%format ]tm≡      = ]tm    "_="
+%format []tm≡     = []tm   "_="
+%format ↑[]≡      = ↑[]    "_="
+%format ↑os≡      = ↑os    "_="
+%format ↑∘os≡     = ↑∘os   "_="
+%format ⟦⟧T≡      = ⟦⟧T    "_="
+%format to-coe≡   = to-coe "_="
+%format to-coe≡⁻¹ = to-coe≡ "^-1"
+
+
+%format Bool        = "\mathbb{B}"
+%format Bool-η      = "\mathbb{B}" -η
+%format Bool-η-prop = "\mathbb{B}" -η-prop
+%format ⊤           = "\mathbb{1}"
+%format tt          = "\langle" "\rangle"
+%format ⊥           = "\mathbb{0}"
+%format ⊥-elim      = "\mathbb{0}" "\Varid{-elim }"
+
+%format >>+   = >> "^+"
+%format _>>_  = _ "\!" >> "\!" _
+%format _>>+_ = _ "\!" >>+ "\!" _
+
+%format --local-confluence = "\text{\rmfamily-{}-}" local-confluence
