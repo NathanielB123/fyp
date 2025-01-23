@@ -81,6 +81,13 @@ module Report.Interim.c0_main where
 \setchapterstyle{kao} % Choose the default chapter heading style
 \pagelayout{margin}
 
+% From https://tex.stackexchange.com/questions/325297/how-to-scale-a-tikzcd-diagram
+\tikzcdset{scale cd/.style={every label/.append style={scale=#1},
+    cells={nodes={scale=#1}}}}
+
+\tikzcdset{scaleedge cd/.style={every label/.append style={scale=#1}}}
+\tikzcdset{scalecell cd/.style={cells={nodes={scale=#1}}}}
+
 %include c1_introduction.lagda
 %include c2_background.lagda
 %%include c3_simplytyped.lagda

@@ -384,20 +384,25 @@ uniqueness principles and can be seen as
 For example, η for the unit type |⊤| can be written
 as |∀ (t : Tm Γ ⊤') → t ~ tt|; that is, any |⊤|-typed term is
 convertible to |tt|. η for non-dependent functions is written
-|∀ (t : Tm Γ (A ⇒' B)) → t ~ ƛ t · (` vz)|: any function-typed term can
+|∀ (t : Tm Γ (A ⇒' B)) → t ~ ƛ (t [ wk ]) · (` vz)|\remarknote[][*2]{Note that
+like
+\refdef{terms}, we represent variables here as indices into the context. 
+This convention is known
+as "de-Bruijn indices" after \sidecite[*2.5]{de1972lambda}
+and lets us avoid dealing with variable-freeness
+conditions.}: any function-typed term can
 be expanded into a lambda abstraction followed by the old term immediately
 applied to the new variable.
 
 Extending
-\sideremark{If conversion-checking is type-directed, these laws
-can be checked after β-normalising both terms by η-expanding once if either is
-not introduction-form-headed.}
 conversion with η for unit, (dependent) pairs and
 (dependent)
 functions is relatively well-understood and mainstream proof assistants 
-(such as Agda) commonly support definitional (or "strict") η for these types.
-These types are often collectively referred to as "negative" types given they
-can be characterised primarily by their elimination rules.
+(such as Agda) commonly support definitional (or "strict") η for these types
+(as long as conversion-checking is type-directed, these laws are easy to check
+by η-expanding neutral terms immediately before comparing syntactically).
+Such types are often collectively referred to as "negative" given they
+are characterised primarily by their elimination rules.
 
 η laws can also be stated for "positive" types (types where the introduction
 rules are primary, such as the empty type, coproducts, booleans, 
@@ -760,7 +765,8 @@ predicate holds for every family of equal terms
 sterling2021normalization}.
 
 Such an approach was used to prove normalisation for STLC with coproducts
-obeying strict η \sidecite{altenkirch2001normalization} (which as mentioned
-in \refsec{strict}, is more powerful than Smart Case), with the main
-innovation being to evaluate into a sheaf model of the type theory rather than 
+obeying strict η \sidecite{altenkirch2001normalization} (which, as mentioned
+in \refsec{strict}, is more powerful than Smart Case for the same type), with 
+the main
+innovation being to evaluate into a sheaf model rather than 
 the usual presheaf on the category of renamings.

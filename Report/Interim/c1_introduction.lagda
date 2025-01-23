@@ -35,7 +35,7 @@ this entire report is written in literate Agda, available at
 when typesetting. For example, writing $\forall$s as $\Pi$s and swapping 
 the equality
 symbols |_≡_| and |_=_| to align with their conventional meanings
-from on-paper type theory.}
+in on-paper type theory.}
 % \sideblankcite[*6]{norell2007towards} \phantom{a}
 
 \begin{example}[Boolean Equality Testing] \phantom{a}
@@ -404,6 +404,7 @@ syntaxes (containing binders) that we will look at later.
 % ---------------------------------------------------------------------------- %
 \begin{definition}[First-Order Terms And Variables] \phantom{a} 
 
+\labdef{terms}
 Variables and terms are defined inductively:
 %if False
 \begin{code}

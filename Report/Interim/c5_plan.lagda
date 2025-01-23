@@ -13,24 +13,25 @@ module Report.Interim.c5_plan where
 
 As of submitting this interim report, I have collected a few examples of
 situations
-where "smart case" is useful (most of which have been given in the
-introduction chapter) and I have
-mechanised a proof of strong normalisation for STLC extended with rewrites
-from neutrals into closed boolean values
-in Agda (\url{https://github.com/NathanielB123/fyp/blob/main/STLC/BoolRw/StrongNorm.agda}). The idea is that this setting is analagous to the theory required
-to justify dependent Smart Case on booleans.
+where Smart Case is useful (most of which have been given in
+\refch{introduction}) and I have
+mechanised a proof of strong normalisation for STLC plus rewrites
+from neutrals into closed boolean values,
+in Agda (\url{https://github.com/NathanielB123/fyp/blob/main/STLC/BoolRw/StrongNorm.agda}). The idea is that this setting is the simply-typed analogue to the 
+dependent type theory required to justify Smart Case on booleans.
 
-The proof is based on  based on András Kovacs' 
+The proof is based on András Kovacs' 
 Agda translation \sidecite{kovacs2020strong} of Jean-Yves Girard's 
 strong-normalisation proof for STLC in "Proofs and Types" 
 \sidecite{girard1989proofs}, and features
 a "spontaneous" reduction relation where
-non-introduction-headed boolean-typed terms are allowed to be immediately
-rewritten to |true| or |false| at any time
-inspired by the extended weak reduction relation denoted with "⇒" in 
-\sidecite{dougherty2000equality}. Such a relation
+boolean-typed terms of non intro-form are allowed to be immediately
+rewritten to |true| or |false| at any time,
+inspired by the extended, weak reduction relation of 
+\sidecite{dougherty2000equality} (denoted with "⇒"). Such a relation
 is of course not confluent, but it over-approximates the "true" set of
-reductions that features a convertibility (modulo constraint set) premise on
+reductions that features a convertibility (modulo the constraint set) premise
+on
 rewrites, and so
 strong normalisation of spontaneous reduction implies strong normalisation
 of the reductions we actually care about. 
@@ -41,22 +42,53 @@ to respect substitution\remarknote{Spontaneous reduction fails here as it
 allows |(` i) >> true|, but applying the substitution |true / i| to both
 sides results in |true >> true| which cannot be allowed if we want
 reduction to be well-founded.} (i.e. |t >> u → t [ δ ] >> u [ δ ]|).
+This is usually required while proving the fundamental theorem for
+lambda abstractions (to get from computability of |t₁ : Tm (Γ , A) B| and
+|u : Tm Γ A|, plus |t₁ >> t₂| to computability of |t₂ [ < u ? ] : Tm Γ B|),
+and can be expressed with the following diagram:
+
+\begin{tikzcd}[scaleedge cd=1.25, sep=huge]
+|t| \arrow[r, "|_>>_|"] \arrow[d, swap, "|_[ δ ]|"]
+& |u| \arrow[d, "|_[ δ ]|"] \\
+|t [ δ ]| \arrow[r, swap, dashrightarrow, "|_>>_|"]
+& |u [ δ ]|
+\end{tikzcd}
+
 I solved this by categorising single-variable substitutions into ones that 
 substitute
-for closed boolean values (|Sub- Δ Γ δ|) and ones that do not
-(|Sub+ Δ Γ δ|). It is then
-possible to prove
+for closed boolean values (|Sub-|) and ones that do not
+(|Sub+|). 
+It is then becomes to prove:
+\sideremark{In the Agda mechanisiation, I generalise these lemmas to
+single-substitutions applying anywhere in the context rather than only on
+the first variable, but the idea is the same.}
 \begin{spec}
-_[_]→+ : t >> u → Sub+ Δ Γ δ → (t [ δ ]) >> (u [ δ ])
+_[_]→+ : t >> u → Sub+ Δ Γ < v > → (t [ < v > ]) >> (u [ < v > ])
 \end{spec}
 and
 \begin{spec}
-boolsub→ : ∀ (t : Tm Γ A) → Sub- Δ Γ δ → t >>+ t [ δ ]
+boolsub→ : Sub- Δ Γ < b > → t >>* t [ < b > ] [ wk ]
 \end{spec}
-\textit{Where |_>>+_| is the transitive-closure of spontaneous reduction.}
+\textit{Where |_>>*_| is the reflexive, transitive closure of spontaneous
+reduction.}
+
+Or, as a diagram:
+
+\begin{tikzcd}[scaleedge cd=1.25, sep=huge]
+|t [ < b >- ]| \arrow[r, "|_[ wk ]|"]
+& |t [ < b >- ] [ wk ]| \\
+|t| \arrow[u, "|_[ < b >- ]|"] 
+    \arrow[ur, dashrightarrow, "|_>>*_|"]
+    \arrow[r, "|_>>_|"]
+    \arrow[d, swap, "|_[ < v >+ ]|"]
+& |u| \arrow[d, "|_[ < v >+ ]|"] \\
+|t [ < v >+ ]| \arrow[r, swap, dashrightarrow, "|_>>_|"]
+& |u [ < v >+ ]|
+|t [ δ- ]| \\
+\end{tikzcd}
 
 And it turns out this is
-sufficient to repair the main normalisation proof.
+sufficient to repair the proof.
 
 I have spent some time trying to identify a promising path
 towards extending this result to dependent types, but so far I don't have
@@ -69,12 +101,12 @@ one top-down (rewriting to completion) and one bottom-up (e-graphs),
 and begun working on an NbE (Normalisation
 by Evaluation) typechecker.
 
-\pagebreak
 \section{Plan}
 
 I think in the immediate future, focussing on implementation is a good
 idea, and I hope that a simple proof-of-concept will not actually be too
-difficult. Dependent pattern matching is fiddly, but is also the only 
+difficult to get working. Dependent pattern matching is fiddly, but is also the
+only 
 real complicated component I need to add (I plan on skipping features like
 user-defined datatypes,
 termination checking of recursive functions,
@@ -85,8 +117,8 @@ maintaining a map from neutrals to values and looking up neutral terms
 when reflecting/unquoting. 
 The details with adding new equational assumptions might also get a bit tricky, 
 but I think iterating normalisation of every LHS/RHS with respect to
-all others until a fixpoint is reached (i.e. analgous to rewriting
-to completion) should be reasonable.
+all others until a fixed point is reached (i.e. analagous to 
+rewriting-to-completion) should be reasonable.
 
 After I have some primitive implementation, I plan on returning to the 
 theory-side of the project.
@@ -99,7 +131,7 @@ neutral |Bool|-typed term |t| with |true| risks breaking typeability (if |t| and
 details will be tricky.
 
 An alternative direction could be to focus on semantic approaches to
-normalisation. I currently am unsure how to justify termination of adding
+normalisation. I currently am unsure how to justify termination when adding
 new equational assumptions in this setting, but I think Altenkirch et al.'s 
 work on NbE for STLC + coproducts with strict η-laws
 \sidecite{altenkirch2001normalization} must have run into similar

@@ -156,8 +156,16 @@
 %format ⊥           = "\mathbb{0}"
 %format ⊥-elim      = "\mathbb{0}" "\Varid{-elim }"
 
-%format >>+   = >> "^+"
+%format >>*   = >> "^*"
 %format _>>_  = _ "\!" >> "\!" _
-%format _>>+_ = _ "\!" >>+ "\!" _
+%format _>>*_ = _ "\!" >>* "\!" _
+
+%format δ-    = δ "^-"
+%format δ+    = δ "^+"
+
+%format +Sub  = Sub "^+"
+%format -Sub  = Sub "^-"
+%format >+    = >   "^+"
+%format >-    = >   "^-"
 
 %format --local-confluence = "\text{\rmfamily-{}-}" local-confluence
