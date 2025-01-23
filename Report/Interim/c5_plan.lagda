@@ -59,7 +59,7 @@ I solved this by categorising single-variable substitutions into ones that
 substitute
 for closed boolean values (|Sub-|) and ones that do not
 (|Sub+|). 
-It is then becomes to prove:
+It then becomes possible to prove:
 \sideremark{In the Agda mechanisiation, I generalise these lemmas to
 single-substitutions applying anywhere in the context rather than only on
 the first variable, but the idea is the same.}
@@ -68,7 +68,7 @@ _[_]→+ : t₁ >> t₂ → Sub+ Δ Γ < u > → (t₁ [ < u > ]) >> (t₂ [ < u
 \end{spec}
 and
 \begin{spec}
-boolsub→ : Sub- Δ Γ < u > → t₁ >>* t₁ [ < u > ] [ wk ]
+boolsub→ : Sub- Δ Γ < b > → t₁ >>* t₁ [ < b > ] [ wk ]
 \end{spec}
 \textit{Where |_>>*_| is the reflexive, transitive closure of spontaneous
 reduction.}
@@ -79,7 +79,7 @@ Or, as a diagram:
 \begin{tikzcd}[scaleedge cd=1.25, sep=huge]
 |t₁ [ < b >- ]| \arrow[r, "|_[ wk ]|"]
 & |t₁ [ < b >- ] [ wk ]| \\
-|t₁| \arrow[u, "|_[ < u >- ]|"] 
+|t₁| \arrow[u, "|_[ < b >- ]|"] 
     \arrow[ur, dashrightarrow, "|_>>*_|"]
     \arrow[r, "|_>>_|"]
     \arrow[d, swap, "|_[ < u >+ ]|"]
