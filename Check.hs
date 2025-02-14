@@ -200,31 +200,33 @@ instance Show (Model Syn q g) where
   show (Rfl _)      = "Refl"
 
 data Spine d q r g where
-  AppEl  :: Model d pi g -> Model d (Par q) g -> Spine d Pi pi g
-  IfEl   :: Body d U g -> Model d b g -> Model d (Par q) g -> Model d (Par r) g 
+  AppSp  :: Model d pi g -> Model d (Par q) g -> Spine d Pi pi g
+  IfSp   :: Body d U g -> Model d b g -> Model d (Par q) g -> Model d (Par r) g 
          -> Spine d B b g
-  JEl    :: Body d U g -> Model d id g -> Model d (Par q) g 
+  JSp    :: Body d U g -> Model d id g -> Model d (Par q) g 
          -> Spine d Id id g 
-  ExplEl :: Model d (Par U) g -> Model d bot g -> Spine d Bot bot g
+  ExplSp :: Model d (Par U) g -> Model d bot g -> Spine d Bot bot g
 
 data Model d q g where
-  Lam    :: Model d (Par U) g -> Body d q g -> Model d (Par Pi) g
-  U      :: Model d (Par U) g
-  B      :: Model d (Par U) g
-  Bot    :: Model d (Par U) g
-  Pi     :: Model d (Par U) g -> Body d U g -> Model d (Par U) g
-  El     :: ElimSort d q r s -> Spine d q r g -> Model d s g
-  Var    :: Var g -> Model d q g
-  TT     :: Model d (Par B) g
-  FF     :: Model d (Par B) g
-  Id     :: Model d (Par U) g -> Model d (Par q) g -> Model d (Par r) g 
-         -> Model d (Par U) g
-  Rfl    :: Model d (Par q) g -> Model d (Par Id) g
+  Lam :: Model d (Par U) g -> Body d q g -> Model d (Par Pi) g
+  U   :: Model d (Par U) g
+  B   :: Model d (Par U) g
+  Bot :: Model d (Par U) g
+  Pi  :: Model d (Par U) g -> Body d U g -> Model d (Par U) g
+  El  :: ElimSort d q r s -> Spine d q r g -> Model d s g
+  -- Variables really should go in 'Spine'...
+  Var :: Var g -> Model d q g
+  TT  :: Model d (Par B) g
+  FF  :: Model d (Par B) g
+  Id  :: Model d (Par U) g -> Model d (Par q) g -> Model d (Par r) g 
+      -> Model d (Par U) g
+  Rfl :: Model d (Par q) g -> Model d (Par Id) g
 
 type Tm    = Model Syn
 type Ty    = Tm (Par U)
-type Ne  q = Model Sem Neu
+type Ne    = Model Sem Neu
 type Val q = Model Sem (Par q)
+type VBody = Body Sem
 type VTy   = Val U
 
 recoverNat :: SNat n -> Dict (Sing SNat n)
@@ -256,20 +258,44 @@ recoverAllElim el@(elimSortSub -> sub)
   , Ev <- recoverSort (subSort sub)
   = Ev
 
+pattern RecSort :: () => Sing SSort q => SSort q
 pattern RecSort <- (recoverSort -> Ev)
   where RecSort = fill
 
+pattern RecElim :: () 
+                => (Sing ElimSort '(d, q, r, s), Sing (<=) '(r, q)
+                   ,Sing SSort r) 
+                => ElimSort d q r s
 pattern RecElim <- (recoverAllElim -> Ev)
   where RecElim = fill
 
-pattern App t u = El RecElim (AppEl t u)
+pattern App t u = El RecElim (AppSp t u)
 
-pattern If m t u v = El RecElim (IfEl m t u v)
+pattern If m t u v = El RecElim (IfSp m t u v)
 
-pattern J m p t = El RecElim (JEl m p t)
+pattern J m p t = El RecElim (JSp m p t)
 
-pattern Expl m p = El RecElim (ExplEl m p)
+pattern Expl m p = El RecElim (ExplSp m p)
 
+pattern Ne :: () => () => Ne g -> Val q g
+pattern Ne t <- El Stk (El Spn -> t)
+  where Ne (El Spn t) = El Stk t
+        Ne (Var i)    = Var i
+
+pattern AppNe :: () => () => Ne g -> Val q g -> Ne g
+pattern AppNe t u = El Spn (AppSp t u)
+
+pattern IfNe :: () => () => VBody U g -> Ne g -> Val q g -> Val r g -> Ne g
+pattern IfNe m t u v = El Spn (IfSp m t u v)
+
+pattern JNe :: () => () => VBody U g -> Ne g -> Val q g -> Ne g
+pattern JNe m p t = El Spn (JSp m p t)
+
+pattern ExplNe :: () => () => Val U g -> Ne g -> Ne g
+pattern ExplNe m t = El Spn (ExplSp m t)
+
+{-# COMPLETE AppNe, IfNe, JNe, ExplNe, Var #-}
+{-# COMPLETE Lam, U, B, Bot, Pi, Var, TT, FF, Id, Rfl, Ne #-}
 {-# COMPLETE Lam, U, B, Bot, Pi, App, If, Var, TT, FF, Id, Rfl, J, Expl #-}
 
 data OPE d g where
@@ -492,15 +518,32 @@ convBody :: Sing SNat g => Body Sem q g -> Body Sem r g -> TCM ()
 convBody (Yo t) (Yo u) 
   = conv (t wkOPE (Var VZ)) (u wkOPE (Var VZ))
 
-conv :: Sing SNat g => Model Sem q g -> Model Sem r g -> TCM ()
+convNe :: Sing SNat g => Ne g -> Ne g -> TCM ()
+convNe (AppNe t1 u1) (AppNe t2 u2) = do
+  convNe t1 t2
+  conv u1 u2
+convNe (IfNe m1 t1 u1 v1) (IfNe m2 t2 u2 v2) = do
+  convBody m1 m2
+  convNe t1 t2
+  conv u1 u2
+  conv v1 v2
+convNe (JNe m1 p1 t1) (JNe m2 p2 t2) = do
+  convBody m1 m2
+  convNe p1 p2
+  conv t1 t2
+convNe (ExplNe m1 p1) (ExplNe m2 p2) = do
+  conv m1 m2
+  convNe p1 p2
+convNe (Var i1) (Var i2)
+  | i1 == i2 = pure ()
+convNe _ _ = pure ()
+
+conv :: Sing SNat g => Val q g -> Val r g -> TCM ()
 conv TT  TT  = pure ()
 conv FF  FF  = pure ()
 conv U   U   = pure ()
 conv B   B   = pure ()
 conv Bot Bot = pure ()
-conv (App t1 u1) (App t2 u2) = do
-  conv t1 t2
-  conv u1 u2
 conv (Lam a1 t1) (Lam a2 t2) = do
   conv a1 a2
   convBody t1 t2
@@ -508,25 +551,13 @@ conv (Pi a1 b1) (Pi a2 b2) = do
   conv a1 a2
   convBody b1 b2
 conv (Var i1) (Var i2)
- | i1 == i2 = pure ()
-conv (If m1 t1 u1 v1) (If m2 t2 u2 v2) = do
-  convBody m1 m2
-  conv t1 t2
-  conv u1 u2
-  conv v1 v2
+  | i1 == i2 = pure ()
 conv (Id a1 x1 y1) (Id a2 x2 y2) = do
   conv a1 a2
   conv x1 x2
   conv y1 y2
 conv (Rfl x1) (Rfl x2) = do
   conv x1 x2
-conv (J m1 p1 t1) (J m2 p2 t2) = do
-  convBody m1 m2
-  conv p1 p2
-  conv t1 t2
-conv (Expl m1 p1) (Expl m2 p2) = do
-  conv m1 m2
-  conv p1 p2
 conv t u = throw 
   $ "Failed to match " <> show (reify t) ++ " with " 
                        <> show (reify u) <> "."
@@ -537,7 +568,9 @@ close _ t = Yo \s u -> eval (toEnv s :< u) t
 newtype TCM a = TCM (Either Error a)
   deriving (Functor, Applicative, Monad)
 
+pattern Failure :: Error -> TCM a
 pattern Failure e = TCM (Left e)
+pattern Success :: a -> TCM a
 pattern Success a = TCM (Right a)
 {-# COMPLETE Failure, Success #-}
 
@@ -627,19 +660,17 @@ checkBody g r a t b = do
 reifyBody :: Sing SNat g => Body Sem q g -> Body Syn q g
 reifyBody (Yo t) = Bo (reify (t wkOPE (Var VZ)))
 
-reifySpine :: (Sing ElimSort '(Syn, q, r, s), Sing (<=) '(r, q), Sing SSort r
-              ,Sing SNat g) 
-           => Spine Sem q r g -> Model Syn s g
-reifySpine (IfEl m t u v) 
-  = If (reifyBody m) (reify t) (reify u) (reify v)
-reifySpine (AppEl t u)  = App (reify t) (reify u)
-reifySpine (JEl m p t)  = J (reifyBody m) (reify p) (reify t)
-reifySpine (ExplEl m p) = Expl (reify m) (reify p)
+reifyNe :: Sing SNat g => Ne g -> Model Syn (Par q) g
+reifyNe (Var i)      = Var i
+reifyNe (IfNe m t u v) 
+  = If (reifyBody m) (reifyNe t) (reify u) (reify v)
+reifyNe (AppNe t u)  = App (reifyNe t) (reify u)
+reifyNe (JNe m p t)  = J (reifyBody m) (reifyNe p) (reify t)
+reifyNe (ExplNe m p) = Expl (reify m) (reifyNe p)
 
-reify :: Sing SNat g => Model Sem q g -> Model Syn q g
+reify :: Sing SNat g => Val q g -> Model Syn (Par q) g
 reify (Var i)    = Var i
-reify (El Stk t) = reifySpine t
-reify (El Spn t) = reifySpine t   
+reify (Ne t)     = reifyNe t
 reify (Lam a t)  = Lam (reify a) (reifyBody t)
 reify (Pi a b)   = Pi (reify a) (reifyBody b)
 reify (Id a x y) = Id (reify a) (reify x) (reify y)
