@@ -297,18 +297,7 @@ renEnv :: OPE x d -> Env d g -> Env x g
 renEnv _ Emp = Emp
 renEnv s (r :< t) = renEnv s r :< ren s t
 
-type family Baa d where
-  Baa Syn = Sort
-  Baa Sem = ParSort
-
-type Waa :: forall d -> Baa d -> Sort
-type family Waa d q where
-  Waa Syn q = q
-  Waa Sem q = Par q
-
-data Unk d g = forall q. Ex {proj :: Model d (Waa d q) g}
-type UnkVal = Unk Sem
-type UnkTm  = Unk Syn
+data UnkVal g = forall q. Ex {proj :: Model Sem (Par q) g}
 
 type family PresVal q g = r | r -> q g where
   PresVal (Par q) g = Val q g
@@ -330,9 +319,6 @@ presElim FromPar t      = t
 -- Trust me bro
 coeTM :: Model d q1 g -> Model d q2 g
 coeTM = unsafeCoerce
-
-projTM :: Unk d g -> Model d q g
-projTM (Ex t) = coeTM t
 
 lookup :: Env d g -> Var g -> UnkVal d
 lookup (_ :< t) VZ     = Ex t
