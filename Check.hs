@@ -25,7 +25,6 @@
 
 
 import Prelude hiding (lookup, not)
-import Control.Monad (guard)
 import Data.Kind (Type)
 import Unsafe.Coerce (unsafeCoerce)
 import Data.Data ((:~:)(..))
@@ -169,10 +168,36 @@ data Body d q g where
   } -> Body Sem q g
 
 deriving instance Show (SSort q)
-deriving instance Show (Var g)
+
+varToInt :: Var g -> Int
+varToInt VZ     = 0
+varToInt (VS i) = varToInt i + 1
+
+instance Show (Var g) where
+  show i = show $ varToInt i
+
 deriving instance Show (ElimSort d q r s)
-deriving instance Show (Body Syn q g)
-deriving instance Show (Model Syn q g)
+instance Show (Body Syn q g) where
+  show (Bo t) = show t
+
+parens :: String -> String
+parens s = "(" <> s <> ")"
+
+instance Show (Model Syn q g) where
+  show (Lam _ t)    = "λ " <> show t
+  show (Pi a b)     = "Π " <> parens (show a) <> " " <> parens (show b)
+  show U            = "Type"
+  show B            = "𝔹"
+  show (App t u)    = parens (show t) <> " " <> parens (show u)
+  show (If _ t u v) = "if " <> parens (show t) <> " then " 
+                   <> parens (show u) <> " else " 
+                   <> parens (show v) <> ")"
+  show (J _ p t)    = "transp " <> parens (show p) <> " " <> parens (show t)
+  show (Var i)      = "`" <> show i
+  show TT           = "True"
+  show FF           = "False"
+  show (Id _ x y)   = parens (show x) <> " = " <> parens (show y)
+  show (Rfl _)      = "Refl"
 
 data Model d q g where
   Lam   :: Model d (Par U) g -> Body d q g -> Model d (Par Pi) g
@@ -437,11 +462,24 @@ eval g e (J m p t)
         p' = evalPres g e p
         t' = eval g e t
 
-convBody :: SNat g -> Body Sem q g -> Body Sem r g -> Maybe ()
+type Error = String
+
+throw :: Error -> TCM a
+throw = Failure
+
+orThrow :: Bool -> Error -> TCM ()
+orThrow True  _ = pure ()
+orThrow False e = throw e
+
+-- Temporary hack
+instance MonadFail TCM where
+  fail s = throw s
+
+convBody :: SNat g -> Body Sem q g -> Body Sem r g -> TCM ()
 convBody g (Yo t) (Yo u) 
   = conv (SS g) (t (wkOPE g) (Var VZ)) (u (wkOPE g) (Var VZ))
 
-conv :: SNat g -> Model Sem q g -> Model Sem r g -> Maybe ()
+conv :: SNat g -> Model Sem q g -> Model Sem r g -> TCM ()
 conv _ TT TT = pure ()
 conv _ FF FF = pure ()
 conv _ U  U  = pure ()
@@ -455,33 +493,57 @@ conv g (Lam a1 t1) (Lam a2 t2) = do
 conv g (Pi a1 b1) (Pi a2 b2) = do
   conv g a1 a2
   convBody g b1 b2
-conv _ (Var i1) (Var i2) = guard $ i1 == i2
+conv _ (Var i1) (Var i2)
+ | i1 == i2 = pure ()
 conv g (If m1 t1 u1 v1) (If m2 t2 u2 v2) = do
   convBody g m1 m2
   conv g t1 t2
   conv g u1 u2
   conv g v1 v2
-conv _ _ _ = mempty
+conv g (Id a1 x1 y1) (Id a2 x2 y2) = do
+  conv g a1 a2
+  conv g x1 x2
+  conv g y1 y2
+conv g (Rfl x1) (Rfl x2) = do
+  conv g x1 x2
+conv g (J m1 p1 t1) (J m2 p2 t2) = do
+  convBody g m1 m2
+  conv g p1 p2
+  conv g t1 t2
+conv g t u = throw 
+  $ "Failed to match " <> show (reify g t) ++ " with " 
+                       <> show (reify g u) <> "."
 
 close :: VTy g -> Val q (S g) -> Body Sem q g
 close _ t = Yo \s u -> eval (opeRng s) (toEnv s :< u) t
 
-inferBody :: Ctx g -> Env g g -> VTy g -> Body Syn q g -> Maybe (VTy (S g))
+newtype TCM a = TCM (Either Error a)
+  deriving (Functor, Applicative, Monad)
+
+pattern Failure e = TCM (Left e)
+pattern Success a = TCM (Right a)
+{-# COMPLETE Failure, Success #-}
+
+instance Show a => Show (TCM a) where
+  show (Failure e)  = "Failed with: " <> e
+  show (Success x) = "Success: " <> show x
+
+inferBody :: Ctx g -> Env g g -> VTy g -> Body Syn q g -> TCM (VTy (S g))
 inferBody g r a (Bo t) = infer (g :. a) (renEnv wk r :< Var VZ) t
   where wk = wkOPE (ctxLen g)
 
 -- TODO: Use 'check' here instead of manual matching and 'conv' calls
-infer :: Ctx g -> Env g g -> Tm q g -> Maybe (VTy g)
+infer :: Ctx g -> Env g g -> Tm q g -> TCM (VTy g)
 infer g r (Lam a t) = do
-  U <- infer g r a
+  check g r a U
   let a' = eval l r a
   b <- inferBody g r a' t
   pure (Pi a' (close a' b))
   where l = ctxLen g
 infer g r (Pi a b) = do
-  U <- infer g r a
+  check g r a U
   let a' = eval l r a
-  U <- inferBody g r a' b
+  checkBody g r a' b U
   pure U
   where l = ctxLen g
 infer g r (App t u) = do
@@ -493,10 +555,10 @@ infer g r (App t u) = do
   pure (b1 (idOPE l) u')
   where l = ctxLen g
 infer g r (If m t u v) = do
-  B <- infer g r t
+  check g r t B
   a1 <- infer g r u
   a2 <- infer g r v
-  U <- inferBody g r B m
+  checkBody g r B m U
   Yo m' <- pure $ evalBody r m
   let a1' = m' (idOPE l) TT
   let a2' = m' (idOPE l) FF
@@ -521,7 +583,7 @@ infer g r (Id a x y) = do
   where l = ctxLen g
 infer g r (J m p t) = do
   Id a x y <- infer g r p
-  U <- inferBody g r a m
+  checkBody g r a m U
   mx1' <- infer g r t
   -- Todo can/should we eval in context extended with 'x' directly?
   Yo m' <- pure $ evalBody r m
@@ -535,10 +597,17 @@ infer _ _ FF        = pure B
 infer _ _ B         = pure U
 infer _ _ U         = pure U
 
-check :: Ctx g -> Env g g -> Tm q g -> Ty g -> Maybe ()
+check :: Ctx g -> Env g g -> Tm q g -> Ty g -> TCM ()
 check g r t a = do
   a' <- infer g r t
   conv l (eval l r a) a'
+  where l = ctxLen g
+
+checkBody :: Ctx g -> Env g g -> VTy g -> Body Syn q g -> Ty (S g)
+          -> TCM ()
+checkBody g r a t b = do
+  b' <- inferBody g r a t
+  conv (SS l) (eval (SS l) (renEnv (wkOPE l) r :< Var VZ) b) b'
   where l = ctxLen g
 
 reifyBody :: SNat g -> Body Sem q g -> Body Syn q g
@@ -571,6 +640,9 @@ example = Lam B (Bo (Var VZ))
 
 not :: Model Syn (Par Pi) g
 not = Lam B (Bo (If (Bo B) (var VZ) FF TT))
+
+proofTy :: Model Syn (Par U) g
+proofTy = Pi B (Bo (Id B (Var VZ) (App not (App not (Var VZ)))))
 
 proof :: Model Syn (Par Pi) g
 proof = Lam B (Bo (If (Bo (Id B (Var VZ) (App not (App not (Var VZ))))) 
