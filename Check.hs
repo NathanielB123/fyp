@@ -434,46 +434,46 @@ evalBody r (Yo t)
 
 eval :: (Sing SNat g2, Sing SSort q) 
      => Env g2 g1 -> Model d q g1 -> PresVal q g2
-eval e (Var i) 
-  = presTM fill $ lookup e i
-eval e (App t u)
+eval r (Var i) 
+  = presTM fill $ lookup r i
+eval r (App t u)
   = presTM fill $ appVal t' u'
-  where t' = evalPres e t
-        u' = eval e u
-eval e (If m t u v)
+  where t' = evalPres r t
+        u' = eval r u
+eval r (If m t u v)
   = presTM fill $ ifVal m' t' u' v'
-  where m' = evalBody e m
-        t' = evalPres e t
-        u' = eval e u
-        v' = eval e v
+  where m' = evalBody r m
+        t' = evalPres r t
+        u' = eval r u
+        v' = eval r v
 eval _ TT = TT
 eval _ FF = FF
 eval _ U  = U
 eval _ B  = B
 eval _ Bot = Bot
-eval e (Lam a t)
-  = Lam a' (evalBody e t)
-  where a' = eval e a
-eval e (Pi a b)
-  = Pi a' (evalBody e b)
-  where a' = eval e a
-eval e (Id a x y)
+eval r (Lam a t)
+  = Lam a' (evalBody r t)
+  where a' = eval r a
+eval r (Pi a b)
+  = Pi a' (evalBody r b)
+  where a' = eval r a
+eval r (Id a x y)
   = Id a' x' y'
-  where a' = eval e a
-        x' = eval e x
-        y' = eval e y
-eval e (Rfl x)
+  where a' = eval r a
+        x' = eval r x
+        y' = eval r y
+eval r (Rfl x)
   = Rfl x'
-  where x' = eval e x
-eval e (J m p t)
+  where x' = eval r x
+eval r (J m p t)
   = presTM fill $ jVal m' p' t'
-  where m' = evalBody e m
-        p' = evalPres e p
-        t' = eval e t
-eval e (Expl m p)
+  where m' = evalBody r m
+        p' = evalPres r p
+        t' = eval r t
+eval r (Expl m p)
   = presTM fill $ explVal m' p'
-  where m' = eval e m
-        p' = evalPres e p
+  where m' = eval r m
+        p' = evalPres r p
 
 type Error = String
 
