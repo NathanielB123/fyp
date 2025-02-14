@@ -132,7 +132,7 @@ data Var n where
   VS :: Var n -> Var (S n)
 deriving instance Eq (Var n)
 
-type data ParSort = B | U | Pi | Id | Bot
+type data ParSort = B | U | Pi | Id | Bot | V
 
 -- 'Neu'tral or 'Par'tisan
 type data Sort = Neu | Par ParSort
@@ -200,27 +200,26 @@ instance Show (Model Syn q g) where
   show (Rfl _)      = "Refl"
 
 data Spine d q r g where
-  AppSp  :: Model d pi g -> Model d (Par q) g -> Spine d Pi pi g
-  IfSp   :: Body d U g -> Model d b g -> Model d (Par q) g -> Model d (Par r) g 
-         -> Spine d B b g
-  JSp    :: Body d U g -> Model d id g -> Model d (Par q) g 
-         -> Spine d Id id g 
-  ExplSp :: Model d (Par U) g -> Model d bot g -> Spine d Bot bot g
+  AppS  :: Model d pi g -> Model d (Par q) g -> Spine d Pi pi g
+  IfS   :: Body d U g -> Model d b g -> Model d (Par q) g -> Model d (Par r) g 
+        -> Spine d B b g
+  JS    :: Body d U g -> Model d id g -> Model d (Par q) g 
+        -> Spine d Id id g 
+  ExplS :: Model d (Par U) g -> Model d bot g -> Spine d Bot bot g
+  VarS  :: Var g -> Spine d V Neu g
 
 data Model d q g where
-  Lam :: Model d (Par U) g -> Body d q g -> Model d (Par Pi) g
-  U   :: Model d (Par U) g
-  B   :: Model d (Par U) g
-  Bot :: Model d (Par U) g
-  Pi  :: Model d (Par U) g -> Body d U g -> Model d (Par U) g
-  El  :: ElimSort d q r s -> Spine d q r g -> Model d s g
-  -- Variables really should go in 'Spine'...
-  Var :: Var g -> Model d q g
-  TT  :: Model d (Par B) g
-  FF  :: Model d (Par B) g
-  Id  :: Model d (Par U) g -> Model d (Par q) g -> Model d (Par r) g 
-      -> Model d (Par U) g
-  Rfl :: Model d (Par q) g -> Model d (Par Id) g
+  Lam  :: Model d (Par U) g -> Body d q g -> Model d (Par Pi) g
+  U    :: Model d (Par U) g
+  B    :: Model d (Par U) g
+  Bot  :: Model d (Par U) g
+  Pi   :: Model d (Par U) g -> Body d U g -> Model d (Par U) g
+  El   :: ElimSort d q r s -> Spine d q r g -> Model d s g
+  TT   :: Model d (Par B) g
+  FF   :: Model d (Par B) g
+  Id   :: Model d (Par U) g -> Model d (Par q) g -> Model d (Par r) g 
+       -> Model d (Par U) g
+  Rfl  :: Model d (Par q) g -> Model d (Par Id) g
 
 type Tm    = Model Syn
 type Ty    = Tm (Par U)
@@ -269,33 +268,33 @@ pattern RecElim :: ()
 pattern RecElim <- (recoverAllElim -> Ev)
   where RecElim = fill
 
-pattern App t u = El RecElim (AppSp t u)
-
-pattern If m t u v = El RecElim (IfSp m t u v)
-
-pattern J m p t = El RecElim (JSp m p t)
-
-pattern Expl m p = El RecElim (ExplSp m p)
+pattern App t u = El RecElim (AppS t u)
+pattern If m t u v = El RecElim (IfS m t u v)
+pattern J m p t = El RecElim (JS m p t)
+pattern Expl m p = El RecElim (ExplS m p)
+pattern Var i = El RecElim (VarS i)
 
 pattern Ne :: () => () => Ne g -> Val q g
 pattern Ne t <- El Stk (El Spn -> t)
   where Ne (El Spn t) = El Stk t
-        Ne (Var i)    = Var i
+
+pattern VarNe :: () => () => Var g -> Ne g
+pattern VarNe i = El Spn (VarS i)
 
 pattern AppNe :: () => () => Ne g -> Val q g -> Ne g
-pattern AppNe t u = El Spn (AppSp t u)
+pattern AppNe t u = El Spn (AppS t u)
 
 pattern IfNe :: () => () => VBody U g -> Ne g -> Val q g -> Val r g -> Ne g
-pattern IfNe m t u v = El Spn (IfSp m t u v)
+pattern IfNe m t u v = El Spn (IfS m t u v)
 
 pattern JNe :: () => () => VBody U g -> Ne g -> Val q g -> Ne g
-pattern JNe m p t = El Spn (JSp m p t)
+pattern JNe m p t = El Spn (JS m p t)
 
 pattern ExplNe :: () => () => Val U g -> Ne g -> Ne g
-pattern ExplNe m t = El Spn (ExplSp m t)
+pattern ExplNe m t = El Spn (ExplS m t)
 
-{-# COMPLETE AppNe, IfNe, JNe, ExplNe, Var #-}
-{-# COMPLETE Lam, U, B, Bot, Pi, Var, TT, FF, Id, Rfl, Ne #-}
+{-# COMPLETE AppNe, IfNe, JNe, ExplNe, VarNe #-}
+{-# COMPLETE Lam, U, B, Bot, Pi, TT, FF, Id, Rfl, Ne #-}
 {-# COMPLETE Lam, U, B, Bot, Pi, App, If, Var, TT, FF, Id, Rfl, J, Expl #-}
 
 data OPE d g where
@@ -402,22 +401,18 @@ lookupTy Nil i = case i of
 appVal :: Sing SNat g => Val Pi g -> Val q g -> UnkVal g
 appVal (Lam _ (Yo t)) u = Ex $ t (idOPE fill) u
 appVal (El Stk t)     u = Ex $ App (El Spn t) u
-appVal (Var i)        u = Ex $ App (Var i) u
 
 ifVal :: Body Sem U g -> Val B g -> Val q g -> Val r g -> UnkVal g
 ifVal _ TT         u _ = Ex $ u
 ifVal _ FF         _ v = Ex $ v
 ifVal m (El Stk t) u v = Ex $ If m (El Spn t) u v
-ifVal m (Var i)    u v = Ex $ If m (Var i) u v
 
 jVal :: Body Sem U g -> Val Id g -> Val q g -> UnkVal g
 jVal _ (Rfl _)    u = Ex $ u
 jVal m (El Stk t) u = Ex $ J m (El Spn t) u
-jVal m (Var i)    u = Ex $ J m (Var i) u
 
 explVal :: Val U g -> Val Bot g -> UnkVal g
 explVal m (El Stk t) = Ex $ Expl m (El Spn t)
-explVal m (Var i)    = Ex $ Expl m (Var i)
 
 wkStar :: SNat g -> SNat d -> OPE (g + d) g
 wkStar SZ     SZ     = Eps
@@ -550,8 +545,6 @@ conv (Lam a1 t1) (Lam a2 t2) = do
 conv (Pi a1 b1) (Pi a2 b2) = do
   conv a1 a2
   convBody b1 b2
-conv (Var i1) (Var i2)
-  | i1 == i2 = pure ()
 conv (Id a1 x1 y1) (Id a2 x2 y2) = do
   conv a1 a2
   conv x1 x2
@@ -661,7 +654,7 @@ reifyBody :: Sing SNat g => Body Sem q g -> Body Syn q g
 reifyBody (Yo t) = Bo (reify (t wkOPE (Var VZ)))
 
 reifyNe :: Sing SNat g => Ne g -> Model Syn (Par q) g
-reifyNe (Var i)      = Var i
+reifyNe (VarNe i)    = Var i
 reifyNe (IfNe m t u v) 
   = If (reifyBody m) (reifyNe t) (reify u) (reify v)
 reifyNe (AppNe t u)  = App (reifyNe t) (reify u)
@@ -669,7 +662,6 @@ reifyNe (JNe m p t)  = J (reifyBody m) (reifyNe p) (reify t)
 reifyNe (ExplNe m p) = Expl (reify m) (reifyNe p)
 
 reify :: Sing SNat g => Val q g -> Model Syn (Par q) g
-reify (Var i)    = Var i
 reify (Ne t)     = reifyNe t
 reify (Lam a t)  = Lam (reify a) (reifyBody t)
 reify (Pi a b)   = Pi (reify a) (reifyBody b)
@@ -682,7 +674,7 @@ reify B          = B
 reify Bot        = Bot
 
 var :: Var g -> Model d Neu g
-var = Var @_ @_ @Neu
+var = Var
 
 -- \b. b
 identity :: Tm (Par Pi) g
