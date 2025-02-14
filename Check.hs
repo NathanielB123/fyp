@@ -18,14 +18,15 @@
 {-# LANGUAGE ViewPatterns #-}
 {-# OPTIONS -Wpartial-fields #-}
 {-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+{-# OPTIONS_GHC -Wno-missing-pattern-synonym-signatures #-}
+
 
 {-# HLINT ignore "Use newtype instead of data" #-}
 
 
-import Prelude hiding (lookup)
+import Prelude hiding (lookup, not)
 import Control.Monad (guard)
-import Data.Coerce (coerce)
-import Data.Kind (Constraint, Type)
+import Data.Kind (Type)
 import Unsafe.Coerce (unsafeCoerce)
 import Data.Data ((:~:)(..))
 
@@ -133,7 +134,7 @@ data Var n where
   VS :: Var n -> Var (S n)
 deriving instance Eq (Var n)
 
-type data ParSort = B | U | Pi
+type data ParSort = B | U | Pi | Id
 
 -- 'Neu'tral or 'Par'tisan
 type data Sort = Neu | Par ParSort
@@ -174,18 +175,24 @@ deriving instance Show (Body Syn q g)
 deriving instance Show (Model Syn q g)
 
 data Model d q g where
-  Lam  :: Model d (Par U) g -> Body d q g -> Model d (Par Pi) g
-  U    :: Model d (Par U) g
-  B    :: Model d (Par U) g
-  Pi   :: Model d (Par U) g -> Body d U g -> Model d (Par U) g
-  SApp :: (ElimSort d Pi pi r, SSort q) 
-       -> Model d pi g -> Model d q g -> Model d r g
-  SIf  :: (ElimSort d B b s, SSort q, SSort r)
-       -> Body d U g -> Model d b g -> Model d q g -> Model d r g -> Model d s g
-  Var  :: Var g -> Model d q g
-  TT   :: Model d (Par B) g
-  FF   :: Model d (Par B) g
-
+  Lam   :: Model d (Par U) g -> Body d q g -> Model d (Par Pi) g
+  U     :: Model d (Par U) g
+  B     :: Model d (Par U) g
+  Pi    :: Model d (Par U) g -> Body d U g -> Model d (Par U) g
+  AppEl :: ElimSort d Pi pi r 
+        -> Model d pi g -> Model d (Par q) g -> Model d r g
+  IfEl  :: ElimSort d B b s
+        -> Body d U g -> Model d b g -> Model d (Par q) g -> Model d (Par r) g 
+        -> Model d s g
+  JEl   :: ElimSort d Id id r
+        -> Body d U g -> Model d id g -> Model d (Par q) g 
+        -> Model d r g 
+  Var   :: Var g -> Model d q g
+  TT    :: Model d (Par B) g
+  FF    :: Model d (Par B) g
+  Id    :: Model d (Par U) g -> Model d (Par q) g -> Model d (Par r) g 
+        -> Model d (Par U) g
+  Rfl   :: Model d (Par q) g -> Model d (Par Id) g
 
 type Tm    = Model Syn
 type Ty    = Tm (Par U)
@@ -212,34 +219,19 @@ recoverAllElim el@(elimSortSub -> sub)
   , Ev <- recoverSort (subSort sub)
   = Ev
 
-pattern App t u <- SApp (recoverAllElim -> Ev, recoverSort -> Ev) t u
-  where App t u = SApp fill2 t u
+pattern RecSort <- (recoverSort -> Ev)
+  where RecSort = fill
 
-pattern If m t u v 
-  <- SIf (recoverAllElim -> Ev, recoverSort -> Ev, recoverSort -> Ev) m t u v
-  where If m t u v = SIf fill3 m t u v
+pattern RecElim <- (recoverAllElim -> Ev)
+  where RecElim = fill
 
-pattern StkApp t u <- SApp (Stk, recoverSort -> Ev) t u
-  where StkApp t u = SApp (Stk, fill) t u
+pattern App t u = AppEl RecElim t u
 
-pattern SpnApp t u <- SApp (Spn, recoverSort -> Ev) t u
-  where SpnApp t u = SApp fill2 t u
+pattern If m t u v = IfEl RecElim m t u v
 
-pattern RdxApp t u <- SApp (Rdx, recoverSort -> Ev) t u
-  where RdxApp t u = SApp fill2 t u
+pattern J m p t = JEl RecElim m p t
 
-pattern StkIf m t u v <- SIf (Stk, recoverSort -> Ev, recoverSort -> Ev) m t u v
-  where StkIf m t u v = SIf (Stk, fill, fill) m t u v
-
-pattern SpnIf m t u v <- SIf (Spn, recoverSort -> Ev, recoverSort -> Ev) m t u v
-  where SpnIf m t u v = SIf fill3 m t u v
-
-pattern RdxIf m t u v <- SIf (Rdx, recoverSort -> Ev, recoverSort -> Ev) m t u v
-  where RdxIf m t u v = SIf fill3 m t u v
-
-{-# COMPLETE Lam, U, B, Pi, App, If, Var, TT, FF #-}
-{-# COMPLETE Lam, U, B, Pi, StkApp, SpnApp, RdxApp, StkIf, SpnIf, RdxIf, Var
-           , TT, FF #-}
+{-# COMPLETE Lam, U, B, Pi, App, If, Var, TT, FF, Id, Rfl, J #-}
 
 data OPE d g where
   Eps  :: OPE Z Z
@@ -283,12 +275,17 @@ ren :: OPE g2 g1 -> Model d q g1 -> Model d q g2
 ren _ U            = U
 ren _ B            = B
 ren s (Pi a b)     = Pi  (ren s a) (renBody s b)
+ren s (Id a x y)   = Id (ren s a) (ren s x) (ren s y)
 ren s (Lam a t)    = Lam (ren s a) (renBody s t)
 ren s (App t u)    = App (ren s t) (ren s u)
 ren s (If m t u v) = If (renBody s m) (ren s t) (ren s u) (ren s v)
+-- Technically I think the type is inferrable from the motive, but that seems
+-- kinda crazy to rely on
+ren s (J m p t)    = J (renBody s m) (ren s p) (ren s t)
 ren s (Var i)      = Var (renVar s i)
 ren _ TT           = TT
 ren _ FF           = FF
+ren s (Rfl t)      = Rfl (ren s t)
 
 renVar :: OPE d g -> Var g -> Var d
 renVar (Keep _) VZ     = VZ
@@ -326,17 +323,11 @@ presTM :: SSort q -> UnkVal g -> PresVal q g
 presTM SPar (Ex t) = coeTM t
 presTM SNeu t      = t
 
-forget :: SSort q -> PresVal q g -> UnkVal g
-forget SNeu t = t
-forget SPar t = Ex t
-
 presElim :: q <= r -> PresVal q g -> Val r g
 presElim FromNeu (Ex t) = coeTM t
 presElim FromPar t      = t
 
-
--- -- Trust me bro
--- -- We could add singleton 'Sort's to make this safe...
+-- Trust me bro
 coeTM :: Model d q1 g -> Model d q2 g
 coeTM = unsafeCoerce
 
@@ -354,17 +345,26 @@ lookupTy (g :. _) (VS i) = ren (wkOPE (ctxLen g)) (lookupTy g i)
 lookupTy Nil i = case i of
 
 appVal :: SNat g -> Val Pi g -> Val q g -> UnkVal g
-appVal g (Lam _ (Yo t))      u = Ex $ t (idOPE g) u
-appVal _ (StkApp t1 t2)      u = Ex $ App (App t1 t2) u
-appVal _ (StkIf t1 t2 t3 t4) u = Ex $ App (If t1 t2 t3 t4) u
-appVal _ (Var i)             u = Ex $ App (Var i) u
+appVal g (Lam _ (Yo t))         u = Ex $ t (idOPE g) u
+appVal _ (AppEl Stk t1 t2)      u = Ex $ App (App t1 t2) u
+appVal _ (IfEl Stk t1 t2 t3 t4) u = Ex $ App (If t1 t2 t3 t4) u
+appVal _ (JEl Stk t1 t2 t3)     u = Ex $ App (J t1 t2 t3) u
+appVal _ (Var i)                u = Ex $ App (Var i) u
 
 ifVal :: Body Sem U g -> Val B g -> Val q g -> Val r g -> UnkVal g
-ifVal _ TT                  u _ = Ex $ u
-ifVal _ FF                  _ v = Ex $ v
-ifVal m (StkApp t1 t2)      u v = Ex $ If m (App t1 t2) u v
-ifVal m (StkIf t1 t2 t3 t4) u v = Ex $ If m (If t1 t2 t3 t4) u v
-ifVal m (Var i)             u v = Ex $ If m (Var i) u v
+ifVal _ TT                     u _ = Ex $ u
+ifVal _ FF                     _ v = Ex $ v
+ifVal m (AppEl Stk t1 t2)      u v = Ex $ If m (App t1 t2) u v
+ifVal m (IfEl Stk t1 t2 t3 t4) u v = Ex $ If m (If t1 t2 t3 t4) u v
+ifVal m (JEl Stk t1 t2 t3)     u v = Ex $ If m (J t1 t2 t3) u v
+ifVal m (Var i)                u v = Ex $ If m (Var i) u v
+
+jVal :: Body Sem U g -> Val Id g -> Val q g -> UnkVal g
+jVal _ (Rfl _)                u = Ex $ u
+jVal m (AppEl Stk t1 t2)      u = Ex $ J m (App t1 t2) u
+jVal m (IfEl Stk t1 t2 t3 t4) u = Ex $ J m (If t1 t2 t3 t4) u
+jVal m (JEl Stk t1 t2 t3)     u = Ex $ J m (J t1 t2 t3) u
+jVal m (Var i)                u = Ex $ J m (Var i) u
 
 wkStar :: SNat g -> SNat d -> OPE (g + d) g
 wkStar SZ     SZ     = Eps
@@ -404,14 +404,10 @@ evalPres :: (Sing (<=) '(q, r), Sing SSort q)
          => SNat g2 -> Env g2 g1 -> Model d q g1 -> Val r g2
 evalPres g r t = presElim fill (eval g r t)
 
-evalForget :: Sing SSort q => SNat g2 -> Env g2 g1 -> Model d q g1 -> UnkVal g2
-evalForget g r t = forget fill (eval g r t)
-
-evalBody :: Env g2 g1 -> VTy g2 -> Body d q g1 
-         -> Body Sem q g2
-evalBody r _ (Bo t) 
+evalBody :: Env g2 g1 -> Body d q g1 -> Body Sem q g2
+evalBody r (Bo t) 
   = Yo \s u -> eval (opeRng s) (renEnv s r :< u) t
-evalBody r _ (Yo t) 
+evalBody r (Yo t) 
   = Yo \s u -> 
   let g' = opeRng s 
    in eval g' (parCom (renEnv s r) (idOPE g')) 
@@ -422,25 +418,38 @@ eval :: Sing SSort q => SNat g2 -> Env g2 g1 -> Model d q g1 -> PresVal q g2
 eval _ e (Var i) 
   = presTM fill $ lookup e i
 eval g e (App t u)
-  | t'    <- evalPres g e t
-  , Ex u' <- evalForget g e u
   = presTM fill $ appVal g t' u'
+  where t' = evalPres g e t
+        u' = eval g e u
 eval g e (If m t u v)
-  | m'    <- evalBody e B m
-  , t'    <- evalPres g e t
-  , Ex u' <- evalForget g e u
-  , Ex v' <- evalForget g e v
   = presTM fill $ ifVal m' t' u' v'
+  where m' = evalBody e m
+        t' = evalPres g e t
+        u' = eval g e u
+        v' = eval g e v
 eval _ _ TT = TT
 eval _ _ FF = FF
 eval _ _ U  = U
 eval _ _ B  = B
 eval g e (Lam a t)
-  = Lam a' (evalBody e a' t)
+  = Lam a' (evalBody e t)
   where a' = eval g e a
 eval g e (Pi a b)
-  = Pi a' (evalBody e a' b)
+  = Pi a' (evalBody e b)
   where a' = eval g e a
+eval g e (Id a x y)
+  = Id a' x' y'
+  where a' = eval g e a
+        x' = eval g e x
+        y' = eval g e y
+eval g e (Rfl x)
+  = Rfl x'
+  where x' = eval g e x
+eval g e (J m p t)
+  = presTM fill $ jVal m' p' t'
+  where m' = evalBody e m
+        p' = evalPres g e p
+        t' = eval g e t
 
 convBody :: SNat g -> Body Sem q g -> Body Sem r g -> Maybe ()
 convBody g (Yo t) (Yo u) 
@@ -475,6 +484,7 @@ inferBody :: Ctx g -> Env g g -> VTy g -> Body Syn q g -> Maybe (VTy (S g))
 inferBody g r a (Bo t) = infer (g :. a) (renEnv wk r :< Var VZ) t
   where wk = wkOPE (ctxLen g)
 
+-- TODO: Use 'check' here instead of manual matching and 'conv' calls
 infer :: Ctx g -> Env g g -> Tm q g -> Maybe (VTy g)
 infer g r (Lam a t) = do
   U <- infer g r a
@@ -492,8 +502,8 @@ infer g r (App t u) = do
   Pi a1 (Yo b1) <- infer g r t
   a2 <- infer g r u
   conv l a1 a2
-  -- Alternatively, we could have 'infer' return the evaluated term
-  Ex u' <- pure $ evalForget l r u
+  -- Perhaps 'infer' should return the 'eval'uated term...
+  let u' = eval l r u
   pure (b1 (idOPE l) u')
   where l = ctxLen g
 infer g r (If m t u v) = do
@@ -501,7 +511,7 @@ infer g r (If m t u v) = do
   a1 <- infer g r u
   a2 <- infer g r v
   U <- inferBody g r B m
-  Yo m' <- pure $ evalBody r B m
+  Yo m' <- pure $ evalBody r m
   let a1' = m' (idOPE l) TT
   let a2' = m' (idOPE l) FF
   conv l a1 a1'
@@ -509,11 +519,35 @@ infer g r (If m t u v) = do
   let t' = evalPres @_ @B l r t
   pure $ m' (idOPE l) t'
   where l = ctxLen g
-infer g _ (Var i)  = pure $ lookupTy g i
-infer _ _ TT       = pure B
-infer _ _ FF       = pure B
-infer _ _ B        = pure U
-infer _ _ U        = pure U
+infer g r (Rfl x) = do
+  a' <- infer g r x
+  let x' = eval l r x
+  pure (Id a' x' x')
+  where l = ctxLen g
+infer g r (Id a x y) = do
+  U <- infer g r a
+  let a1' = eval l r a
+  a2' <- infer g r x
+  conv l a1' a2'
+  a3' <- infer g r y
+  conv l a1' a3'
+  pure U
+  where l = ctxLen g
+infer g r (J m p t) = do
+  Id a x y <- infer g r p
+  U <- inferBody g r a m
+  mx1' <- infer g r t
+  -- Todo can/should we eval in context extended with 'x' directly?
+  Yo m' <- pure $ evalBody r m
+  let mx2' = m' (idOPE l) (eval l r x)
+  conv l mx1' mx2'
+  pure $ m' (idOPE l) (eval l r y)
+  where l = ctxLen g
+infer g _ (Var i)   = pure $ lookupTy g i
+infer _ _ TT        = pure B
+infer _ _ FF        = pure B
+infer _ _ B         = pure U
+infer _ _ U         = pure U
 
 check :: Ctx g -> Env g g -> Tm q g -> Ty g -> Maybe ()
 check g r t a = do
@@ -526,17 +560,32 @@ reifyBody g (Yo t) = Bo (reify (SS g) (t (wkOPE g) (Var VZ)))
 
 reify :: SNat g -> Model Sem q g -> Model Syn q g
 reify _ (Var i)         = Var i
-reify g (StkApp t u)    = App (reify g t) (reify g u)
-reify g (StkIf m t u v) = If (reifyBody g m) (reify g t) (reify g u) (reify g v)
-reify g (SpnApp t u)    = App (reify g t) (reify g u)
-reify g (SpnIf m t u v) = If (reifyBody g m) (reify g t) (reify g u) (reify g v)
+reify g (IfEl Stk m t u v) 
+  = If (reifyBody g m) (reify g t) (reify g u) (reify g v)
+reify g (IfEl Spn m t u v) 
+  = If (reifyBody g m) (reify g t) (reify g u) (reify g v)
+reify g (AppEl Stk t u) = App (reify g t) (reify g u)
+reify g (AppEl Spn t u) = App (reify g t) (reify g u)
+reify g (JEl Stk m p t) = J (reifyBody g m) (reify g p) (reify g t)
+reify g (JEl Spn m p t) = J (reifyBody g m) (reify g p) (reify g t)   
 reify g (Lam a t)       = Lam (reify g a) (reifyBody g t)
 reify g (Pi a b)        = Pi (reify g a) (reifyBody g b)
+reify g (Id a x y)      = Id (reify g a) (reify g x) (reify g y)
+reify g (Rfl x)         = Rfl (reify g x)
 reify _ TT              = TT
 reify _ FF              = FF
 reify _ U               = U
 reify _ B               = B
 
+var :: Var g -> Model d Neu g
+var = Var @_ @_ @Neu
 
 example :: Tm (Par Pi) Z
 example = Lam B (Bo (Var VZ))
+
+not :: Model Syn (Par Pi) g
+not = Lam B (Bo (If (Bo B) (var VZ) FF TT))
+
+proof :: Model Syn (Par Pi) g
+proof = Lam B (Bo (If (Bo (Id B (Var VZ) (App not (App not (Var VZ))))) 
+              (var VZ) (Rfl TT) (Rfl FF)))
