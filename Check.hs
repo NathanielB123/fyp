@@ -39,6 +39,14 @@ data Dict c = c => Ev
 class Sing s i where
   fill :: Ap s i
 
+type instance Ap SNat n = SNat n
+
+instance Sing SNat Z where
+  fill = SZ
+
+instance Sing SNat n => Sing SNat (S n) where
+  fill = SS fill
+
 type instance Ap SSort i = SSort i
 
 instance Sing SSort (Par q) where
@@ -58,7 +66,7 @@ instance Sing (<=) '(Par q, q) where
 type instance Ap ElimSort '(d, q, r, s) = ElimSort d q r s
 
 -- Morally:
--- Sing ElimSort d q r s = case s of
+-- fill @ElimSort @'(d, q, r, s) = case s of
 --   Neu -> do
 --     .Neu -> Spn
 --   (Par s) -> case d of
@@ -104,12 +112,6 @@ recoverElim Spn = Ev
 recoverElim @d Stk 
   | Refl <- unsafeCoerce @(d :~: d) @(d :~: Syn) Refl
   = Ev
-
-fill2 :: (Sing f i, Sing g j) => (Ap f i, Ap g j)
-fill2 = (fill, fill)
-
-fill3 :: (Sing f i, Sing g j, Sing h k) => (Ap f i, Ap g j, Ap h k)
-fill3 = (fill, fill, fill)
 
 -- I don't like punning
 type Pair a b = (a, b)
@@ -159,7 +161,7 @@ type data Dom = Syn | Sem
 data Body d q g where
   Bo :: {unbo :: Model Syn (Par q) (S g)} -> Body Syn q g
   Yo :: {
-    unyo :: forall g' r. OPE g' g -> Model Sem (Par r) g' 
+    unyo :: forall g' r. Sing SNat g' => OPE g' g -> Model Sem (Par r) g' 
           -> Model Sem (Par q) g'
   } -> Body Sem q g
 
@@ -225,6 +227,16 @@ type Ne  q = Model Sem Neu
 type Val q = Model Sem (Par q)
 type VTy   = Val U
 
+recoverNat :: SNat n -> Dict (Sing SNat n)
+recoverNat SZ     = Ev
+recoverNat (SS n)
+  | Ev <- recoverNat n
+  = Ev
+
+addNat :: SNat n -> SNat m -> SNat (n + m)
+addNat SZ     m = m
+addNat (SS n) m = SS $ addNat n m
+
 recoverSub :: q <= r -> Dict (Sing (<=) '(q, r))
 recoverSub FromNeu = Ev
 recoverSub FromPar = Ev
@@ -266,11 +278,11 @@ data OPE d g where
   Drop :: OPE d g -> OPE (S d) g
 
 idOPE :: SNat g -> OPE g g
-idOPE SZ = Eps
+idOPE SZ     = Eps
 idOPE (SS n) = Keep (idOPE n)
 
-wkOPE :: SNat g -> OPE (S g) g
-wkOPE n = Drop (idOPE n)
+wkOPE :: Sing SNat g => OPE (S g) g
+wkOPE = Drop (idOPE fill)
 
 comOPE :: OPE d g -> OPE x d -> OPE x g
 comOPE Eps       s2        = s2
@@ -289,10 +301,6 @@ envLen (r :< _) = SS (envLen r)
 data Ctx g where
   Nil  :: Ctx Z
   (:.) :: Ctx g -> VTy g -> Ctx (S g)
-
-ctxLen :: Ctx g -> SNat g
-ctxLen Nil      = SZ
-ctxLen (g :. _) = SS (ctxLen g)
 
 renBody :: OPE g2 g1 -> Body d q g1 -> Body d q g2
 renBody s (Bo t) = Bo $ ren (Keep s) t
@@ -354,15 +362,21 @@ lookup (_ :< t) VZ     = Ex t
 lookup (r :< _) (VS i) = lookup r i
 lookup Emp      i      = case i of
 
-lookupTy :: Ctx g -> Var g -> VTy g
-lookupTy (g :. a) VZ     = ren (wkOPE (ctxLen g)) a
-lookupTy (g :. _) (VS i) = ren (wkOPE (ctxLen g)) (lookupTy g i)
+lookupTy :: Sing SNat g => Ctx g -> Var g -> VTy g
+lookupTy @g (_ :. a) VZ     
+  | SS n <- fill @SNat @g 
+  , Ev   <- recoverNat n
+  = ren wkOPE a
+lookupTy @g (g :. _) (VS i) 
+  | SS n <- fill @SNat @g 
+  , Ev   <- recoverNat n
+  = ren wkOPE (lookupTy g i)
 lookupTy Nil i = case i of
 
-appVal :: SNat g -> Val Pi g -> Val q g -> UnkVal g
-appVal g (Lam _ (Yo t)) u = Ex $ t (idOPE g) u
-appVal _ (El Stk t)     u = Ex $ App (El Spn t) u
-appVal _ (Var i)        u = Ex $ App (Var i) u
+appVal :: Sing SNat g => Val Pi g -> Val q g -> UnkVal g
+appVal (Lam _ (Yo t)) u = Ex $ t (idOPE fill) u
+appVal (El Stk t)     u = Ex $ App (El Spn t) u
+appVal (Var i)        u = Ex $ App (Var i) u
 
 ifVal :: Body Sem U g -> Val B g -> Val q g -> Val r g -> UnkVal g
 ifVal _ TT         u _ = Ex $ u
@@ -388,86 +402,78 @@ starWk :: SNat g -> SNat d -> OPE (d + g) g
 starWk g SZ     = idOPE g
 starWk g (SS d) = Drop (starWk g d)
 
-toEnv :: OPE d g -> Env d g
-toEnv s = renEnv s (idEnv (opeDom s))
+toEnv :: Sing SNat g => OPE d g -> Env d g
+toEnv s = renEnv s (idEnv fill)
 
-parCom :: Env d g -> OPE d t -> Env d (g + t)
-parCom Emp      s      = toEnv s
+parCom :: Sing SNat t => Env d g -> OPE d t -> Env d (g + t)
+parCom Emp      s = toEnv s
 parCom (r :< t) s = parCom r s :< t
-
-opeRng :: OPE d g -> SNat d
-opeRng Eps      = SZ
-opeRng (Drop s) = SS (opeRng s)
-opeRng (Keep s) = SS (opeRng s)
-
-opeDom :: OPE d g -> SNat g
-opeDom Eps      = SZ
-opeDom (Drop s) = opeDom s
-opeDom (Keep s) = SS (opeDom s)
 
 idEnv :: SNat g -> Env g g
 idEnv SZ     = Emp
-idEnv (SS n) = renEnv (wkOPE n) (idEnv n) :< Var VZ
+idEnv (SS n) 
+  | Ev <- recoverNat n 
+  = renEnv wkOPE (idEnv n) :< Var VZ
 
 subSort :: q <= r -> SSort q
 subSort FromNeu = SNeu
 subSort FromPar = SPar
 
-evalPres :: (Sing (<=) '(q, r), Sing SSort q) 
-         => SNat g2 -> Env g2 g1 -> Model d q g1 -> Val r g2
-evalPres g r t = presElim fill (eval g r t)
+evalPres :: (Sing (<=) '(q, r), Sing SSort q, Sing SNat g2) 
+         => Env g2 g1 -> Model d q g1 -> Val r g2
+evalPres r t = presElim fill (eval r t)
 
-evalBody :: Env g2 g1 -> Body d q g1 -> Body Sem q g2
+evalBody :: Sing SNat g2 => Env g2 g1 -> Body d q g1 -> Body Sem q g2
 evalBody r (Bo t) 
-  = Yo \s u -> eval (opeRng s) (renEnv s r :< u) t
+  = Yo \s u -> eval (renEnv s r :< u) t
 evalBody r (Yo t) 
-  = Yo \s u -> 
-  let g' = opeRng s 
-   in eval g' (parCom (renEnv s r) (idOPE g')) 
-              (t (wkStar d g') (ren (starWk g' d) u))
+  = Yo \ @g' s u -> case recoverNat (addNat @_ @g' (envLen r) fill) of 
+              Ev -> eval (parCom (renEnv s r) (idOPE fill)) 
+                         (t (wkStar @_ @g' d fill) (ren (starWk @g' fill d) u))
   where d = envLen r
 
-eval :: Sing SSort q => SNat g2 -> Env g2 g1 -> Model d q g1 -> PresVal q g2
-eval _ e (Var i) 
+eval :: (Sing SNat g2, Sing SSort q) 
+     => Env g2 g1 -> Model d q g1 -> PresVal q g2
+eval e (Var i) 
   = presTM fill $ lookup e i
-eval g e (App t u)
-  = presTM fill $ appVal g t' u'
-  where t' = evalPres g e t
-        u' = eval g e u
-eval g e (If m t u v)
+eval e (App t u)
+  = presTM fill $ appVal t' u'
+  where t' = evalPres e t
+        u' = eval e u
+eval e (If m t u v)
   = presTM fill $ ifVal m' t' u' v'
   where m' = evalBody e m
-        t' = evalPres g e t
-        u' = eval g e u
-        v' = eval g e v
-eval _ _ TT = TT
-eval _ _ FF = FF
-eval _ _ U  = U
-eval _ _ B  = B
-eval _ _ Bot = Bot
-eval g e (Lam a t)
+        t' = evalPres e t
+        u' = eval e u
+        v' = eval e v
+eval _ TT = TT
+eval _ FF = FF
+eval _ U  = U
+eval _ B  = B
+eval _ Bot = Bot
+eval e (Lam a t)
   = Lam a' (evalBody e t)
-  where a' = eval g e a
-eval g e (Pi a b)
+  where a' = eval e a
+eval e (Pi a b)
   = Pi a' (evalBody e b)
-  where a' = eval g e a
-eval g e (Id a x y)
+  where a' = eval e a
+eval e (Id a x y)
   = Id a' x' y'
-  where a' = eval g e a
-        x' = eval g e x
-        y' = eval g e y
-eval g e (Rfl x)
+  where a' = eval e a
+        x' = eval e x
+        y' = eval e y
+eval e (Rfl x)
   = Rfl x'
-  where x' = eval g e x
-eval g e (J m p t)
+  where x' = eval e x
+eval e (J m p t)
   = presTM fill $ jVal m' p' t'
   where m' = evalBody e m
-        p' = evalPres g e p
-        t' = eval g e t
-eval g e (Expl m p)
+        p' = evalPres e p
+        t' = eval e t
+eval e (Expl m p)
   = presTM fill $ explVal m' p'
-  where m' = eval g e m
-        p' = evalPres g e p
+  where m' = eval e m
+        p' = evalPres e p
 
 type Error = String
 
@@ -482,51 +488,51 @@ orThrow False e = throw e
 instance MonadFail TCM where
   fail s = throw s
 
-convBody :: SNat g -> Body Sem q g -> Body Sem r g -> TCM ()
-convBody g (Yo t) (Yo u) 
-  = conv (SS g) (t (wkOPE g) (Var VZ)) (u (wkOPE g) (Var VZ))
+convBody :: Sing SNat g => Body Sem q g -> Body Sem r g -> TCM ()
+convBody (Yo t) (Yo u) 
+  = conv (t wkOPE (Var VZ)) (u wkOPE (Var VZ))
 
-conv :: SNat g -> Model Sem q g -> Model Sem r g -> TCM ()
-conv _ TT TT = pure ()
-conv _ FF FF = pure ()
-conv _ U  U  = pure ()
-conv _ B  B  = pure ()
-conv _ Bot Bot = pure ()
-conv g (App t1 u1) (App t2 u2) = do
-  conv g t1 t2
-  conv g u1 u2
-conv g (Lam a1 t1) (Lam a2 t2) = do
-  conv g a1 a2
-  convBody g t1 t2
-conv g (Pi a1 b1) (Pi a2 b2) = do
-  conv g a1 a2
-  convBody g b1 b2
-conv _ (Var i1) (Var i2)
+conv :: Sing SNat g => Model Sem q g -> Model Sem r g -> TCM ()
+conv TT  TT  = pure ()
+conv FF  FF  = pure ()
+conv U   U   = pure ()
+conv B   B   = pure ()
+conv Bot Bot = pure ()
+conv (App t1 u1) (App t2 u2) = do
+  conv t1 t2
+  conv u1 u2
+conv (Lam a1 t1) (Lam a2 t2) = do
+  conv a1 a2
+  convBody t1 t2
+conv (Pi a1 b1) (Pi a2 b2) = do
+  conv a1 a2
+  convBody b1 b2
+conv (Var i1) (Var i2)
  | i1 == i2 = pure ()
-conv g (If m1 t1 u1 v1) (If m2 t2 u2 v2) = do
-  convBody g m1 m2
-  conv g t1 t2
-  conv g u1 u2
-  conv g v1 v2
-conv g (Id a1 x1 y1) (Id a2 x2 y2) = do
-  conv g a1 a2
-  conv g x1 x2
-  conv g y1 y2
-conv g (Rfl x1) (Rfl x2) = do
-  conv g x1 x2
-conv g (J m1 p1 t1) (J m2 p2 t2) = do
-  convBody g m1 m2
-  conv g p1 p2
-  conv g t1 t2
-conv g (Expl m1 p1) (Expl m2 p2) = do
-  conv g m1 m2
-  conv g p1 p2
-conv g t u = throw 
-  $ "Failed to match " <> show (reify g t) ++ " with " 
-                       <> show (reify g u) <> "."
+conv (If m1 t1 u1 v1) (If m2 t2 u2 v2) = do
+  convBody m1 m2
+  conv t1 t2
+  conv u1 u2
+  conv v1 v2
+conv (Id a1 x1 y1) (Id a2 x2 y2) = do
+  conv a1 a2
+  conv x1 x2
+  conv y1 y2
+conv (Rfl x1) (Rfl x2) = do
+  conv x1 x2
+conv (J m1 p1 t1) (J m2 p2 t2) = do
+  convBody m1 m2
+  conv p1 p2
+  conv t1 t2
+conv (Expl m1 p1) (Expl m2 p2) = do
+  conv m1 m2
+  conv p1 p2
+conv t u = throw 
+  $ "Failed to match " <> show (reify t) ++ " with " 
+                       <> show (reify u) <> "."
 
-close :: VTy g -> Val q (S g) -> Body Sem q g
-close _ t = Yo \s u -> eval (opeRng s) (toEnv s :< u) t
+close :: Sing SNat g => VTy g -> Val q (S g) -> Body Sem q g
+close _ t = Yo \s u -> eval (toEnv s :< u) t
 
 newtype TCM a = TCM (Either Error a)
   deriving (Functor, Applicative, Monad)
@@ -539,74 +545,66 @@ instance Show a => Show (TCM a) where
   show (Failure e)  = "Failed with: " <> e
   show (Success x) = "Success: " <> show x
 
-inferBody :: Ctx g -> Env g g -> VTy g -> Body Syn q g -> TCM (VTy (S g))
-inferBody g r a (Bo t) = infer (g :. a) (renEnv wk r :< Var VZ) t
-  where wk = wkOPE (ctxLen g)
+inferBody :: Sing SNat g => Ctx g -> Env g g -> VTy g -> Body Syn q g 
+          -> TCM (VTy (S g))
+inferBody g r a (Bo t) = infer (g :. a) (renEnv wkOPE r :< Var VZ) t
 
 -- TODO: Use 'check' here instead of manual matching and 'conv' calls
-infer :: Ctx g -> Env g g -> Tm q g -> TCM (VTy g)
+infer :: Sing SNat g => Ctx g -> Env g g -> Tm q g -> TCM (VTy g)
 infer g r (Lam a t) = do
   check g r a U
-  let a' = eval l r a
+  let a' = eval r a
   b <- inferBody g r a' t
   pure (Pi a' (close a' b))
-  where l = ctxLen g
 infer g r (Pi a b) = do
   check g r a U
-  let a' = eval l r a
+  let a' = eval r a
   checkBody g r a' b U
   pure U
-  where l = ctxLen g
 infer g r (App t u) = do
   Pi a1 (Yo b1) <- infer g r t
   a2 <- infer g r u
-  conv l a1 a2
+  conv a1 a2
   -- Perhaps 'infer' should return the 'eval'uated term...
-  let u' = eval l r u
-  pure (b1 (idOPE l) u')
-  where l = ctxLen g
+  let u' = eval r u
+  pure (b1 (idOPE fill) u')
 infer g r (If m t u v) = do
   check g r t B
   a1 <- infer g r u
   a2 <- infer g r v
   checkBody g r B m U
   Yo m' <- pure $ evalBody r m
-  let a1' = m' (idOPE l) TT
-  let a2' = m' (idOPE l) FF
-  conv l a1 a1'
-  conv l a2 a2'
-  let t' = evalPres @_ @B l r t
-  pure $ m' (idOPE l) t'
-  where l = ctxLen g
+  let a1' = m' (idOPE fill) TT
+  let a2' = m' (idOPE fill) FF
+  conv a1 a1'
+  conv a2 a2'
+  let t' = evalPres @_ @B r t
+  pure $ m' (idOPE fill) t'
 infer g r (Rfl x) = do
   a' <- infer g r x
-  let x' = eval l r x
+  let x' = eval r x
   pure (Id a' x' x')
-  where l = ctxLen g
 infer g r (Id a x y) = do
   U <- infer g r a
-  let a1' = eval l r a
+  let a1' = eval r a
   a2' <- infer g r x
-  conv l a1' a2'
+  conv a1' a2'
   a3' <- infer g r y
-  conv l a1' a3'
+  conv a1' a3'
   pure U
-  where l = ctxLen g
 infer g r (J m p t) = do
   Id a x y <- infer g r p
   checkBody g r a m U
   mx1' <- infer g r t
   -- Todo can/should we eval in context extended with 'x' directly?
   Yo m' <- pure $ evalBody r m
-  let mx2' = m' (idOPE l) (eval l r x)
-  conv l mx1' mx2'
-  pure $ m' (idOPE l) (eval l r y)
-  where l = ctxLen g
+  let mx2' = m' (idOPE fill) (eval r x)
+  conv mx1' mx2'
+  pure $ m' (idOPE fill) (eval r y)
 infer g r (Expl m p) = do
   check g r p Bot
   check g r m U
-  pure (eval l r m)
-  where l = ctxLen g
+  pure (eval r m)
 infer g _ (Var i)   = pure $ lookupTy g i
 infer _ _ TT        = pure B
 infer _ _ FF        = pure B
@@ -615,76 +613,79 @@ infer _ _ Bot       = pure U
 -- Type in type!
 infer _ _ U         = pure U
 
-check :: Ctx g -> Env g g -> Tm q g -> Ty g -> TCM ()
+check :: Sing SNat g => Ctx g -> Env g g -> Tm q g -> Ty g -> TCM ()
 check g r t a = do
   a' <- infer g r t
-  conv l (eval l r a) a'
-  where l = ctxLen g
+  conv (eval r a) a'
 
-checkBody :: Ctx g -> Env g g -> VTy g -> Body Syn q g -> Ty (S g)
-          -> TCM ()
+checkBody :: Sing SNat g 
+          => Ctx g -> Env g g -> VTy g -> Body Syn q g -> Ty (S g) -> TCM ()
 checkBody g r a t b = do
   b' <- inferBody g r a t
-  conv (SS l) (eval (SS l) (renEnv (wkOPE l) r :< Var VZ) b) b'
-  where l = ctxLen g
+  conv (eval (renEnv wkOPE r :< Var VZ) b) b'
 
-reifyBody :: SNat g -> Body Sem q g -> Body Syn q g
-reifyBody g (Yo t) = Bo (reify (SS g) (t (wkOPE g) (Var VZ)))
+reifyBody :: Sing SNat g => Body Sem q g -> Body Syn q g
+reifyBody (Yo t) = Bo (reify (t wkOPE (Var VZ)))
 
-reifySpine :: (Sing ElimSort '(Syn, q, r, s), Sing (<=) '(r, q), Sing SSort r) 
-           => SNat g -> Spine Sem q r g -> Model Syn s g
-reifySpine g (IfEl m t u v) 
-  = If (reifyBody g m) (reify g t) (reify g u) (reify g v)
-reifySpine g (AppEl t u)  = App (reify g t) (reify g u)
-reifySpine g (JEl m p t)  = J (reifyBody g m) (reify g p) (reify g t)
-reifySpine g (ExplEl m p) = Expl (reify g m) (reify g p)
+reifySpine :: (Sing ElimSort '(Syn, q, r, s), Sing (<=) '(r, q), Sing SSort r
+              ,Sing SNat g) 
+           => Spine Sem q r g -> Model Syn s g
+reifySpine (IfEl m t u v) 
+  = If (reifyBody m) (reify t) (reify u) (reify v)
+reifySpine (AppEl t u)  = App (reify t) (reify u)
+reifySpine (JEl m p t)  = J (reifyBody m) (reify p) (reify t)
+reifySpine (ExplEl m p) = Expl (reify m) (reify p)
 
-reify :: SNat g -> Model Sem q g -> Model Syn q g
-reify _ (Var i)    = Var i
-reify g (El Stk t) = reifySpine g t
-reify g (El Spn t) = reifySpine g t   
-reify g (Lam a t)  = Lam (reify g a) (reifyBody g t)
-reify g (Pi a b)   = Pi (reify g a) (reifyBody g b)
-reify g (Id a x y) = Id (reify g a) (reify g x) (reify g y)
-reify g (Rfl x)    = Rfl (reify g x)
-reify _ TT         = TT
-reify _ FF         = FF
-reify _ U          = U
-reify _ B          = B
-reify _ Bot        = Bot
+reify :: Sing SNat g => Model Sem q g -> Model Syn q g
+reify (Var i)    = Var i
+reify (El Stk t) = reifySpine t
+reify (El Spn t) = reifySpine t   
+reify (Lam a t)  = Lam (reify a) (reifyBody t)
+reify (Pi a b)   = Pi (reify a) (reifyBody b)
+reify (Id a x y) = Id (reify a) (reify x) (reify y)
+reify (Rfl x)    = Rfl (reify x)
+reify TT         = TT
+reify FF         = FF
+reify U          = U
+reify B          = B
+reify Bot        = Bot
 
 var :: Var g -> Model d Neu g
 var = Var @_ @_ @Neu
 
+-- \b. b
 identity :: Tm (Par Pi) g
 identity = Lam B (Bo (Var VZ))
 
+-- \b. if b then False else True
 not :: Model Syn (Par Pi) g
 not = Lam B (Bo (If (Bo B) (var VZ) FF TT))
 
--- (b : B) -> b = not (not b)
+-- '(b : B) -> b = not (not b)'
 notProofTy :: Model Syn (Par U) g
 notProofTy = Pi B (Bo (Id B (Var VZ) (App not (App not (Var VZ)))))
 
--- \b. if b then refl else refl
+-- '\b. if b then Refl else Refl'
 notProof :: Model Syn (Par Pi) g
 notProof = Lam B (Bo (If (Bo (Id B (Var VZ) (App not (App not (Var VZ))))) 
               (var VZ) (Rfl TT) (Rfl FF)))
 
--- \x y p. J (z. z = x) p refl
+-- '\x y p. J (z. z = x) p Refl'
 symProof :: Model Syn (Par Pi) g
 symProof = Lam B $ Bo $ Lam B $ Bo $ Lam (Id B (Var $ VS VZ) (Var VZ)) $ Bo 
          $ J (Bo $ Id B (Var VZ) (Var (VS $ VS $ VS VZ))) (var VZ) 
              (Rfl (Var $ VS $ VS VZ))
 
+-- We don't have a unit type, but we can very easily construct proofs of
+-- 'true = true'!
 unit :: Model Syn (Par U) g
 unit = Id B TT TT
 
--- \b. if b then Unit else Bot 
+-- '\b. if b then Unit else Bot' 
 isTrue :: Model Syn (Par Pi) g
 isTrue = Lam B $ Bo $ If (Bo U) (var VZ) unit Bot
 
--- \p. J (z. isTrue z) p tt 
+-- '\p. J (z. isTrue z) p tt'
 disj :: Model Syn (Par Pi) g
 disj = Lam (Id B TT FF) $ Bo 
      $ J (Bo (App isTrue (Var VZ))) (var VZ) (Rfl TT)
