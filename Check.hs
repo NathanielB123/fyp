@@ -127,6 +127,13 @@ data SNat n where
   SS :: SNat n -> SNat (S n)
   SZ :: SNat Z
 
+-- Note we don't include evidence of the 'ParSort'. 
+-- It turns out this is unnecessary (and actually unrecoverable from 
+-- e.g. 'Stk' and 'Rdx')
+data SSort q where
+  SNeu :: SSort Neu
+  SPar :: SSort (Par q)
+
 data Var n where
   VZ :: Var (S n)
   VS :: Var n -> Var (S n)
@@ -137,33 +144,56 @@ type data ParSort = B | U | Pi | Id | Bot | V
 -- 'Neu'tral or 'Par'tisan
 type data Sort = Neu | Par ParSort
 
--- Note we don't include evidence of the 'ParSort'. 
--- It turns out this is unnecessary (and actually unrecoverable from 
--- e.g. 'Stk' and 'Rdx')
-data SSort q where
-  SNeu :: SSort Neu
-  SPar :: SSort (Par q)
-
 -- Spine, Stuck, or Redex
 -- Terms in the semantic domain should not contain redexes
+-- Terms in general should not contain "obviously" ill-typed redexes
 data ElimSort d q r s where
   Spn :: ElimSort d   q Neu     Neu
   Stk :: ElimSort d   q Neu     (Par s)
   Rdx :: ElimSort Syn q (Par q) (Par r)
 
-data (<=) q r where
-  FromNeu :: Neu   <= q
-  FromPar :: Par q <= q
-
--- 'Dom'ain: 'Syn'tax or 'Sem'antics
+-- 'Dom'ain: 'Syn'tax (terms) or 'Sem'antics (values)
 type data Dom = Syn | Sem
 
 data Body d q g where
-  Bo :: {unbo :: Model Syn (Par q) (S g)} -> Body Syn q g
-  Yo :: {
-    unyo :: forall g' r. Sing SNat g' => OPE g' g -> Model Sem (Par r) g' 
+  Inc :: {uninc :: Model Syn (Par q) (S g)} -> Body Syn q g
+  Clo :: {
+    unclo :: forall g' r. Sing SNat g' => OPE g' g -> Model Sem (Par r) g' 
           -> Model Sem (Par q) g'
   } -> Body Sem q g
+
+data Spine d q r g where
+  AppS    :: Model d pi g -> Model d (Par q) g -> Spine d Pi pi g
+  IfS     :: Body d U g -> Model d b g -> Model d (Par q) g -> Model d (Par r) g 
+          -> Spine d B b g
+  TranspS :: Body d U g -> Model d id g -> Model d (Par q) g 
+          -> Spine d Id id g 
+  ExplS   :: Model d (Par U) g -> Model d bot g -> Spine d Bot bot g
+  VarS    :: Var g -> Spine d V Neu g
+
+data Model d q g where
+  Lam :: Model d (Par U) g -> Body d q g -> Model d (Par Pi) g
+  U   :: Model d (Par U) g
+  B   :: Model d (Par U) g
+  Bot :: Model d (Par U) g
+  Pi  :: Model d (Par U) g -> Body d U g -> Model d (Par U) g
+  El  :: ElimSort d q r s -> Spine d q r g -> Model d s g
+  TT  :: Model d (Par B) g
+  FF  :: Model d (Par B) g
+  Id  :: Model d (Par U) g -> Model d (Par q) g -> Model d (Par r) g 
+      -> Model d (Par U) g
+  Rfl :: Model d (Par q) g -> Model d (Par Id) g
+
+type Tm    = Model Syn
+type Ty    = Tm (Par U)
+type Ne    = Model Sem Neu
+type Val q = Model Sem (Par q)
+type VBody = Body Sem
+type VTy   = Val U
+
+data (<=) q r where
+  FromNeu :: Neu   <= q
+  FromPar :: Par q <= q
 
 deriving instance Show (SSort q)
 
@@ -176,57 +206,28 @@ instance Show (Var g) where
 
 deriving instance Show (ElimSort d q r s)
 instance Show (Body Syn q g) where
-  show (Bo t) = show t
+  show (Inc t) = show t
 
 parens :: String -> String
 parens s = "(" <> s <> ")"
 
 instance Show (Model Syn q g) where
-  show (Lam _ t)    = "λ " <> show t
-  show (Pi a b)     = "Π " <> parens (show a) <> " " <> parens (show b)
-  show U            = "Type"
-  show B            = "𝔹"
-  show Bot          = "𝟘"
-  show (App t u)    = parens (show t) <> " " <> parens (show u)
-  show (If _ t u v) = "if " <> parens (show t) <> " then " 
-                   <> parens (show u) <> " else " 
-                   <> parens (show v) <> ")"
-  show (J _ p t)    = "transp " <> parens (show p) <> " " <> parens (show t)
-  show (Expl _ p)   = "! " <> parens (show p)
-  show (Var i)      = "`" <> show i
-  show TT           = "True"
-  show FF           = "False"
-  show (Id _ x y)   = parens (show x) <> " = " <> parens (show y)
-  show (Rfl _)      = "Refl"
-
-data Spine d q r g where
-  AppS  :: Model d pi g -> Model d (Par q) g -> Spine d Pi pi g
-  IfS   :: Body d U g -> Model d b g -> Model d (Par q) g -> Model d (Par r) g 
-        -> Spine d B b g
-  JS    :: Body d U g -> Model d id g -> Model d (Par q) g 
-        -> Spine d Id id g 
-  ExplS :: Model d (Par U) g -> Model d bot g -> Spine d Bot bot g
-  VarS  :: Var g -> Spine d V Neu g
-
-data Model d q g where
-  Lam  :: Model d (Par U) g -> Body d q g -> Model d (Par Pi) g
-  U    :: Model d (Par U) g
-  B    :: Model d (Par U) g
-  Bot  :: Model d (Par U) g
-  Pi   :: Model d (Par U) g -> Body d U g -> Model d (Par U) g
-  El   :: ElimSort d q r s -> Spine d q r g -> Model d s g
-  TT   :: Model d (Par B) g
-  FF   :: Model d (Par B) g
-  Id   :: Model d (Par U) g -> Model d (Par q) g -> Model d (Par r) g 
-       -> Model d (Par U) g
-  Rfl  :: Model d (Par q) g -> Model d (Par Id) g
-
-type Tm    = Model Syn
-type Ty    = Tm (Par U)
-type Ne    = Model Sem Neu
-type Val q = Model Sem (Par q)
-type VBody = Body Sem
-type VTy   = Val U
+  show (Lam _ t)      = "λ " <> show t
+  show (Pi a b)       = "Π " <> parens (show a) <> " " <> parens (show b)
+  show U              = "Type"
+  show B              = "𝔹"
+  show Bot            = "𝟘"
+  show (App t u)      = parens (show t) <> " " <> parens (show u)
+  show (If _ t u v)   = "if " <> parens (show t) <> " then " 
+                     <> parens (show u) <> " else " 
+                     <> parens (show v) <> ")"
+  show (Transp _ p t) = "transp " <> parens (show p) <> " " <> parens (show t)
+  show (Expl _ p)     = "! " <> parens (show p)
+  show (Var i)        = "`" <> show i
+  show TT             = "True"
+  show FF             = "False"
+  show (Id _ x y)     = parens (show x) <> " = " <> parens (show y)
+  show (Rfl _)        = "Refl"
 
 recoverNat :: SNat n -> Dict (Sing SNat n)
 recoverNat SZ     = Ev
@@ -270,7 +271,7 @@ pattern RecElim <- (recoverAllElim -> Ev)
 
 pattern App t u = El RecElim (AppS t u)
 pattern If m t u v = El RecElim (IfS m t u v)
-pattern J m p t = El RecElim (JS m p t)
+pattern Transp m p t = El RecElim (TranspS m p t)
 pattern Expl m p = El RecElim (ExplS m p)
 pattern Var i = El RecElim (VarS i)
 
@@ -287,15 +288,15 @@ pattern AppNe t u = El Spn (AppS t u)
 pattern IfNe :: () => () => VBody U g -> Ne g -> Val q g -> Val r g -> Ne g
 pattern IfNe m t u v = El Spn (IfS m t u v)
 
-pattern JNe :: () => () => VBody U g -> Ne g -> Val q g -> Ne g
-pattern JNe m p t = El Spn (JS m p t)
+pattern TranspNe :: () => () => VBody U g -> Ne g -> Val q g -> Ne g
+pattern TranspNe m p t = El Spn (TranspS m p t)
 
 pattern ExplNe :: () => () => Val U g -> Ne g -> Ne g
 pattern ExplNe m t = El Spn (ExplS m t)
 
-{-# COMPLETE AppNe, IfNe, JNe, ExplNe, VarNe #-}
+{-# COMPLETE AppNe, IfNe, TranspNe, ExplNe, VarNe #-}
 {-# COMPLETE Lam, U, B, Bot, Pi, TT, FF, Id, Rfl, Ne #-}
-{-# COMPLETE Lam, U, B, Bot, Pi, App, If, Var, TT, FF, Id, Rfl, J, Expl #-}
+{-# COMPLETE Lam, U, B, Bot, Pi, App, If, Var, TT, FF, Id, Rfl, Transp, Expl #-}
 
 data OPE d g where
   Eps  :: OPE Z Z
@@ -328,26 +329,24 @@ data Ctx g where
   (:.) :: Ctx g -> VTy g -> Ctx (S g)
 
 renBody :: OPE g2 g1 -> Body d q g1 -> Body d q g2
-renBody s (Bo t) = Bo $ ren (Keep s) t
-renBody s (Yo t) = Yo $ t . comOPE s
+renBody s (Inc t) = Inc $ ren (Keep s) t
+renBody s (Clo t) = Clo $ t . comOPE s
 
 ren :: OPE g2 g1 -> Model d q g1 -> Model d q g2
-ren _ U            = U
-ren _ B            = B
-ren _ Bot          = Bot
-ren s (Pi a b)     = Pi  (ren s a) (renBody s b)
-ren s (Id a x y)   = Id (ren s a) (ren s x) (ren s y)
-ren s (Lam a t)    = Lam (ren s a) (renBody s t)
-ren s (App t u)    = App (ren s t) (ren s u)
-ren s (If m t u v) = If (renBody s m) (ren s t) (ren s u) (ren s v)
--- Technically I think the type is inferrable from the motive, but that seems
--- kinda crazy to rely on
-ren s (J m p t)    = J (renBody s m) (ren s p) (ren s t)
-ren s (Expl m p)   = Expl (ren s m) (ren s p)
-ren s (Var i)      = Var (renVar s i)
-ren _ TT           = TT
-ren _ FF           = FF
-ren s (Rfl t)      = Rfl (ren s t)
+ren _ U              = U
+ren _ B              = B
+ren _ Bot            = Bot
+ren s (Pi a b)       = Pi  (ren s a) (renBody s b)
+ren s (Id a x y)     = Id (ren s a) (ren s x) (ren s y)
+ren s (Lam a t)      = Lam (ren s a) (renBody s t)
+ren s (App t u)      = App (ren s t) (ren s u)
+ren s (If m t u v)   = If (renBody s m) (ren s t) (ren s u) (ren s v)
+ren s (Transp m p t) = Transp (renBody s m) (ren s p) (ren s t)
+ren s (Expl m p)     = Expl (ren s m) (ren s p)
+ren s (Var i)        = Var (renVar s i)
+ren _ TT             = TT
+ren _ FF             = FF
+ren s (Rfl t)        = Rfl (ren s t)
 
 renVar :: OPE d g -> Var g -> Var d
 renVar (Keep _) VZ     = VZ
@@ -399,7 +398,7 @@ lookupTy @g (g :. _) (VS i)
 lookupTy Nil i = case i of
 
 appVal :: Sing SNat g => Val Pi g -> Val q g -> UnkVal g
-appVal (Lam _ (Yo t)) u = Ex $ t (idOPE fill) u
+appVal (Lam _ (Clo t)) u = Ex $ t (idOPE fill) u
 appVal (El Stk t)     u = Ex $ App (El Spn t) u
 
 ifVal :: Body Sem U g -> Val B g -> Val q g -> Val r g -> UnkVal g
@@ -409,7 +408,7 @@ ifVal m (El Stk t) u v = Ex $ If m (El Spn t) u v
 
 jVal :: Body Sem U g -> Val Id g -> Val q g -> UnkVal g
 jVal _ (Rfl _)    u = Ex $ u
-jVal m (El Stk t) u = Ex $ J m (El Spn t) u
+jVal m (El Stk t) u = Ex $ Transp m (El Spn t) u
 
 explVal :: Val U g -> Val Bot g -> UnkVal g
 explVal m (El Stk t) = Ex $ Expl m (El Spn t)
@@ -445,10 +444,10 @@ evalPres :: (Sing (<=) '(q, r), Sing SSort q, Sing SNat g2)
 evalPres r t = presElim fill (eval r t)
 
 evalBody :: Sing SNat g2 => Env g2 g1 -> Body d q g1 -> Body Sem q g2
-evalBody r (Bo t) 
-  = Yo \s u -> eval (renEnv s r :< u) t
-evalBody r (Yo t) 
-  = Yo \ @g' s u -> case recoverNat (addNat @_ @g' (envLen r) fill) of 
+evalBody r (Inc t) 
+  = Clo \s u -> eval (renEnv s r :< u) t
+evalBody r (Clo t) 
+  = Clo \ @g' s u -> case recoverNat (addNat @_ @g' (envLen r) fill) of 
               Ev -> eval (parCom (renEnv s r) (idOPE fill)) 
                          (t (wkStar @_ @g' d fill) (ren (starWk @g' fill d) u))
   where d = envLen r
@@ -486,7 +485,7 @@ eval r (Id a x y)
 eval r (Rfl x)
   = Rfl x'
   where x' = eval r x
-eval r (J m p t)
+eval r (Transp m p t)
   = presTM fill $ jVal m' p' t'
   where m' = evalBody r m
         p' = evalPres r p
@@ -510,7 +509,7 @@ instance MonadFail TCM where
   fail s = throw s
 
 convBody :: Sing SNat g => Body Sem q g -> Body Sem r g -> TCM ()
-convBody (Yo t) (Yo u) 
+convBody (Clo t) (Clo u) 
   = conv (t wkOPE (Var VZ)) (u wkOPE (Var VZ))
 
 convNe :: Sing SNat g => Ne g -> Ne g -> TCM ()
@@ -522,14 +521,14 @@ convNe (IfNe m1 t1 u1 v1) (IfNe m2 t2 u2 v2) = do
   convNe t1 t2
   conv u1 u2
   conv v1 v2
-convNe (JNe m1 p1 t1) (JNe m2 p2 t2) = do
+convNe (TranspNe m1 p1 t1) (TranspNe m2 p2 t2) = do
   convBody m1 m2
   convNe p1 p2
   conv t1 t2
 convNe (ExplNe m1 p1) (ExplNe m2 p2) = do
   conv m1 m2
   convNe p1 p2
-convNe (Var i1) (Var i2)
+convNe (VarNe i1) (VarNe i2)
   | i1 == i2 = pure ()
 convNe _ _ = pure ()
 
@@ -551,12 +550,13 @@ conv (Id a1 x1 y1) (Id a2 x2 y2) = do
   conv y1 y2
 conv (Rfl x1) (Rfl x2) = do
   conv x1 x2
+conv (Ne t1) (Ne t2) = convNe t1 t2
 conv t u = throw 
   $ "Failed to match " <> show (reify t) ++ " with " 
                        <> show (reify u) <> "."
 
 close :: Sing SNat g => VTy g -> Val q (S g) -> Body Sem q g
-close _ t = Yo \s u -> eval (toEnv s :< u) t
+close _ t = Clo \s u -> eval (toEnv s :< u) t
 
 newtype TCM a = TCM (Either Error a)
   deriving (Functor, Applicative, Monad)
@@ -573,7 +573,7 @@ instance Show a => Show (TCM a) where
 
 inferBody :: Sing SNat g => Ctx g -> Env g g -> VTy g -> Body Syn q g 
           -> TCM (VTy (S g))
-inferBody g r a (Bo t) = infer (g :. a) (renEnv wkOPE r :< Var VZ) t
+inferBody g r a (Inc t) = infer (g :. a) (renEnv wkOPE r :< Var VZ) t
 
 -- TODO: Use 'check' here instead of manual matching and 'conv' calls
 infer :: Sing SNat g => Ctx g -> Env g g -> Tm q g -> TCM (VTy g)
@@ -588,7 +588,7 @@ infer g r (Pi a b) = do
   checkBody g r a' b U
   pure U
 infer g r (App t u) = do
-  Pi a1 (Yo b1) <- infer g r t
+  Pi a1 (Clo b1) <- infer g r t
   a2 <- infer g r u
   conv a1 a2
   -- Perhaps 'infer' should return the 'eval'uated term...
@@ -599,7 +599,7 @@ infer g r (If m t u v) = do
   a1 <- infer g r u
   a2 <- infer g r v
   checkBody g r B m U
-  Yo m' <- pure $ evalBody r m
+  Clo m' <- pure $ evalBody r m
   let a1' = m' (idOPE fill) TT
   let a2' = m' (idOPE fill) FF
   conv a1 a1'
@@ -618,12 +618,12 @@ infer g r (Id a x y) = do
   a3' <- infer g r y
   conv a1' a3'
   pure U
-infer g r (J m p t) = do
+infer g r (Transp m p t) = do
   Id a x y <- infer g r p
   checkBody g r a m U
   mx1' <- infer g r t
   -- Todo can/should we eval in context extended with 'x' directly?
-  Yo m' <- pure $ evalBody r m
+  Clo m' <- pure $ evalBody r m
   let mx2' = m' (idOPE fill) (eval r x)
   conv mx1' mx2'
   pure $ m' (idOPE fill) (eval r y)
@@ -651,14 +651,14 @@ checkBody g r a t b = do
   conv (eval (renEnv wkOPE r :< Var VZ) b) b'
 
 reifyBody :: Sing SNat g => Body Sem q g -> Body Syn q g
-reifyBody (Yo t) = Bo (reify (t wkOPE (Var VZ)))
+reifyBody (Clo t) = Inc $ reify (t wkOPE (Var VZ))
 
 reifyNe :: Sing SNat g => Ne g -> Model Syn (Par q) g
 reifyNe (VarNe i)    = Var i
 reifyNe (IfNe m t u v) 
   = If (reifyBody m) (reifyNe t) (reify u) (reify v)
 reifyNe (AppNe t u)  = App (reifyNe t) (reify u)
-reifyNe (JNe m p t)  = J (reifyBody m) (reifyNe p) (reify t)
+reifyNe (TranspNe m p t)  = Transp (reifyBody m) (reifyNe p) (reify t)
 reifyNe (ExplNe m p) = Expl (reify m) (reifyNe p)
 
 reify :: Sing SNat g => Val q g -> Model Syn (Par q) g
@@ -678,25 +678,25 @@ var = Var
 
 -- \b. b
 identity :: Tm (Par Pi) g
-identity = Lam B (Bo (Var VZ))
+identity = Lam B $ Inc $ Var VZ
 
 -- \b. if b then False else True
 not :: Model Syn (Par Pi) g
-not = Lam B (Bo (If (Bo B) (var VZ) FF TT))
+not = Lam B $ Inc $ If (Inc B) (var VZ) FF TT
 
 -- '(b : B) -> b = not (not b)'
 notProofTy :: Model Syn (Par U) g
-notProofTy = Pi B (Bo (Id B (Var VZ) (App not (App not (Var VZ)))))
+notProofTy = Pi B $ Inc $ Id B (Var VZ) (App not (App not (Var VZ)))
 
 -- '\b. if b then Refl else Refl'
 notProof :: Model Syn (Par Pi) g
-notProof = Lam B (Bo (If (Bo (Id B (Var VZ) (App not (App not (Var VZ))))) 
-              (var VZ) (Rfl TT) (Rfl FF)))
+notProof = Lam B $ Inc $ If (Inc (Id B (Var VZ) (App not (App not (Var VZ))))) 
+              (var VZ) (Rfl TT) (Rfl FF)
 
--- '\x y p. J (z. z = x) p Refl'
+-- '\x y p. transp (z. z = x) p Refl'
 symProof :: Model Syn (Par Pi) g
-symProof = Lam B $ Bo $ Lam B $ Bo $ Lam (Id B (Var $ VS VZ) (Var VZ)) $ Bo 
-         $ J (Bo $ Id B (Var VZ) (Var (VS $ VS $ VS VZ))) (var VZ) 
+symProof = Lam B $ Inc $ Lam B $ Inc $ Lam (Id B (Var $ VS VZ) (Var VZ)) $ Inc 
+         $ Transp (Inc $ Id B (Var VZ) (Var (VS $ VS $ VS VZ))) (var VZ) 
              (Rfl (Var $ VS $ VS VZ))
 
 -- We don't have a unit type, but we can very easily construct proofs of
@@ -706,9 +706,9 @@ unit = Id B TT TT
 
 -- '\b. if b then Unit else Bot' 
 isTrue :: Model Syn (Par Pi) g
-isTrue = Lam B $ Bo $ If (Bo U) (var VZ) unit Bot
+isTrue = Lam B $ Inc $ If (Inc U) (var VZ) unit Bot
 
--- '\p. J (z. isTrue z) p tt'
+-- '\p. transp (z. isTrue z) p tt'
 disj :: Model Syn (Par Pi) g
-disj = Lam (Id B TT FF) $ Bo 
-     $ J (Bo (App isTrue (Var VZ))) (var VZ) (Rfl TT)
+disj = Lam (Id B TT FF) $ Inc 
+     $ Transp (Inc (App isTrue (Var VZ))) (var VZ) (Rfl TT)
