@@ -1,6 +1,5 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE GADTs #-}
-{-# OPTIONS -Wall #-}
 {-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE TypeData #-}
 {-# LANGUAGE QuantifiedConstraints #-}
@@ -16,21 +15,18 @@
 {-# LANGUAGE RoleAnnotations #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
+
+{-# OPTIONS -Wall #-}
 {-# OPTIONS -Wpartial-fields #-}
-{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
-{-# OPTIONS_GHC -Wno-missing-pattern-synonym-signatures #-}
-
-
-{-# HLINT ignore "Use newtype instead of data" #-}
-
+{-# OPTIONS -Wno-unrecognised-pragmas #-}
+{-# OPTIONS -Wno-missing-pattern-synonym-signatures #-}
 
 import Prelude hiding (lookup, not)
 import Data.Kind (Type)
 import Unsafe.Coerce (unsafeCoerce)
 import Data.Data ((:~:)(..))
 
--- Open type families are cringe, but tons of similar typeclasses are also
--- cringe
+-- Open type families are cringe, but additional typeclasses are also cringe
 type Ap :: f -> a -> Type
 type family Ap f a = r | r -> f a
 
