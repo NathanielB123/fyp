@@ -26,7 +26,7 @@ import Prelude qualified as P
 import Data.Kind (Type)
 import Unsafe.Coerce (unsafeCoerce)
 import Data.Data ((:~:)(..))
-import Data.Maybe (fromMaybe)
+import Data.Maybe (fromMaybe, maybeToList)
 import Data.Bifunctor (Bifunctor(..))
 
 -- Open type families are cringe, but additional typeclasses are also cringe
@@ -400,6 +400,39 @@ lookupTy Nil i = case i of
 
 type EqMap g = [(Ne g, UnkVal g)]
 
+iterFix :: Eq a => (a -> a) -> a -> a
+iterFix f x = let x' = f x in if x == x' then x else iterFix f x'
+
+-- TODO: To deal with arbitrary equations (i.e. neutral RHSs), we might need to 
+-- reorient
+mkEq :: Val q g -> Val r g -> Maybe (Ne g, UnkVal g)
+mkEq (Ne t) u = pure (t, Ex u)
+mkEq _      _ = Nothing
+
+complWrtEqs :: Sing SNat g => Env g g -> EqMap g -> EqMap g -> EqMap g
+complWrtEqs _ acc []       = acc
+complWrtEqs r acc ((t, Ex u) : es)
+  | Ex t' <- eval r es t
+  , u'    <- eval r es u
+  , e'    <- mkEq t' u'
+  = complWrtEqs r (acc <> maybeToList e') es
+
+complete :: Sing SNat g => Env g g -> EqMap g -> EqMap g
+complete r es = iterFix (complWrtEqs r []) es
+
+evalEnv :: Sing SNat d => Env d g -> EqMap d -> Env g t -> Env d t
+evalEnv _ _  Emp       = Emp
+evalEnv r es (ts :< t) = evalEnv r es ts :< eval r es t
+
+addEq :: Sing SNat d => Env d g -> EqMap d -> Ne d -> Val q d 
+      -> (Env d g, EqMap d)
+addEq r es t u = (r', es'')
+  where es'  = (t, Ex u) : es
+        idE  = varEnv fill
+        es'' = complete idE $ (t, Ex u) : es'
+        idE' = idEnv es''
+        r'   = evalEnv idE' es'' r
+
 renEqMap :: OPE d g -> EqMap g -> EqMap d
 renEqMap s = map (bimap (ren s) (renUnk s))
 
@@ -408,28 +441,27 @@ lookupNe es t = fromMaybe (Ex (Ne t)) (P.lookup t es)
 
 appVal :: Sing SNat g => EqMap g -> Val Pi g -> Val q g -> UnkVal g
 appVal es (Lam _ (Clo t)) u = Ex $ t (idOPE fill) es u
-appVal es (El Stk t)      u = lookupNe es $ App (El Spn t) u
-  
+appVal es (Ne t)      u     = lookupNe es $ App t u
+
 ifVal :: Sing SNat g2
       => Env g2 g1 -> EqMap g2 -> Body Sem U g2 -> Val B g2 
       -> Model d (Par q) g1 -> Model d (Par r) g1 
       -> UnkVal g2
 ifVal r es _ TT         u _ = Ex $ eval r es u
 ifVal r es _ FF         _ v = Ex $ eval r es v
-ifVal r es m (El Stk t) u v = lookupNe es $ If m t' u' v'
-  where t'  = El Spn t
-        esT = (t', Ex TT) : es
-        esF = (t', Ex FF) : es
-        u'  = eval r esT u
-        v'  = eval r esF v
+ifVal r es m (Ne t) u v     = lookupNe es $ If m t u' v'
+  where (rT, esT) = addEq r es t TT
+        (rF, esF) = addEq r es t FF
+        u'  = eval rT esT u
+        v'  = eval rF esF v
 
 jVal :: Sing SNat g 
      => EqMap g -> Body Sem U g -> Val Id g -> Val q g -> UnkVal g
-jVal _ _ (Rfl _)    u = Ex $ u
-jVal es m (El Stk t) u = lookupNe es $ Transp m (El Spn t) u
+jVal _ _  (Rfl _)    u = Ex $ u
+jVal es m (Ne t) u = lookupNe es $ Transp m t u
 
 explVal :: Sing SNat g => EqMap g -> Val U g -> Val Bot g -> UnkVal g
-explVal es m (El Stk t) = lookupNe es $ Expl m (El Spn t)
+explVal es m (Ne t) = lookupNe es $ Expl m t
 
 wkStar :: SNat g -> SNat d -> OPE (g + d) g
 wkStar SZ     SZ     = Eps
@@ -440,18 +472,31 @@ starWk :: SNat g -> SNat d -> OPE (d + g) g
 starWk g SZ     = idOPE g
 starWk g (SS d) = Drop (starWk g d)
 
-toEnv :: Sing SNat g => OPE d g -> Env d g
-toEnv s = renEnv s (idEnv fill)
+toEnv :: (Sing SNat g, Sing SNat d) => EqMap d -> OPE d g -> Env d g
+toEnv es s = rwVars es $ renEnv s $ varEnv fill
 
-parCom :: Sing SNat t => Env d g -> OPE d t -> Env d (g + t)
-parCom Emp      s = toEnv s
-parCom (r :< t) s = parCom r s :< t
+parCom :: (Sing SNat d, Sing SNat t) => Env d g -> EqMap d -> OPE d t 
+       -> Env d (g + t)
+parCom Emp      es s = toEnv es s
+parCom (r :< t) es s = parCom r es s :< t
 
-idEnv :: SNat g -> Env g g
-idEnv SZ     = Emp
-idEnv (SS n) 
+varEnv :: SNat g -> Env g g
+varEnv SZ     = Emp
+varEnv (SS n)
   | Ev <- recoverNat n 
-  = renEnv wkOPE (idEnv n) :< Var VZ
+  = renEnv wkOPE (varEnv n) :< Var VZ
+
+-- Invariant: The passed-in environment should only contain variables
+-- I think a refactor to capture this properly would be nice...
+rwVars :: Sing SNat d => EqMap d -> Env d g -> Env d g
+rwVars _  Emp          = Emp
+rwVars es (ts :< Ne t)
+  | Ex t' <- lookupNe es t
+  = rwVars es ts :< t'
+rwVars _ _ = error "ICE: Something went wrong!"
+
+idEnv :: Sing SNat g => EqMap g -> Env g g
+idEnv es = rwVars es (varEnv fill)
 
 subSort :: q <= r -> SSort q
 subSort FromNeu = SNeu
@@ -466,19 +511,19 @@ evalBody r es (Inc t)
   = Clo \s es' u -> eval (renEnv s r :< u) (renEqMap s es <> es') t
 evalBody r es (Clo t) 
   = Clo \ @g' s es' u -> case recoverNat (addNat @_ @g' (envLen r) fill) of 
-    Ev -> eval (parCom (renEnv s r) (idOPE fill)) es' 
-               (t wk1 (renEqMap wk2 (renEqMap s es <> es')) (ren wk2 u))
-      where wk1 = wkStar @_ @g' d fill
+    Ev -> eval (parCom (renEnv s r) (es'') (idOPE fill)) es' 
+               (t wk1 (renEqMap wk2 (es'' <> es')) (ren wk2 u))
+      where es'' = renEqMap s es
+            wk1 = wkStar @_ @g' d fill
             wk2 = starWk @g' fill d
   where d = envLen r
-      
 
 eval :: (Sing SNat g2, Sing SSort q) 
      => Env g2 g1 -> EqMap g2 -> Model d q g1 -> PresVal q g2
 eval r _ (Var i) 
   = presTM fill $ lookup r i
 eval r es (App t u)
-  = presTM fill $ appVal es t' u'
+  =  presTM fill $ appVal es t' u'
   where t' = evalPres r es t
         u' = eval r es u
 eval r es (If m t u v)
@@ -535,10 +580,17 @@ convBody (Clo t) (Clo u)
 
 -- TODO: Switch from 'conv' to '=='
 instance Sing SNat g => Eq (Ne g) where
-  (==) :: Sing SNat g => Ne g -> Ne g -> Bool
   t == u = case convNe t u of
     Success _ -> True
     Failure _ -> False
+
+instance Sing SNat g => Eq (UnkVal g) where
+  Ex t == Ex u = case conv t u of
+    Success _ -> True
+    Failure _ -> False
+
+instance Sing SNat g => Eq (Val q g) where
+  t == u = Ex t == Ex u
 
 convNe :: Sing SNat g => Ne g -> Ne g -> TCM ()
 convNe (AppNe t1 u1) (AppNe t2 u2) = do
@@ -558,7 +610,9 @@ convNe (ExplNe m1 p1) (ExplNe m2 p2) = do
   convNe p1 p2
 convNe (VarNe i1) (VarNe i2)
   | i1 == i2 = pure ()
-convNe _ _ = pure ()
+convNe t u 
+  = throw $ "Failed to match " <> show (reifyNe t) ++ " with " 
+                               <> show (reifyNe u) <> "."
 
 conv :: Sing SNat g => Val q g -> Val r g -> TCM ()
 conv TT  TT  = pure ()
@@ -579,12 +633,12 @@ conv (Id a1 x1 y1) (Id a2 x2 y2) = do
 conv (Rfl x1) (Rfl x2) = do
   conv x1 x2
 conv (Ne t1) (Ne t2) = convNe t1 t2
-conv t u = throw 
-  $ "Failed to match " <> show (reify t) ++ " with " 
-                       <> show (reify u) <> "."
+conv t u 
+  = throw $ "Failed to match " <> show (reify t) ++ " with " 
+                               <> show (reify u) <> "."
 
 close :: Sing SNat g => VTy g -> Val q (S g) -> Body Sem q g
-close _ t = Clo \s es u -> eval (toEnv s :< u) es t
+close _ t = Clo \s es u -> eval (toEnv es s :< u) es t
 
 newtype TCM a = TCM (Either Error a)
   deriving (Functor, Applicative, Monad)
@@ -703,6 +757,16 @@ reify U          = U
 reify B          = B
 reify Bot        = Bot
 
+instance Sing SNat g => Show (Val q g) where
+  show = show . reify
+
+instance Sing SNat g => Show (Ne g) where 
+  show = show . Ne
+
+deriving instance Sing SNat g => Show (UnkVal g)
+
+deriving instance Sing SNat d => Show (Env d g)
+
 var :: Var g -> Model d Neu g
 var = Var
 
@@ -722,6 +786,16 @@ notProofTy = Pi B $ Inc $ Id B (Var VZ) (App not (App not (Var VZ)))
 notProof :: Model Syn (Par Pi) g
 notProof = Lam B $ Inc $ If (Inc (Id B (Var VZ) (App not (App not (Var VZ))))) 
               (var VZ) (Rfl TT) (Rfl FF)
+
+-- \(b : B) -> if b then b else b
+ifId :: Model Syn (Par Pi) g
+ifId = Lam B $ Inc $ If (Inc B) (var VZ) (Var VZ) (Var VZ)
+
+-- \(f : B -> B) (b : B) -> if f b then f b else f b
+ifIdF :: Model Syn (Par Pi) g
+ifIdF = Lam (Pi B $ Inc B) $ Inc $ Lam B $ Inc 
+      $ If (Inc B) (El Spn (AppS (var (VS VZ)) (Var VZ))) 
+           (App (var (VS VZ)) (Var VZ)) (App (var (VS VZ)) (Var VZ))
 
 -- \(b : B) -> if b then not b else b
 ifNot :: Model Syn (Par Pi) g
