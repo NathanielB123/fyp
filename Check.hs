@@ -164,6 +164,9 @@ data Spine d q r g where
   AppS    :: Model d pi g -> Model d (Par q) g -> Spine d Pi pi g
   IfS     :: Body d U g -> Model d b g -> Model d (Par q) g -> Model d (Par r) g 
           -> Spine d B b g
+  SmrtIfS :: Model d (Par U) g -> Model d b g 
+          -> Model d (Par q) g -> Model d (Par r) g 
+          -> Spine d B b g
   TranspS :: Body d U g -> Model d id g -> Model d (Par q) g 
           -> Spine d Id id g 
   ExplS   :: Model d (Par U) g -> Model d bot g -> Spine d Bot bot g
@@ -210,22 +213,25 @@ parens :: String -> String
 parens s = "(" <> s <> ")"
 
 instance Show (Model Syn q g) where
-  show (Lam _ t)      = "λ " <> show t
-  show (Pi a b)       = "Π " <> parens (show a) <> " " <> parens (show b)
-  show U              = "Type"
-  show B              = "𝔹"
-  show Bot            = "𝟘"
-  show (App t u)      = parens (show t) <> " " <> parens (show u)
-  show (If _ t u v)   = "if " <> parens (show t) <> " then " 
-                     <> parens (show u) <> " else " 
-                     <> parens (show v) <> ")"
-  show (Transp _ p t) = "transp " <> parens (show p) <> " " <> parens (show t)
-  show (Expl _ p)     = "! " <> parens (show p)
-  show (Var i)        = "`" <> show i
-  show TT             = "True"
-  show FF             = "False"
-  show (Id _ x y)     = parens (show x) <> " = " <> parens (show y)
-  show (Rfl _)        = "Refl"
+  show (Lam _ t)        = "λ " <> show t
+  show (Pi a b)         = "Π " <> parens (show a) <> " " <> parens (show b)
+  show U                = "Type"
+  show B                = "𝔹"
+  show Bot              = "𝟘"
+  show (App t u)        = parens (show t) <> " " <> parens (show u)
+  show (If _ t u v)     = "if " <> parens (show t) <> " then " 
+                       <> parens (show u) <> " else " 
+                       <> parens (show v) <> ")"
+  show (SmrtIf _ t u v) = "sif " <> parens (show t) <> " then " 
+                       <> parens (show u) <> " else " 
+                       <> parens (show v) <> ")"
+  show (Transp _ p t)   = "transp " <> parens (show p) <> " " <> parens (show t)
+  show (Expl _ p)       = "! " <> parens (show p)
+  show (Var i)          = "`" <> show i
+  show TT               = "True"
+  show FF               = "False"
+  show (Id _ x y)       = parens (show x) <> " = " <> parens (show y)
+  show (Rfl _)          = "Refl"
 
 recoverNat :: SNat n -> Dict (Sing SNat n)
 recoverNat SZ     = Ev
@@ -271,6 +277,7 @@ pattern App t u = El RecElim (AppS t u)
 pattern If m t u v = El RecElim (IfS m t u v)
 pattern Transp m p t = El RecElim (TranspS m p t)
 pattern Expl m p = El RecElim (ExplS m p)
+pattern SmrtIf m t u v = El RecElim (SmrtIfS m t u v)
 pattern Var i = El RecElim (VarS i)
 
 pattern Ne :: () => () => Ne g -> Val q g
@@ -292,9 +299,13 @@ pattern TranspNe m p t = El Spn (TranspS m p t)
 pattern ExplNe :: () => () => Val U g -> Ne g -> Ne g
 pattern ExplNe m t = El Spn (ExplS m t)
 
-{-# COMPLETE AppNe, IfNe, TranspNe, ExplNe, VarNe #-}
+pattern SmrtIfNe :: () => () => Val U g -> Ne g -> Val q g -> Val r g -> Ne g
+pattern SmrtIfNe m t u v = El Spn (SmrtIfS m t u v)
+
+{-# COMPLETE AppNe, IfNe, SmrtIfNe, TranspNe, ExplNe, VarNe #-}
 {-# COMPLETE Lam, U, B, Bot, Pi, TT, FF, Id, Rfl, Ne #-}
-{-# COMPLETE Lam, U, B, Bot, Pi, App, If, Var, TT, FF, Id, Rfl, Transp, Expl #-}
+{-# COMPLETE Lam, U, B, Bot, Pi, App, If, SmrtIf, Var, 
+             TT, FF, Id, Rfl, Transp, Expl #-}
 
 data OPE d g where
   Eps  :: OPE Z Z
@@ -331,20 +342,21 @@ renBody s (Inc t) = Inc $ ren (Keep s) t
 renBody s (Clo t) = Clo $ t . comOPE s
 
 ren :: OPE g2 g1 -> Model d q g1 -> Model d q g2
-ren _ U              = U
-ren _ B              = B
-ren _ Bot            = Bot
-ren s (Pi a b)       = Pi  (ren s a) (renBody s b)
-ren s (Id a x y)     = Id (ren s a) (ren s x) (ren s y)
-ren s (Lam a t)      = Lam (ren s a) (renBody s t)
-ren s (App t u)      = App (ren s t) (ren s u)
-ren s (If m t u v)   = If (renBody s m) (ren s t) (ren s u) (ren s v)
-ren s (Transp m p t) = Transp (renBody s m) (ren s p) (ren s t)
-ren s (Expl m p)     = Expl (ren s m) (ren s p)
-ren s (Var i)        = Var (renVar s i)
-ren _ TT             = TT
-ren _ FF             = FF
-ren s (Rfl t)        = Rfl (ren s t)
+ren _ U                = U
+ren _ B                = B
+ren _ Bot              = Bot
+ren s (Pi a b)         = Pi  (ren s a) (renBody s b)
+ren s (Id a x y)       = Id (ren s a) (ren s x) (ren s y)
+ren s (Lam a t)        = Lam (ren s a) (renBody s t)
+ren s (App t u)        = App (ren s t) (ren s u)
+ren s (If m t u v)     = If (renBody s m) (ren s t) (ren s u) (ren s v)
+ren s (SmrtIf m t u v) = SmrtIf (ren s m) (ren s t) (ren s u) (ren s v)
+ren s (Transp m p t)   = Transp (renBody s m) (ren s p) (ren s t)
+ren s (Expl m p)       = Expl (ren s m) (ren s p)
+ren s (Var i)          = Var (renVar s i)
+ren _ TT               = TT
+ren _ FF               = FF
+ren s (Rfl t)          = Rfl (ren s t)
 
 renVar :: OPE d g -> Var g -> Var d
 renVar (Keep _) VZ     = VZ
@@ -455,6 +467,21 @@ ifVal r es m (Ne t) u v     = lookupNe es $ If m t u' v'
         u'  = eval rT esT u
         v'  = eval rF esF v
 
+-- "Smart if" evaluates identically to "if"
+-- We should probably try to remove duplication here by folding into the same
+-- constructor...
+smrtIfVal :: Sing SNat g2
+          => Env g2 g1 -> EqMap g2 -> Val U g2 -> Val B g2 
+          -> Model d (Par q) g1 -> Model d (Par r) g1 
+          -> UnkVal g2
+smrtIfVal r es _ TT         u _ = Ex $ eval r es u
+smrtIfVal r es _ FF         _ v = Ex $ eval r es v
+smrtIfVal r es m (Ne t) u v     = lookupNe es $ SmrtIf m t u' v'
+  where (rT, esT) = addEq r es t TT
+        (rF, esF) = addEq r es t FF
+        u'  = eval rT esT u
+        v'  = eval rF esF v
+
 jVal :: Sing SNat g 
      => EqMap g -> Body Sem U g -> Val Id g -> Val q g -> UnkVal g
 jVal _ _  (Rfl _)    u = Ex $ u
@@ -529,6 +556,10 @@ eval r es (App t u)
 eval r es (If m t u v)
   = presTM fill $ ifVal r es m' t' u v
   where m' = evalBody r es m
+        t' = evalPres r es t
+eval r es (SmrtIf m t u v)
+  = presTM fill $ smrtIfVal r es m' t' u v
+  where m' = eval r es m
         t' = evalPres r es t
 eval _ _ TT  = TT
 eval _ _ FF  = FF
@@ -689,6 +720,17 @@ infer g r es (If m t u v) = do
   conv a2 a2'
   let t' = evalPres @_ @B r es t
   pure $ m' (idOPE fill) es t'
+infer g r es (SmrtIf m t u v) = do
+  -- TODO:
+  -- check g r es t B
+  -- t' <- eval g r t
+  -- a1 <- infer g r es u
+  -- let mT = uncurry eval (addEq r es _ _) m 
+
+  -- a2 <- infer g r es v
+  
+  -- _
+  throw "Smart if not implemented yet!"
 infer g r es (Rfl x) = do
   a' <- infer g r es x
   let x' = eval r es x
@@ -741,6 +783,8 @@ reifyNe :: Sing SNat g => Ne g -> Model Syn (Par q) g
 reifyNe (VarNe i)    = Var i
 reifyNe (IfNe m t u v) 
   = If (reifyBody m) (reifyNe t) (reify u) (reify v)
+reifyNe (SmrtIfNe m t u v)
+  = SmrtIf (reify m) (reifyNe t) (reify u) (reify v)
 reifyNe (AppNe t u)  = App (reifyNe t) (reify u)
 reifyNe (TranspNe m p t)  = Transp (reifyBody m) (reifyNe p) (reify t)
 reifyNe (ExplNe m p) = Expl (reify m) (reifyNe p)
