@@ -22,9 +22,12 @@
 {-# OPTIONS -Wno-missing-pattern-synonym-signatures #-}
 
 import Prelude hiding (lookup, not)
+import Prelude qualified as P
 import Data.Kind (Type)
 import Unsafe.Coerce (unsafeCoerce)
 import Data.Data ((:~:)(..))
+import Data.Maybe (fromMaybe)
+import Data.Bifunctor (Bifunctor(..))
 
 -- Open type families are cringe, but additional typeclasses are also cringe
 type Ap :: f -> a -> Type
@@ -70,8 +73,7 @@ type instance Ap ElimSort '(d, q, r, s) = ElimSort d q r s
 --       Neu      -> Stk
 --       (Par .q) -> Rdx
 --     Sem -> case r of
---       .Neu -> Stk
---             
+--       .Neu -> Stk     
 
 -- We could get rid of the explicit type annotations here if we made the kind
 -- of the 2nd arg to 'Sing' depend on the first
@@ -154,8 +156,8 @@ type data Dom = Syn | Sem
 data Body d q g where
   Inc :: {uninc :: Model Syn (Par q) (S g)} -> Body Syn q g
   Clo :: {
-    unclo :: forall g' r. Sing SNat g' => OPE g' g -> Model Sem (Par r) g' 
-          -> Model Sem (Par q) g'
+    unclo :: forall g' r. Sing SNat g' => OPE g' g -> EqMap g' 
+          -> Model Sem (Par r) g' -> Model Sem (Par q) g'
   } -> Body Sem q g
 
 data Spine d q r g where
@@ -356,6 +358,9 @@ renEnv s (r :< t) = renEnv s r :< ren s t
 
 data UnkVal g = forall q. Ex {proj :: Model Sem (Par q) g}
 
+renUnk :: OPE d g -> UnkVal g -> UnkVal d
+renUnk s (Ex t) = Ex (ren s t)
+
 type family PresVal q g = r | r -> q g where
   PresVal (Par q) g = Val q g
   PresVal Neu     g = UnkVal g
@@ -393,21 +398,38 @@ lookupTy @g (g :. _) (VS i)
   = ren wkOPE (lookupTy g i)
 lookupTy Nil i = case i of
 
-appVal :: Sing SNat g => Val Pi g -> Val q g -> UnkVal g
-appVal (Lam _ (Clo t)) u = Ex $ t (idOPE fill) u
-appVal (El Stk t)     u = Ex $ App (El Spn t) u
+type EqMap g = [(Ne g, UnkVal g)]
 
-ifVal :: Body Sem U g -> Val B g -> Val q g -> Val r g -> UnkVal g
-ifVal _ TT         u _ = Ex $ u
-ifVal _ FF         _ v = Ex $ v
-ifVal m (El Stk t) u v = Ex $ If m (El Spn t) u v
+renEqMap :: OPE d g -> EqMap g -> EqMap d
+renEqMap s = map (bimap (ren s) (renUnk s))
 
-jVal :: Body Sem U g -> Val Id g -> Val q g -> UnkVal g
-jVal _ (Rfl _)    u = Ex $ u
-jVal m (El Stk t) u = Ex $ Transp m (El Spn t) u
+lookupNe :: Sing SNat g => EqMap g -> Ne g -> UnkVal g
+lookupNe es t = fromMaybe (Ex (Ne t)) (P.lookup t es)
 
-explVal :: Val U g -> Val Bot g -> UnkVal g
-explVal m (El Stk t) = Ex $ Expl m (El Spn t)
+appVal :: Sing SNat g => EqMap g -> Val Pi g -> Val q g -> UnkVal g
+appVal es (Lam _ (Clo t)) u = Ex $ t (idOPE fill) es u
+appVal es (El Stk t)      u = lookupNe es $ App (El Spn t) u
+  
+ifVal :: Sing SNat g2
+      => Env g2 g1 -> EqMap g2 -> Body Sem U g2 -> Val B g2 
+      -> Model d (Par q) g1 -> Model d (Par r) g1 
+      -> UnkVal g2
+ifVal r es _ TT         u _ = Ex $ eval r es u
+ifVal r es _ FF         _ v = Ex $ eval r es v
+ifVal r es m (El Stk t) u v = lookupNe es $ If m t' u' v'
+  where t'  = El Spn t
+        esT = (t', Ex TT) : es
+        esF = (t', Ex FF) : es
+        u'  = eval r esT u
+        v'  = eval r esF v
+
+jVal :: Sing SNat g 
+     => EqMap g -> Body Sem U g -> Val Id g -> Val q g -> UnkVal g
+jVal _ _ (Rfl _)    u = Ex $ u
+jVal es m (El Stk t) u = lookupNe es $ Transp m (El Spn t) u
+
+explVal :: Sing SNat g => EqMap g -> Val U g -> Val Bot g -> UnkVal g
+explVal es m (El Stk t) = lookupNe es $ Expl m (El Spn t)
 
 wkStar :: SNat g -> SNat d -> OPE (g + d) g
 wkStar SZ     SZ     = Eps
@@ -436,60 +458,63 @@ subSort FromNeu = SNeu
 subSort FromPar = SPar
 
 evalPres :: (Sing (<=) '(q, r), Sing SSort q, Sing SNat g2) 
-         => Env g2 g1 -> Model d q g1 -> Val r g2
-evalPres r t = presElim fill (eval r t)
+         => Env g2 g1 -> EqMap g2 -> Model d q g1 -> Val r g2
+evalPres r es t = presElim fill (eval r es t)
 
-evalBody :: Sing SNat g2 => Env g2 g1 -> Body d q g1 -> Body Sem q g2
-evalBody r (Inc t) 
-  = Clo \s u -> eval (renEnv s r :< u) t
-evalBody r (Clo t) 
-  = Clo \ @g' s u -> case recoverNat (addNat @_ @g' (envLen r) fill) of 
-              Ev -> eval (parCom (renEnv s r) (idOPE fill)) 
-                         (t (wkStar @_ @g' d fill) (ren (starWk @g' fill d) u))
+evalBody :: Sing SNat g2 => Env g2 g1 -> EqMap g2 -> Body d q g1 -> Body Sem q g2
+evalBody r es (Inc t) 
+  = Clo \s es' u -> eval (renEnv s r :< u) (renEqMap s es <> es') t
+evalBody r es (Clo t) 
+  = Clo \ @g' s es' u -> case recoverNat (addNat @_ @g' (envLen r) fill) of 
+    Ev -> eval (parCom (renEnv s r) (idOPE fill)) es' 
+               (t wk1 (renEqMap wk2 (renEqMap s es <> es')) (ren wk2 u))
+      where wk1 = wkStar @_ @g' d fill
+            wk2 = starWk @g' fill d
   where d = envLen r
+      
 
 eval :: (Sing SNat g2, Sing SSort q) 
-     => Env g2 g1 -> Model d q g1 -> PresVal q g2
-eval r (Var i) 
+     => Env g2 g1 -> EqMap g2 -> Model d q g1 -> PresVal q g2
+eval r _ (Var i) 
   = presTM fill $ lookup r i
-eval r (App t u)
-  = presTM fill $ appVal t' u'
-  where t' = evalPres r t
-        u' = eval r u
-eval r (If m t u v)
-  = presTM fill $ ifVal m' t' u' v'
-  where m' = evalBody r m
-        t' = evalPres r t
-        u' = eval r u
-        v' = eval r v
-eval _ TT = TT
-eval _ FF = FF
-eval _ U  = U
-eval _ B  = B
-eval _ Bot = Bot
-eval r (Lam a t)
-  = Lam a' (evalBody r t)
-  where a' = eval r a
-eval r (Pi a b)
-  = Pi a' (evalBody r b)
-  where a' = eval r a
-eval r (Id a x y)
+eval r es (App t u)
+  = presTM fill $ appVal es t' u'
+  where t' = evalPres r es t
+        u' = eval r es u
+eval r es (If m t u v)
+  = presTM fill $ ifVal r es m' t' u v
+  where m' = evalBody r es m
+        t' = evalPres r es t
+eval _ _ TT  = TT
+eval _ _ FF  = FF
+eval _ _ U   = U
+eval _ _ B   = B
+eval _ _ Bot = Bot
+eval r es (Lam a t)
+  = Lam a' t'
+  where a' = eval r es a
+        t' = evalBody r es t
+eval r es (Pi a b)
+  = Pi a' b'
+  where a' = eval r es a
+        b' = evalBody r es b
+eval r es (Id a x y)
   = Id a' x' y'
-  where a' = eval r a
-        x' = eval r x
-        y' = eval r y
-eval r (Rfl x)
+  where a' = eval r es a
+        x' = eval r es x
+        y' = eval r es y
+eval r es (Rfl x)
   = Rfl x'
-  where x' = eval r x
-eval r (Transp m p t)
-  = presTM fill $ jVal m' p' t'
-  where m' = evalBody r m
-        p' = evalPres r p
-        t' = eval r t
-eval r (Expl m p)
-  = presTM fill $ explVal m' p'
-  where m' = eval r m
-        p' = evalPres r p
+  where x' = eval r es x
+eval r es (Transp m p t)
+  = presTM fill $ jVal es m' p' t'
+  where m' = evalBody r es m
+        p' = evalPres r es p
+        t' = eval r es t
+eval r es (Expl m p)
+  = presTM fill $ explVal es m' p'
+  where m' = eval r es m
+        p' = evalPres r es p
 
 type Error = String
 
@@ -506,7 +531,14 @@ instance MonadFail TCM where
 
 convBody :: Sing SNat g => Body Sem q g -> Body Sem r g -> TCM ()
 convBody (Clo t) (Clo u) 
-  = conv (t wkOPE (Var VZ)) (u wkOPE (Var VZ))
+  = conv (t wkOPE [] (Var VZ)) (u wkOPE [] (Var VZ))
+
+-- TODO: Switch from 'conv' to '=='
+instance Sing SNat g => Eq (Ne g) where
+  (==) :: Sing SNat g => Ne g -> Ne g -> Bool
+  t == u = case convNe t u of
+    Success _ -> True
+    Failure _ -> False
 
 convNe :: Sing SNat g => Ne g -> Ne g -> TCM ()
 convNe (AppNe t1 u1) (AppNe t2 u2) = do
@@ -552,7 +584,7 @@ conv t u = throw
                        <> show (reify u) <> "."
 
 close :: Sing SNat g => VTy g -> Val q (S g) -> Body Sem q g
-close _ t = Clo \s u -> eval (toEnv s :< u) t
+close _ t = Clo \s es u -> eval (toEnv s :< u) es t
 
 newtype TCM a = TCM (Either Error a)
   deriving (Functor, Applicative, Monad)
@@ -567,87 +599,89 @@ instance Show a => Show (TCM a) where
   show (Failure e)  = "Failed with: " <> e
   show (Success x) = "Success: " <> show x
 
-inferBody :: Sing SNat g => Ctx g -> Env g g -> VTy g -> Body Syn q g 
+inferBody :: Sing SNat g => Ctx g -> Env g g -> EqMap g -> VTy g -> Body Syn q g 
           -> TCM (VTy (S g))
-inferBody g r a (Inc t) = infer (g :. a) (renEnv wkOPE r :< Var VZ) t
+inferBody g r es a (Inc t) 
+  = infer (g :. a) (renEnv wkOPE r :< Var VZ) (renEqMap wkOPE es) t
 
 -- TODO: Use 'check' here instead of manual matching and 'conv' calls
-infer :: Sing SNat g => Ctx g -> Env g g -> Tm q g -> TCM (VTy g)
-infer g r (Lam a t) = do
-  check g r a U
-  let a' = eval r a
-  b <- inferBody g r a' t
+infer :: Sing SNat g => Ctx g -> Env g g -> EqMap g -> Tm q g -> TCM (VTy g)
+infer g r es (Lam a t) = do
+  check g r es a U
+  let a' = eval r es a
+  b <- inferBody g r es a' t
   pure (Pi a' (close a' b))
-infer g r (Pi a b) = do
-  check g r a U
-  let a' = eval r a
-  checkBody g r a' b U
+infer g r es (Pi a b) = do
+  check g r es a U
+  let a' = eval r es a
+  checkBody g r es a' b U
   pure U
-infer g r (App t u) = do
-  Pi a1 (Clo b1) <- infer g r t
-  a2 <- infer g r u
+infer g r es (App t u) = do
+  Pi a1 (Clo b1) <- infer g r es t
+  a2 <- infer g r es u
   conv a1 a2
   -- Perhaps 'infer' should return the 'eval'uated term...
-  let u' = eval r u
-  pure (b1 (idOPE fill) u')
-infer g r (If m t u v) = do
-  check g r t B
-  a1 <- infer g r u
-  a2 <- infer g r v
-  checkBody g r B m U
-  Clo m' <- pure $ evalBody r m
-  let a1' = m' (idOPE fill) TT
-  let a2' = m' (idOPE fill) FF
+  let u' = eval r es u
+  pure (b1 (idOPE fill) es u')
+infer g r es (If m t u v) = do
+  check g r es t B
+  a1 <- infer g r es u
+  a2 <- infer g r es v
+  checkBody g r es B m U
+  Clo m' <- pure $ evalBody r es m
+  let a1' = m' (idOPE fill) es TT
+  let a2' = m' (idOPE fill) es FF
   conv a1 a1'
   conv a2 a2'
-  let t' = evalPres @_ @B r t
-  pure $ m' (idOPE fill) t'
-infer g r (Rfl x) = do
-  a' <- infer g r x
-  let x' = eval r x
+  let t' = evalPres @_ @B r es t
+  pure $ m' (idOPE fill) es t'
+infer g r es (Rfl x) = do
+  a' <- infer g r es x
+  let x' = eval r es x
   pure (Id a' x' x')
-infer g r (Id a x y) = do
-  U <- infer g r a
-  let a1' = eval r a
-  a2' <- infer g r x
+infer g r es (Id a x y) = do
+  U <- infer g r es a
+  let a1' = eval r es a
+  a2' <- infer g r es x
   conv a1' a2'
-  a3' <- infer g r y
+  a3' <- infer g r es y
   conv a1' a3'
   pure U
-infer g r (Transp m p t) = do
-  Id a x y <- infer g r p
-  checkBody g r a m U
-  mx1' <- infer g r t
+infer g r es (Transp m p t) = do
+  Id a x y <- infer g r es p
+  checkBody g r es a m U
+  mx1' <- infer g r es t
   -- Todo can/should we eval in context extended with 'x' directly?
-  Clo m' <- pure $ evalBody r m
-  let mx2' = m' (idOPE fill) (eval r x)
+  Clo m' <- pure $ evalBody r es m
+  let mx2' = m' (idOPE fill) es x
   conv mx1' mx2'
-  pure $ m' (idOPE fill) (eval r y)
-infer g r (Expl m p) = do
-  check g r p Bot
-  check g r m U
-  pure (eval r m)
-infer g _ (Var i)   = pure $ lookupTy g i
-infer _ _ TT        = pure B
-infer _ _ FF        = pure B
-infer _ _ B         = pure U
-infer _ _ Bot       = pure U
+  pure $ m' (idOPE fill) es y
+infer g r es (Expl m p) = do
+  check g r es p Bot
+  check g r es m U
+  pure (eval r es m)
+infer g _ _ (Var i)   = pure $ lookupTy g i
+infer _ _ _ TT        = pure B
+infer _ _ _ FF        = pure B
+infer _ _ _ B         = pure U
+infer _ _ _ Bot       = pure U
 -- Type in type!
-infer _ _ U         = pure U
+infer _ _ _ U         = pure U
 
-check :: Sing SNat g => Ctx g -> Env g g -> Tm q g -> Ty g -> TCM ()
-check g r t a = do
-  a' <- infer g r t
-  conv (eval r a) a'
+check :: Sing SNat g => Ctx g -> Env g g -> EqMap g -> Tm q g -> Ty g -> TCM ()
+check g r es t a = do
+  a' <- infer g r es t
+  conv (eval r es a) a'
 
 checkBody :: Sing SNat g 
-          => Ctx g -> Env g g -> VTy g -> Body Syn q g -> Ty (S g) -> TCM ()
-checkBody g r a t b = do
-  b' <- inferBody g r a t
-  conv (eval (renEnv wkOPE r :< Var VZ) b) b'
+          => Ctx g -> Env g g -> EqMap g -> VTy g -> Body Syn q g -> Ty (S g) 
+          -> TCM ()
+checkBody g r es a t b = do
+  b' <- inferBody g r es a t
+  conv (eval (renEnv wkOPE r :< Var VZ) (renEqMap wkOPE es) b) b'
 
 reifyBody :: Sing SNat g => Body Sem q g -> Body Syn q g
-reifyBody (Clo t) = Inc $ reify (t wkOPE (Var VZ))
+reifyBody (Clo t) = Inc $ reify (t wkOPE [] (Var VZ))
 
 reifyNe :: Sing SNat g => Ne g -> Model Syn (Par q) g
 reifyNe (VarNe i)    = Var i
@@ -688,6 +722,10 @@ notProofTy = Pi B $ Inc $ Id B (Var VZ) (App not (App not (Var VZ)))
 notProof :: Model Syn (Par Pi) g
 notProof = Lam B $ Inc $ If (Inc (Id B (Var VZ) (App not (App not (Var VZ))))) 
               (var VZ) (Rfl TT) (Rfl FF)
+
+-- \(b : B) -> if b then not b else b
+ifNot :: Model Syn (Par Pi) g
+ifNot = Lam B $ Inc $ If (Inc B) (var VZ) (App not (Var VZ)) (Var VZ)
 
 -- '\x y p. transp (z. z = x) p Refl'
 symProof :: Model Syn (Par Pi) g
