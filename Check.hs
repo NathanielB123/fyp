@@ -31,7 +31,7 @@ import Data.Data ((:~:)(..))
 import Data.Maybe (fromMaybe, maybeToList)
 import Data.Bifunctor (Bifunctor(..))
 
--- Thinn type families are cringe, but additional typeclasses are also cringe
+-- Open type families are cringe, but additional typeclasses are also cringe
 type Ap :: f -> a -> Type
 type family Ap f a = r | r -> f a
 
@@ -80,7 +80,7 @@ type instance Ap ElimSort '(d, q, r, s) = ElimSort d q r s
 -- We could get rid of the explicit type annotations here if we made the kind
 -- of the 2nd arg to 'Sing' depend on the first
 -- The problem is that I don't think it is possible to make this dependency
--- work for Thinn type families
+-- work for open type families
 instance forall (d :: Dom) (q :: ParSort) (r :: Sort)
               . r ~ Neu => Sing ElimSort '(d, q, r, Neu) where
   fill = Spn
@@ -530,7 +530,7 @@ complStep (vs, es) = do
   pure (runUnk (Ex . eval (vs', es')) <$> vs', es')
 
 complete :: Sing SNat g => Env g g -> Maybe (Env g g)
-complete r = iterMaybeFix (\(vs, es) -> complWrtEqs (pure (vs, [])) vs es) r
+complete r = iterMaybeFix complStep r
 
 -- evalEnv :: Sing SNat d => Env d g -> EqMap d -> Env g t -> Env d t
 -- evalEnv _ _  Emp       = Emp
