@@ -30,6 +30,8 @@ import Unsafe.Coerce (unsafeCoerce)
 import Data.Data ((:~:)(..))
 import Data.Maybe (fromMaybe)
 import Data.Bifunctor (Bifunctor(..))
+import Debug.Trace (trace)
+import Data.Foldable (Foldable(..))
 
 -- Open type families are cringe, but additional typeclasses are also cringe
 type Ap :: f -> a -> Type
@@ -510,8 +512,9 @@ addRw BadEq       _        = error "Bad equation encountered!"
 
 complWrtEqs :: Sing SNat g 
             => Maybe (Env g g) -> Vals g g -> EqMap g -> Maybe (Env g g)
-complWrtEqs acc _ []               = acc
-complWrtEqs acc r ((t, Ex u) : es)
+complWrtEqs Nothing         _ []               = Nothing
+complWrtEqs (Just (vs, es)) _ []               = Just (vs, reverse es)
+complWrtEqs acc             r ((t, Ex u) : es)
   | Ex t' <- eval (r, es) t
   , u'    <- eval (r, es) u
   , eq    <- mkEq t' u' = do
@@ -524,13 +527,14 @@ runUnk f (Ex t) = f t
 complStep :: Sing SNat g => (Vals g g, EqMap g) 
           -> Maybe (Vec g (UnkVal g), EqMap g)
 complStep (vs, es) = do
+  trace ("Vs: " <> show vs <> ", Es: " <> show es) $ pure ()
   (vs', es') <- complWrtEqs (pure (vs, [])) vs es
   -- If we applied substitutions eagerly, we wouldn't have to keep re-evaluating
   -- the values like this...
   pure (runUnk (Ex . eval (vs', es')) <$> vs', es')
 
 complete :: Sing SNat g => Env g g -> Maybe (Env g g)
-complete r = complStep r -- iterMaybeFix complStep r
+complete r = iterMaybeFix complStep r
 
 -- evalEnv :: Sing SNat d => Env d g -> EqMap d -> Env g t -> Env d t
 -- evalEnv _ _  Emp       = Emp
@@ -818,6 +822,10 @@ inferBody :: Sing SNat g => Ctx g -> Env g g -> VTy g -> Body Syn q g
 inferBody g r a (Inc t) 
   = infer (g :. a) (incEnv r) t
 
+appendError :: String -> TCM a -> TCM a
+appendError _ (Success x) = Success x
+appendError s (Failure e) = Failure (s <> "\n  - " <> e)
+
 -- TODO: Use 'check' here instead of manual matching and 'conv' calls
 infer :: Sing SNat g => Ctx g -> Env g g -> Tm q g -> TCM (VTy g)
 infer g r (Lam a t) = do
@@ -903,14 +911,23 @@ checkMaybeAbsurd _ Nothing t     _ = throw
   $  "Body in inconsistent contexts must be absurd, but was instead " 
   <> show t
 
+checkErr :: (Show a, Show b) => a -> b -> Error
+checkErr t a 
+  = "Checking " <> quotes (show t) <> " has type " <> quotes (show a)
+
+checkBodyErr :: (Show a, Show b, Show c) => a -> b -> c -> Error
+checkBodyErr a t b 
+  =  "Checking " <> quotes (show t) <> " has type " <> quotes (show b)
+  <> " where '`0' : " <> quotes (show a)
+
 check :: Sing SNat g => Ctx g -> Env g g -> Tm q g -> Ty g -> TCM ()
-check g r t a = do
+check g r t a = appendError (checkErr t a) do
   a' <- infer g r t
   chkConv (eval r a) a'
 
 checkBody :: Sing SNat g 
           => Ctx g -> Env g g -> VTy g -> Body Syn q g -> Ty (S g) -> TCM ()
-checkBody g r a t b = do
+checkBody g r a t b = appendError (checkBodyErr a t b) do
   b' <- inferBody g r a t
   chkConv (eval (incEnv r) b) b'
 
@@ -945,8 +962,15 @@ instance Sing SNat g => Show (Val q g) where
 instance Sing SNat g => Show (Ne g) where 
   show = show . Ne
 
-deriving instance Sing SNat g => Show (UnkVal g)
-deriving instance Show a => Show (Vec g a)
+instance Sing SNat g => Show (UnkVal g) where
+  show (Ex t) = show t
+
+instance Foldable (Vec g) where
+  foldMap _ Emp       = mempty
+  foldMap f (xs :< x) = foldMap f xs <> f x
+
+instance Show a => Show (Vec g a) where
+  show xs = show (toList xs)
 
 var :: Var g -> Model d Neu g
 var = Var
@@ -1009,15 +1033,15 @@ disj = Lam (Id B TT FF) $ Inc
 --    then (if f True then refl else (if f False then refl else refl)) 
 --    else (if f False then (if f True then refl else refl) else refl)'
 threeNotProof :: Model Syn (Par Pi) g
-threeNotProof = Lam (Pi B $ Inc B) $ Inc $ Pi B $ Inc 
-              $ let m = Id B (App (var (VS VZ)) (Var VZ)) 
-                        (App (var (VS VZ)) (App (var (VS VZ)) 
-                        (App (var (VS VZ)) (Var VZ))))
-                 in SmrtIf m 
-              (var VZ) 
-                (SmrtIf m (app (var (VS VZ)) TT) 
-                  (Rfl TT) 
-                  (SmrtIf m (app (var (VS VZ)) FF) (Rfl FF) (Rfl FF))) 
-                (SmrtIf m (app (var (VS VZ)) FF) 
-                  (SmrtIf m (app (var (VS VZ)) TT) (Rfl TT) (Rfl TT)) 
-                  (Rfl FF))
+threeNotProof 
+  = Lam (Pi B $ Inc B) $ Inc $ Lam B $ Inc 
+  $ let m = Id B (App (var (VS VZ)) (Var VZ)) 
+            (App (var (VS VZ)) (App (var (VS VZ)) 
+            (App (var (VS VZ)) (Var VZ))))
+     in SmrtIf m (var VZ) 
+          (SmrtIf m (app (var (VS VZ)) TT) 
+            (Rfl TT) 
+            (SmrtIf m (app (var (VS VZ)) FF) (Rfl FF) (Rfl FF))) 
+          (SmrtIf m (app (var (VS VZ)) FF) 
+            (SmrtIf m (app (var (VS VZ)) TT) (Rfl TT) (Rfl TT)) 
+            (Rfl FF))
