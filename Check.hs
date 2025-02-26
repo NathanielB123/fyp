@@ -28,7 +28,7 @@ import Prelude qualified as P
 import Data.Kind (Type)
 import Unsafe.Coerce (unsafeCoerce)
 import Data.Data ((:~:)(..))
-import Data.Maybe (fromMaybe, maybeToList)
+import Data.Maybe (fromMaybe)
 import Data.Bifunctor (Bifunctor(..))
 
 -- Open type families are cringe, but additional typeclasses are also cringe
@@ -139,7 +139,7 @@ data Var n where
   VS :: Var n -> Var (S n)
 deriving instance Eq (Var n)
 
-type data ParSort = B | U | Pi | Id | Bot | V | Absrd
+type data ParSort = B | U | Pi | Id | Bot | V |   Absrd
 
 -- 'Neu'tral or 'Par'tisan
 type data Sort = Neu | Par ParSort
@@ -530,7 +530,7 @@ complStep (vs, es) = do
   pure (runUnk (Ex . eval (vs', es')) <$> vs', es')
 
 complete :: Sing SNat g => Env g g -> Maybe (Env g g)
-complete r = iterMaybeFix complStep r
+complete r = complStep r -- iterMaybeFix complStep r
 
 -- evalEnv :: Sing SNat d => Env d g -> EqMap d -> Env g t -> Env d t
 -- evalEnv _ _  Emp       = Emp
@@ -540,11 +540,12 @@ evalVals :: Sing SNat t => Env t d -> Vals d g -> Vals t g
 evalVals r (ts :< Ex t) = evalVals r ts :< Ex (eval r t)
 evalVals _ Emp          = Emp
 
-addEq :: Sing SNat d => Env d g -> Ne d -> Val q d 
+addEq :: Sing SNat d => Env d g -> Val q d -> Val r d 
       -> Maybe (Env d g)
 addEq (vs, es) t u = do
-  r' <- complete (idVals, (t, Ex u) : es)
-  pure (evalVals r' vs, eqs r')
+  r' <- addRw (mkEq t u) (idVals, es)
+  r''  <- complete r'
+  pure (evalVals r'' vs, eqs r'')
 
 thinEqMap :: Thin d g -> EqMap g -> EqMap d
 thinEqMap s = map (bimap (thin s) (thin s))
@@ -556,6 +557,9 @@ appVal :: Sing SNat g => EqMap g -> Val Pi g -> Val q g -> UnkVal g
 appVal es (Lam _ (Clo t)) u = Ex $ t (idTh fill) es u
 appVal es (Ne t)          u = lookupNe es $ App t u
 
+-- TODO: It's actually unsafe to give standard if these enhanced evaluation
+-- rules. Consider 'if True then u else v', which typechecks for standard if
+-- even when 'v' is not '!'
 ifVal :: Sing SNat g2
       => Env g2 g1 -> Body Sem U g2 -> Val B g2 
       -> Model d (Par q) g1 -> Model d (Par r) g1 
@@ -563,9 +567,10 @@ ifVal :: Sing SNat g2
 ifVal r _ TT         u _ = Ex $ eval r u
 ifVal r _ FF         _ v = Ex $ eval r v
 ifVal r m (Ne t) u v
-  | (Just rT, Just rF) <- (addEq r t TT, addEq r t FF)
-  , u'                 <- eval rT u
-  , v'                 <- eval rF v 
+  | Just rT <- addEq r (Ne t) TT
+  , Just rF <- addEq r (Ne t) FF
+  , u'      <- eval rT u
+  , v'      <- eval rF v 
   = lookupNe (eqs r) $ If m t u' v'
   | otherwise = error "Something went wrong!"
 
@@ -579,8 +584,8 @@ smrtIfVal :: Sing SNat g2
 smrtIfVal r _ TT         u _ = Ex $ eval r u
 smrtIfVal r _ FF         _ v = Ex $ eval r v
 smrtIfVal r m (Ne t) u v
-  | Just rT <- addEq r t TT
-  , Just rF <- addEq r t FF
+  | Just rT <- addEq r (Ne t) TT
+  , Just rF <- addEq r (Ne t) FF
   , u'      <- eval rT u
   , v'      <- eval rF v 
   = lookupNe (eqs r) $ SmrtIf m t u' v'
@@ -845,18 +850,17 @@ infer g r (If m t u v) = do
   let t' = evalPres @_ @B r t
   pure $ m' (idTh fill) (eqs r) t'
 infer g r (SmrtIf m t u v) = do
-  -- TODO:
-  -- I think we need to split into cases depending on whether 't' evaluates to a
-  -- neutral
-
-  -- check g r es t B
-  -- t' <- eval g r t
-  -- a1 <- infer g r es u
-  -- let mT = uncurry eval (addEq r es _ _) m 
-
-  -- a2 <- infer g r es v
-  --
-  throw "Smart if not implemented yet!"
+  check g r m U
+  check g r t B
+  let t' = evalPres @_ @B r t
+  let rT = addEq r t' TT
+  let rF = addEq r t' FF
+  -- TODO: We end up re-evaluating 'm' three times here. We probably should
+  -- avoid this...
+  checkMaybeAbsurd g rT u m
+  checkMaybeAbsurd g rF v m
+  let m' = eval r m 
+  pure m'
 infer g r (Rfl x) = do
   a' <- infer g r x
   let x' = eval r x
@@ -889,7 +893,15 @@ infer _ _ B         = pure U
 infer _ _ Bot       = pure U
 -- Type in type!
 infer _ _ U         = pure U
-infer _ _ Absrd     = throw "Absurd encountered in non-absurd context!"
+infer _ _ Absrd     = throw "Absurd encountered in non-inconsistent context!"
+
+checkMaybeAbsurd :: Sing SNat g 
+                 => Ctx g -> Maybe (Env g g) -> Tm q g -> Ty g -> TCM ()
+checkMaybeAbsurd g (Just r) t a    = check g r t a
+checkMaybeAbsurd _ Nothing Absrd _ = pure ()
+checkMaybeAbsurd _ Nothing t     _ = throw 
+  $  "Body in inconsistent contexts must be absurd, but was instead " 
+  <> show t
 
 check :: Sing SNat g => Ctx g -> Env g g -> Tm q g -> Ty g -> TCM ()
 check g r t a = do
@@ -938,6 +950,9 @@ deriving instance Show a => Show (Vec g a)
 
 var :: Var g -> Model d Neu g
 var = Var
+
+app :: Model d Neu g -> Model d (Par q) g -> Model d Neu g
+app t u = App t u
 
 -- \b. b
 identity :: Tm (Par Pi) g
@@ -989,3 +1004,20 @@ isTrue = Lam B $ Inc $ If (Inc U) (var VZ) unit Bot
 disj :: Model Syn (Par Pi) g
 disj = Lam (Id B TT FF) $ Inc 
      $ Transp (Inc (App isTrue (Var VZ))) (var VZ) (Rfl TT)
+
+-- '\f b. if b 
+--    then (if f True then refl else (if f False then refl else refl)) 
+--    else (if f False then (if f True then refl else refl) else refl)'
+threeNotProof :: Model Syn (Par Pi) g
+threeNotProof = Lam (Pi B $ Inc B) $ Inc $ Pi B $ Inc 
+              $ let m = Id B (App (var (VS VZ)) (Var VZ)) 
+                        (App (var (VS VZ)) (App (var (VS VZ)) 
+                        (App (var (VS VZ)) (Var VZ))))
+                 in SmrtIf m 
+              (var VZ) 
+                (SmrtIf m (app (var (VS VZ)) TT) 
+                  (Rfl TT) 
+                  (SmrtIf m (app (var (VS VZ)) FF) (Rfl FF) (Rfl FF))) 
+                (SmrtIf m (app (var (VS VZ)) FF) 
+                  (SmrtIf m (app (var (VS VZ)) TT) (Rfl TT) (Rfl TT)) 
+                  (Rfl FF))
