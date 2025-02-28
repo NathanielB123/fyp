@@ -299,7 +299,7 @@ eval _ U   = U
 eval _ B   = B
 eval _ Bot = Bot
 eval r (Lam a t) = Lam a' t'
-  where a' = eval r a
+  where a' = eval r <$> a
         t' = evalBody (vals r) t
 eval r (Pi a b) = Pi a' b'
   where a' = eval r a
@@ -346,15 +346,15 @@ inferBody g r a (Inc t)
   = infer (g :. a) (incEnv r) t
 
 infer :: Sing SNat g => Ctx g -> Env g g -> Tm q g -> TCM (VTy g)
-infer g r (Lam a t) = do
-  check g r a U
+infer g r (Lam (Just a) t) = do
+  check g r U a
   let a' = eval r a
   b' <- close <$> inferBody g r a' t
   pure (Pi a' b')
 infer g r (Pi a b) = do
-  check g r a U
+  check g r U a
   let a' = eval r a
-  checkBody g r a' b U
+  checkBody g r a' U b
   pure U
 infer g r (App t u) = do
   Pi a1 (Clo b1) <- infer g r t
@@ -365,11 +365,12 @@ infer g r (App t u) = do
   pure (b1 (idTh fill) (eqs r) u')
 infer _ _ (SmrtIf Nothing _ _ _) = throw $ cannotInferErr "smart if"
 infer _ _ (Expl Nothing _)       = throw $ cannotInferErr "explode"
+infer _ _ (Lam Nothing _)        = throw $ cannotInferErr "lambda"
 infer g r (If m t u v) = do
-  check g r t B
+  check g r B t
   a1 <- infer g r u
   a2 <- infer g r v
-  checkBody g r B m U
+  checkBody g r B U m
   Clo m' <- pure $ evalBody (vals r) m
   let a1' = m' (idTh fill) (eqs r) TT
   let a2' = m' (idTh fill) (eqs r) FF
@@ -378,15 +379,15 @@ infer g r (If m t u v) = do
   let t' = evalPres @_ @B r t
   pure $ m' (idTh fill) (eqs r) t'
 infer g r (SmrtIf (Just m) t u v) = do
-  check g r m U
-  check g r t B
+  check g r U m
+  check g r B t
   let t' = evalPres @_ @B r t
   let rT = addEq r t' TT
   let rF = addEq r t' FF
   -- TODO: We end up re-evaluating 'm' three times here. We probably should
   -- avoid this...
-  checkMaybeAbsurd g rT u m
-  checkMaybeAbsurd g rF v m
+  checkMaybeAbsurd g rT m u
+  checkMaybeAbsurd g rF m v
   let m' = eval r m 
   pure m'
 infer g r (Rfl x) = do
@@ -403,7 +404,7 @@ infer g r (Id a x y) = do
   pure U
 infer g r (Transp m p t) = do
   Id a x y <- infer g r p
-  checkBody g r a m U
+  checkBody g r a U m
   mx1' <- infer g r t
   -- Todo can/should we eval in context extended with 'x' directly?
   Clo m' <- pure $ evalBody (vals r) m
@@ -411,8 +412,8 @@ infer g r (Transp m p t) = do
   chkConv mx1' mx2'
   pure $ m' (idTh fill) (eqs r) y
 infer g r (Expl (Just m) p) = do
-  check g r p Bot
-  check g r m U
+  check g r Bot p
+  check g r U m
   pure (eval r m)
 infer g _ (Var i)   = pure $ tLookup i g
 infer _ _ TT        = pure B
@@ -424,10 +425,10 @@ infer _ _ U         = pure U
 infer _ _ Absrd     = throw "Absurd encountered in non-inconsistent context!"
 
 checkMaybeAbsurd :: Sing SNat g 
-                 => Ctx g -> Maybe (Env g g) -> Tm q g -> Ty g -> TCM ()
-checkMaybeAbsurd g (Just r) t a    = check g r t a
-checkMaybeAbsurd _ Nothing Absrd _ = pure ()
-checkMaybeAbsurd _ Nothing t     _ = throw 
+                 => Ctx g -> Maybe (Env g g) -> Ty g -> Tm q g -> TCM ()
+checkMaybeAbsurd g (Just r) a t    = check g r a t
+checkMaybeAbsurd _ Nothing _ Absrd = pure ()
+checkMaybeAbsurd _ Nothing _ t     = throw 
   $  "Body in inconsistent contexts must be absurd, but was instead " 
   <> show t
 
@@ -435,38 +436,39 @@ checkErr :: (Show a, Show b) => a -> b -> Error
 checkErr t a 
   = "Checking " <> quotes (show t) <> " has type " <> quotes (show a)
 
-checkBodyErr :: (Show a, Show b, Show c) => a -> b -> c -> Error
-checkBodyErr a t b 
-  =  "Checking " <> quotes (show t) <> " has type " <> quotes (show b)
-  <> " where '`0' : " <> quotes (show a)
+checkLamErr :: Show a => a -> Error
+checkLamErr a = quotes (show a) <> " is convertible to a pi-type."
 
 -- TODO: Refactor 'infer'/'check' to do proper bidir 
 -- (i.e. don't redundantly check 'a' is of type 'U' - I think the neater
 -- approach here would be for 'infer' to remove annotations, rather
 -- than 'check' adding them...)
-check :: Sing SNat g => Ctx g -> Env g g -> Tm q g -> Ty g -> TCM ()
-check @_ @q g r t a = appendError (checkErr t a) $ case t of
+check :: Sing SNat g => Ctx g -> Env g g -> Ty g -> Tm q g -> TCM ()
+check @_ @q g r a t = appendError (checkErr t a) $ case t of
   SmrtIf Nothing t' u' v' 
     -> discard $ infer @_ @q g r (SmrtIf (Just a) t' u' v')
   Expl Nothing p       
     -> discard $ infer @_ @q g r (Expl (Just a) p)
+  Lam Nothing t' -> case a of
+    Pi a' b' -> check g r (Pi a' b') (Lam (Just a') t')
+    _        -> throw $ checkLamErr a
   _ -> do
     a' <- infer g r t
     chkConv (eval r a) a'
 
 checkBody :: Sing SNat g 
-          => Ctx g -> Env g g -> VTy g -> Body Syn q g -> Ty (S g) -> TCM ()
-checkBody g r a (Inc t) b = check (g :. a) (incEnv r) t b
+          => Ctx g -> Env g g -> VTy g -> Ty (S g) -> Body Syn q g -> TCM ()
+checkBody g r a b (Inc t) = check (g :. a) (incEnv r) b t
 
 -- Examples:
 
 -- '\b. b'
 identity :: Tm Pi g
-identity = Lam B $ Inc $ Var VZ
+identity = Lam (Just B) $ Inc $ Var VZ
 
 -- '\b. if b then False else True'
 not :: Model Syn (Par Pi) g
-not = Lam B $ Inc $ If (Inc B) (Var VZ) FF TT
+not = Lam (Just B) $ Inc $ If (Inc B) (Var VZ) FF TT
 
 -- '\(b : B) -> b = not (not b)'
 notProofTy :: Model Syn (Par U) g
@@ -474,27 +476,28 @@ notProofTy = Pi B $ Inc $ Id B (Var VZ) (App not (App not (Var VZ)))
 
 -- '\b. if b then Refl else Refl'
 notProof :: Model Syn (Par Pi) g
-notProof = Lam B $ Inc 
+notProof = Lam (Just B) $ Inc 
          $ If (Inc (Id B (Var VZ) (App not (App not (Var VZ))))) 
               (Var VZ) (Rfl TT) (Rfl FF)
 
 -- \(b : B) -> if b then b else b
 ifId :: Model Syn (Par Pi) g
-ifId = Lam B $ Inc $ If (Inc B) (Var VZ) (Var VZ) (Var VZ)
+ifId = Lam (Just B) $ Inc $ If (Inc B) (Var VZ) (Var VZ) (Var VZ)
 
 -- '\(f : B -> B) (b : B) -> if f b then f b else f b'
 ifIdF :: Model Syn (Par Pi) g
-ifIdF = Lam (Pi B $ Inc B) $ Inc $ Lam B $ Inc 
+ifIdF = Lam (Just $ Pi B $ Inc B) $ Inc $ Lam (Just B) $ Inc 
       $ If (Inc B) (App (Var (VS VZ)) (Var VZ)) 
            (App (Var (VS VZ)) (Var VZ)) (App (Var (VS VZ)) (Var VZ))
 
 -- \(b : B) -> if b then not b else b
 ifNot :: Model Syn (Par Pi) g
-ifNot = Lam B $ Inc $ If (Inc B) (Var VZ) (App not (Var VZ)) (Var VZ)
+ifNot = Lam (Just B) $ Inc $ If (Inc B) (Var VZ) (App not (Var VZ)) (Var VZ)
 
 -- '\x y p. transp (z. z = x) p Refl'
 symProof :: Model Syn (Par Pi) g
-symProof = Lam B $ Inc $ Lam B $ Inc $ Lam (Id B (Var $ VS VZ) (Var VZ)) $ Inc 
+symProof = Lam (Just B) $ Inc $ Lam (Just B) $ Inc 
+         $ Lam (Just $ Id B (Var $ VS VZ) (Var VZ)) $ Inc 
          $ Transp (Inc $ Id B (Var VZ) (Var (VS $ VS $ VS VZ))) (Var VZ) 
              (Rfl (Var $ VS $ VS VZ))
 
@@ -505,11 +508,11 @@ unit = Id B TT TT
 
 -- '\b. if b then Unit else Bot' 
 isTrue :: Model Syn (Par Pi) g
-isTrue = Lam B $ Inc $ If (Inc U) (Var VZ) unit Bot
+isTrue = Lam (Just B) $ Inc $ If (Inc U) (Var VZ) unit Bot
 
 -- '\p. transp (z. isTrue z) p tt'
 disj :: Model Syn (Par Pi) g
-disj = Lam (Id B TT FF) $ Inc 
+disj = Lam (Just $ Id B TT FF) $ Inc 
      $ Transp (Inc $ App isTrue (Var VZ)) (Var VZ) (Rfl TT)
 
 -- '\f b. if b 
@@ -517,7 +520,7 @@ disj = Lam (Id B TT FF) $ Inc
 --    else (if f False then (if f True then refl else refl) else refl)'
 threeNotProof :: Model Syn (Par Pi) g
 threeNotProof 
-  = Lam (Pi B $ Inc B) $ Inc $ Lam B $ Inc 
+  = Lam (Just $ Pi B $ Inc B) $ Inc $ Lam (Just B) $ Inc 
   $ SmrtIf 
     (Just $ Id B (App (Var (VS VZ)) (Var VZ)) 
       (App (Var (VS VZ)) (App (Var (VS VZ)) 

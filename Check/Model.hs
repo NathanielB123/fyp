@@ -81,13 +81,15 @@ data SParSort q where
   SPi    :: SParSort Pi
   SId    :: SParSort Id
   SBot   :: SParSort Bot
+  SAbsrd :: SParSort Absrd
 
 instance Show (SParSort q) where
-  show SB   = "𝔹"
-  show SU   = "Type"
-  show SPi  = "Π" 
-  show SBot = "𝟘"
-  show SId  = "="
+  show SB     = "𝔹"
+  show SU     = "Type"
+  show SPi    = "Π" 
+  show SBot   = "𝟘"
+  show SId    = "="
+  show SAbsrd = "Absurd"
 
 data Var n where
   VZ :: Var (S n)
@@ -147,7 +149,7 @@ data Spine d a q r g where
 
 type Model :: Dom -> Sort -> Nat -> Type
 data Model d q g where
-  Lam   :: Model d (Par U) g -> Body d q g -> Model d (Par Pi) g
+  Lam   :: Maybe (Model d (Par U) g) -> Body d q g -> Model d (Par Pi) g
   U     :: Model d (Par U) g
   B     :: Model d (Par U) g
   Bot   :: Model d (Par U) g
@@ -319,7 +321,7 @@ instance PshThin (Model d q) where
   thin _ Bot              = Bot
   thin s (Pi a b)         = Pi     (thin s a)  (thin s b)
   thin s (Id a x y)       = Id     (thin s a)  (thin s x) (thin s y)
-  thin s (Lam a t)        = Lam    (thin s a)  (thin s t)
+  thin s (Lam a t)        = Lam    (fThin s a) (thin s t)
   thin s (App t u)        = App    (thin s t)  (thin s u)
   thin s (If m t u v)     = If     (thin s m)  (thin s t) (thin s u) (thin s v)
   thin s (SmrtIf m t u v) = SmrtIf (fThin s m) (thin s t) (thin s u) (thin s v)
@@ -431,7 +433,7 @@ reifyNe (ExplNe m p) = Expl (reify <$> m) (reifyNe p)
 
 reify :: Sing SNat g => Val q g -> Model Syn (Par q) g
 reify (Ne t)     = reifyNe t
-reify (Lam a t)  = Lam (reify a) (reifyBody t)
+reify (Lam a t)  = Lam (reify <$> a) (reifyBody t)
 reify (Pi a b)   = Pi (reify a) (reifyBody b)
 reify (Id a x y) = Id (reify a) (reify x) (reify y)
 reify (Rfl x)    = Rfl (reify x)
