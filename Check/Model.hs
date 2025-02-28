@@ -5,10 +5,15 @@
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE UndecidableInstances #-}
 
+{-# OPTIONS -Wall #-}
+{-# OPTIONS -Wpartial-fields #-}
+{-# OPTIONS -Wno-unrecognised-pragmas #-}
+{-# OPTIONS -Wno-missing-pattern-synonym-signatures #-}
+
 module Check.Model where
 
 import Check.Utils
-import Data.Kind (Constraint)
+import Data.Kind (Constraint, Type)
 
 type instance Ap SSort i = SSort i
 
@@ -70,6 +75,20 @@ data SSort q where
   SNeu :: SSort Neu
   SPar :: SSort (Par q)
 
+data SParSort q where
+  SB     :: SParSort B
+  SU     :: SParSort U
+  SPi    :: SParSort Pi
+  SId    :: SParSort Id
+  SBot   :: SParSort Bot
+
+instance Show (SParSort q) where
+  show SB   = "𝔹"
+  show SU   = "Type"
+  show SPi  = "Π" 
+  show SBot = "𝟘"
+  show SId  = "="
+
 data Var n where
   VZ :: Var (S n)
   VS :: Var n -> Var (S n)
@@ -107,25 +126,33 @@ data Body d q g where
           -> Model Sem (Par r) g' -> Model Sem (Par q) g'
   } -> Body Sem q g
 
-data Spine d q r g where
-  AppS    :: Model d pi g -> Model d (Par q) g -> Spine d Pi pi g
-  IfS     :: Body d U g -> Model d b g -> Model d (Par q) g -> Model d (Par r) g 
-          -> Spine d B b g
-  SmrtIfS :: Model d (Par U) g -> Model d b g 
-          -> Model d (Par q) g -> Model d (Par r) g 
-          -> Spine d B b g
-  TranspS :: Body d U g -> Model d id g -> Model d (Par q) g 
-          -> Spine d Id id g 
-  ExplS   :: Model d (Par U) g -> Model d bot g -> Spine d Bot bot g
-  VarS    :: Var g -> Spine d V (VSort d) g
-  
+type Motive :: Dom -> Maybe Nat -> Nat -> Type
+type family Motive d a g where
+  Motive d Nothing      g = ()
+  Motive d (Just Z)     g = Maybe (Model d (Par U) g)
+  Motive d (Just (S Z)) g = Body d U g
+  -- TODO: Support arities > 1
+
+type Spine :: Dom -> Maybe Nat -> ParSort -> Sort -> Nat -> Type
+data Spine d a q r g where
+  VarS    :: Var g -> Spine d Nothing V (VSort d) g
+  AppS    :: Model d pi g -> Model d (Par q) g -> Spine d Nothing Pi pi g
+  IfS     :: Model d b g -> Model d (Par q) g -> Model d (Par r) g 
+          -> Spine d (Just (S Z)) B b g
+  SmrtIfS :: Model d b g -> Model d (Par q) g -> Model d (Par r) g 
+          -> Spine d (Just Z) B b g
+  TranspS :: Model d id g -> Model d (Par q) g 
+          -> Spine d (Just (S Z)) Id id g 
+  ExplS   :: Model d bot g -> Spine d (Just Z) Bot bot g
+
+type Model :: Dom -> Sort -> Nat -> Type
 data Model d q g where
   Lam   :: Model d (Par U) g -> Body d q g -> Model d (Par Pi) g
   U     :: Model d (Par U) g
   B     :: Model d (Par U) g
   Bot   :: Model d (Par U) g
   Pi    :: Model d (Par U) g -> Body d U g -> Model d (Par U) g
-  El    :: ElimSort d q r s -> Spine d q r g -> Model d s g
+  El    :: ElimSort d q r s -> Motive d a g -> Spine d a q r g -> Model d s g
   TT    :: Model d (Par B) g
   FF    :: Model d (Par B) g
   Id    :: Model d (Par U) g -> Model d (Par q) g -> Model d (Par r) g 
@@ -231,34 +258,40 @@ pattern RecElim :: ()
 pattern RecElim <- (recoverAllElim -> Ev)
   where RecElim = fill
 
-pattern App t u = El RecElim (AppS t u)
-pattern If m t u v = El RecElim (IfS m t u v)
-pattern Transp m p t = El RecElim (TranspS m p t)
-pattern Expl m p = El RecElim (ExplS m p)
-pattern SmrtIf m t u v = El RecElim (SmrtIfS m t u v)
-pattern Var i = El RecElim (VarS i)
+pattern Var i <- El RecElim _ (VarS i)
+  where Var i = El RecElim () (VarS i)
+pattern App t u <- El RecElim _ (AppS t u)
+  where App t u = El RecElim () (AppS t u)
+pattern If m t u v = El RecElim m (IfS t u v)
+pattern Transp m p t = El RecElim m (TranspS p t)
+pattern Expl m p = El RecElim m (ExplS p)
+pattern SmrtIf m t u v = El RecElim m (SmrtIfS t u v)
 
 pattern Ne :: () => () => Ne g -> Val q g
-pattern Ne t <- El Stk (El Spn -> t)
-  where Ne (El Spn t) = El Stk t
+pattern Ne t <- El Stk m (El Spn m -> t)
+  where Ne (El Spn m t) = El Stk m t
 
 pattern VarNe :: () => () => Var g -> Ne g
-pattern VarNe i = El Spn (VarS i)
+pattern VarNe i <- El Spn _ (VarS i)
+  where VarNe i = El Spn () (VarS i)
 
 pattern AppNe :: () => () => Ne g -> Val q g -> Ne g
-pattern AppNe t u = El Spn (AppS t u)
+pattern AppNe t u <- El Spn _ (AppS t u)
+  where AppNe t u = El Spn () (AppS t u)
 
-pattern IfNe :: () => () => VBody U g -> Ne g -> Val q g -> Val r g -> Ne g
-pattern IfNe m t u v = El Spn (IfS m t u v)
+pattern IfNe :: () => () 
+             => VBody U g -> Ne g -> Val q g -> Val r g -> Ne g
+pattern IfNe m t u v = El Spn m (IfS t u v)
 
 pattern TranspNe :: () => () => VBody U g -> Ne g -> Val q g -> Ne g
-pattern TranspNe m p t = El Spn (TranspS m p t)
+pattern TranspNe m p t = El Spn m (TranspS p t)
 
-pattern ExplNe :: () => () => Val U g -> Ne g -> Ne g
-pattern ExplNe m t = El Spn (ExplS m t)
+pattern ExplNe :: () => () => Maybe (Val U g) -> Ne g -> Ne g
+pattern ExplNe m t = El Spn m (ExplS t)
 
-pattern SmrtIfNe :: () => () => Val U g -> Ne g -> Val q g -> Val r g -> Ne g
-pattern SmrtIfNe m t u v = El Spn (SmrtIfS m t u v)
+pattern SmrtIfNe :: () => () 
+                 => Maybe (Val U g) -> Ne g -> Val q g -> Val r g -> Ne g
+pattern SmrtIfNe m t u v = El Spn m (SmrtIfS t u v)
 
 {-# COMPLETE AppNe, IfNe, SmrtIfNe, TranspNe, ExplNe, VarNe #-}
 {-# COMPLETE Lam, U, B, Bot, Pi, TT, FF, Id, Rfl, Absrd, Ne #-}
@@ -268,6 +301,9 @@ pattern SmrtIfNe m t u v = El Spn (SmrtIfS m t u v)
 data Unk d g = forall q. Ex {proj :: Model d (Par q) g}
 type UnkTm  = Unk Syn
 type UnkVal = Unk Sem
+
+runUnk :: (forall q. Model d (Par q) g -> r) -> Unk d g -> r
+runUnk f (Ex t) = f t
 
 instance PshThin (Unk d) where
   thin s (Ex t) = Ex $ thin s t
@@ -281,14 +317,14 @@ instance PshThin (Model d q) where
   thin _ U                = U
   thin _ B                = B
   thin _ Bot              = Bot
-  thin s (Pi a b)         = Pi     (thin s a) (thin s b)
-  thin s (Id a x y)       = Id     (thin s a) (thin s x) (thin s y)
-  thin s (Lam a t)        = Lam    (thin s a) (thin s t)
-  thin s (App t u)        = App    (thin s t) (thin s u)
-  thin s (If m t u v)     = If     (thin s m) (thin s t) (thin s u) (thin s v)
-  thin s (SmrtIf m t u v) = SmrtIf (thin s m) (thin s t) (thin s u) (thin s v)
-  thin s (Transp m p t)   = Transp (thin s m) (thin s p) (thin s t)
-  thin s (Expl m p)       = Expl   (thin s m) (thin s p)
+  thin s (Pi a b)         = Pi     (thin s a)  (thin s b)
+  thin s (Id a x y)       = Id     (thin s a)  (thin s x) (thin s y)
+  thin s (Lam a t)        = Lam    (thin s a)  (thin s t)
+  thin s (App t u)        = App    (thin s t)  (thin s u)
+  thin s (If m t u v)     = If     (thin s m)  (thin s t) (thin s u) (thin s v)
+  thin s (SmrtIf m t u v) = SmrtIf (fThin s m) (thin s t) (thin s u) (thin s v)
+  thin s (Transp m p t)   = Transp (thin s m)  (thin s p) (thin s t)
+  thin s (Expl m p)       = Expl   (fThin s m) (thin s p)
   thin s (Var i)          = Var    (thin s i)
   thin _ TT               = TT
   thin _ FF               = FF
@@ -388,10 +424,10 @@ reifyNe (VarNe i)    = Var i
 reifyNe (IfNe m t u v) 
   = If (reifyBody m) (reifyNe t) (reify u) (reify v)
 reifyNe (SmrtIfNe m t u v)
-  = SmrtIf (reify m) (reifyNe t) (reify u) (reify v)
+  = SmrtIf (reify <$> m) (reifyNe t) (reify u) (reify v)
 reifyNe (AppNe t u)  = App (reifyNe t) (reify u)
 reifyNe (TranspNe m p t)  = Transp (reifyBody m) (reifyNe p) (reify t)
-reifyNe (ExplNe m p) = Expl (reify m) (reifyNe p)
+reifyNe (ExplNe m p) = Expl (reify <$> m) (reifyNe p)
 
 reify :: Sing SNat g => Val q g -> Model Syn (Par q) g
 reify (Ne t)     = reifyNe t

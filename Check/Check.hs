@@ -163,9 +163,6 @@ complWrtEqs acc             r ((t, Ex u) : es)
     acc' <- addRw eq <$> acc
     complWrtEqs acc' r es  
 
-runUnk :: (forall q. Val q g -> r) -> UnkVal g -> r
-runUnk f (Ex t) = f t
-
 complStep :: Sing SNat g => (Vals g g, EqMap g) 
           -> Maybe (Vec g (UnkVal g), EqMap g)
 complStep (vs, es) = do
@@ -206,7 +203,8 @@ appVal es (Ne t)          u = lookupNe es $ App t u
 -- rules. Consider 'if True then u else v', which typechecks for standard if
 -- even when 'v' is not '!'
 ifVal :: Sing SNat g
-      => EqMap g -> Body Sem U g -> Val B g -> Val q g -> Val r g -> UnkVal g
+      => EqMap g -> Body Sem U g -> Val B g -> Val q g -> Val r g 
+      -> UnkVal g
 ifVal _  _ TT     u _ = Ex u
 ifVal _  _ FF     _ v = Ex v
 ifVal es m (Ne t) u v = lookupNe es $ If m t u v
@@ -215,7 +213,7 @@ ifVal es m (Ne t) u v = lookupNe es $ If m t u v
 -- We should probably try to remove duplication here by folding into the same
 -- constructor...
 smrtIfVal :: Sing SNat g2
-          => Env g2 g1 -> Val U g2 -> Val B g2 
+          => Env g2 g1 -> Maybe (Val U g2) -> Val B g2 
           -> Model d (Par q) g1 -> Model d (Par r) g1 
           -> UnkVal g2
 smrtIfVal r _ TT         u _ = Ex $ eval r u
@@ -226,14 +224,14 @@ smrtIfVal r m (Ne t) u v
   , u'      <- eval rT u
   , v'      <- eval rF v 
   = lookupNe (eqs r) $ SmrtIf m t u' v'
-  | otherwise = error "Something went wrong!"
+  | otherwise = __IMPOSSIBLE__
 
 jVal :: Sing SNat g 
      => EqMap g -> Body Sem U g -> Val Id g -> Val q g -> UnkVal g
 jVal _ _  (Rfl _)    u = Ex u
 jVal es m (Ne t) u = lookupNe es $ Transp m t u
 
-explVal :: Sing SNat g => EqMap g -> Val U g -> Val Bot g -> UnkVal g
+explVal :: Sing SNat g => EqMap g -> Maybe (Val U g) -> Val Bot g -> UnkVal g
 explVal es m (Ne t) = lookupNe es $ Expl m t
 
 wkStar :: SNat g -> SNat d -> Thin (g + d) g
@@ -293,7 +291,7 @@ eval r (If m t u v) = presTM fill $ ifVal (eqs r) m' t' u' v'
         v' = eval r v
 eval r (SmrtIf m t u v)
   = presTM fill $ smrtIfVal r m' t' u v
-  where m' = eval r m
+  where m' = eval r <$> m
         t' = evalPres r t
 eval _ TT  = TT
 eval _ FF  = FF
@@ -317,9 +315,9 @@ eval r (Transp m p t) = presTM fill $ jVal (eqs r) m' p' t'
         p' = evalPres r p
         t' = eval r t
 eval r (Expl m p) = presTM fill $ explVal (eqs r) m' p'
-  where m' = eval r m
+  where m' = eval r <$> m
         p' = evalPres r p
-eval _ Absrd = error "Something has gone wrong!"
+eval _ Absrd = __IMPOSSIBLE__
 
 notConvErr :: (Show a, Show b) => a -> b -> Error
 notConvErr t u = quotes (show t) <> " and " <> quotes (show u)
@@ -337,6 +335,10 @@ chkConv t u = guardThrow (conv t u) $ notConvErr (reify t) (reify u)
 
 close :: Sing SNat g => Val q (S g) -> Body Sem q g
 close t = Clo \s es u -> eval (fThin s idVals :< Ex u, es) t
+
+cannotInferErr :: (Show a) => a -> Error
+cannotInferErr x 
+  = "Cannot infer type of un-annotated " <> quotes (show x) <> "!"
 
 inferBody :: Sing SNat g => Ctx g -> Env g g -> VTy g -> Body Syn q g 
           -> TCM (VTy (S g))
@@ -361,6 +363,8 @@ infer g r (App t u) = do
   -- Perhaps 'infer' should return the 'eval'uated term...
   let u' = eval r u
   pure (b1 (idTh fill) (eqs r) u')
+infer _ _ (SmrtIf Nothing _ _ _) = throw $ cannotInferErr "smart if"
+infer _ _ (Expl Nothing _)       = throw $ cannotInferErr "explode"
 infer g r (If m t u v) = do
   check g r t B
   a1 <- infer g r u
@@ -373,7 +377,7 @@ infer g r (If m t u v) = do
   chkConv a2 a2'
   let t' = evalPres @_ @B r t
   pure $ m' (idTh fill) (eqs r) t'
-infer g r (SmrtIf m t u v) = do
+infer g r (SmrtIf (Just m) t u v) = do
   check g r m U
   check g r t B
   let t' = evalPres @_ @B r t
@@ -406,7 +410,7 @@ infer g r (Transp m p t) = do
   let mx2' = m' (idTh fill) (eqs r) x
   chkConv mx1' mx2'
   pure $ m' (idTh fill) (eqs r) y
-infer g r (Expl m p) = do
+infer g r (Expl (Just m) p) = do
   check g r p Bot
   check g r m U
   pure (eval r m)
@@ -436,16 +440,25 @@ checkBodyErr a t b
   =  "Checking " <> quotes (show t) <> " has type " <> quotes (show b)
   <> " where '`0' : " <> quotes (show a)
 
+-- TODO: Refactor 'infer'/'check' to do proper bidir 
+-- (i.e. don't redundantly check 'a' is of type 'U' - I think the neater
+-- approach here would be for 'infer' to remove annotations, rather
+-- than 'check' adding them...)
 check :: Sing SNat g => Ctx g -> Env g g -> Tm q g -> Ty g -> TCM ()
-check g r t a = appendError (checkErr t a) do
-  a' <- infer g r t
-  chkConv (eval r a) a'
+check @_ @q g r t a = appendError (checkErr t a) $ case t of
+  SmrtIf Nothing t' u' v' 
+    -> discard $ infer @_ @q g r (SmrtIf (Just a) t' u' v')
+  Expl Nothing p       
+    -> discard $ infer @_ @q g r (Expl (Just a) p)
+  _ -> do
+    a' <- infer g r t
+    chkConv (eval r a) a'
 
 checkBody :: Sing SNat g 
           => Ctx g -> Env g g -> VTy g -> Body Syn q g -> Ty (S g) -> TCM ()
-checkBody g r a t b = appendError (checkBodyErr a t b) do
-  b' <- inferBody g r a t
-  chkConv (eval (incEnv r) b) b'
+checkBody g r a (Inc t) b = check (g :. a) (incEnv r) t b
+
+-- Examples:
 
 -- '\b. b'
 identity :: Tm Pi g
@@ -461,7 +474,8 @@ notProofTy = Pi B $ Inc $ Id B (Var VZ) (App not (App not (Var VZ)))
 
 -- '\b. if b then Refl else Refl'
 notProof :: Model Syn (Par Pi) g
-notProof = Lam B $ Inc $ If (Inc (Id B (Var VZ) (App not (App not (Var VZ))))) 
+notProof = Lam B $ Inc 
+         $ If (Inc (Id B (Var VZ) (App not (App not (Var VZ))))) 
               (Var VZ) (Rfl TT) (Rfl FF)
 
 -- \(b : B) -> if b then b else b
@@ -496,7 +510,7 @@ isTrue = Lam B $ Inc $ If (Inc U) (Var VZ) unit Bot
 -- '\p. transp (z. isTrue z) p tt'
 disj :: Model Syn (Par Pi) g
 disj = Lam (Id B TT FF) $ Inc 
-     $ Transp (Inc (App isTrue (Var VZ))) (Var VZ) (Rfl TT)
+     $ Transp (Inc $ App isTrue (Var VZ)) (Var VZ) (Rfl TT)
 
 -- '\f b. if b 
 --    then (if f True then refl else (if f False then refl else refl)) 
@@ -504,13 +518,14 @@ disj = Lam (Id B TT FF) $ Inc
 threeNotProof :: Model Syn (Par Pi) g
 threeNotProof 
   = Lam (Pi B $ Inc B) $ Inc $ Lam B $ Inc 
-  $ let m = Id B (App (Var (VS VZ)) (Var VZ)) 
-            (App (Var (VS VZ)) (App (Var (VS VZ)) 
-            (App (Var (VS VZ)) (Var VZ))))
-     in SmrtIf m (Var VZ) 
-          (SmrtIf m (App (Var (VS VZ)) TT) 
-            (Rfl TT) 
-            (SmrtIf m (App (Var (VS VZ)) FF) (Rfl FF) (Rfl FF))) 
-          (SmrtIf m (App (Var (VS VZ)) FF) 
-            (SmrtIf m (App (Var (VS VZ)) TT) (Rfl TT) (Rfl TT)) 
-            (Rfl FF))
+  $ SmrtIf 
+    (Just $ Id B (App (Var (VS VZ)) (Var VZ)) 
+      (App (Var (VS VZ)) (App (Var (VS VZ)) 
+      (App (Var (VS VZ)) (Var VZ))))) 
+    (Var VZ) 
+    (SmrtIf Nothing (App (Var (VS VZ)) TT) 
+      (Rfl TT) 
+      (SmrtIf Nothing (App (Var (VS VZ)) FF) (Rfl FF) (Rfl FF))) 
+    (SmrtIf Nothing (App (Var (VS VZ)) FF) 
+      (SmrtIf Nothing (App (Var (VS VZ)) TT) (Rfl TT) (Rfl TT)) 
+      (Rfl FF))

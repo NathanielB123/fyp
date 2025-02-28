@@ -8,7 +8,7 @@ import Text.Gigaparsec.Char (string, spaces, satisfy)
 import Data.Char (ord)
 import Data.String (IsString(..))
 
-import Check.PreSyntax
+import Check.Syntax
 import Check.Utils
 
 token :: String -> Parsec ()

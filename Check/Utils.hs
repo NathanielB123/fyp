@@ -88,5 +88,13 @@ instance Foldable (Vec g) where
 instance Show a => Show (Vec g a) where
   show xs = show (toList xs)
 
-pass :: Applicative m => m ()
+pass :: Applicative f => f ()
 pass = pure ()
+
+discard :: Applicative f => f a -> f ()
+discard x = x *> pass
+
+insert :: Eq a => a -> b -> [(a, b)] -> [(a, b)]
+insert k v kvs 
+  | k `elem` map fst kvs = fmap (\p -> if k == fst p then (k, v) else p) kvs
+  | otherwise            = (k, v) : kvs

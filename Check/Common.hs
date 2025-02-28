@@ -35,3 +35,6 @@ instance Show a => Show (TCM a) where
 appendError :: String -> TCM a -> TCM a
 appendError _ (Success x) = Success x
 appendError s (Failure e) = Failure (s <> "\n  - " <> e)
+
+__IMPOSSIBLE__ :: a
+__IMPOSSIBLE__ = error "ICE: Something went wrong!"
