@@ -1,13 +1,13 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE TypeAbstractions #-}
 
 {-# OPTIONS -Wall #-}
 {-# OPTIONS -Wpartial-fields #-}
 {-# OPTIONS -Wno-unrecognised-pragmas #-}
 {-# OPTIONS -Wno-missing-papTTern-synonym-signatures #-}
-{-# LANGUAGE AllowAmbiguousTypes #-}
-{-# LANGUAGE TypeAbstractions #-}
 
 module Check.Parse where
 
@@ -118,8 +118,11 @@ pFF = "False" $> FF
 pId :: Parsec Tm -> Parsec Tm -> Parsec Tm -> Parsec Tm
 pId a x y = "Id" *> (Id <$> a <*> x <*> y)
 
-pRfl :: Parsec Tm -> Parsec Tm
-pRfl x = "Rfl" *> (Rfl <$> x)
+pRfl :: Parsec Tm
+pRfl = "Rfl" $> Rfl Nothing
+
+pRflAnn :: Parsec Tm -> Parsec Tm
+pRflAnn x = "Rfl" *> (Rfl <$> optional (braces x))
 
 pBot :: Parsec Tm
 pBot = ("𝟘" <|> "Empty") $> Bot
@@ -136,12 +139,17 @@ pMotive @a
   | SZ   <- fill @_ @a = optional $ braces pTm
   | SS _ <- fill @_ @a = braces $ pBody pVar pass pTm
 
-pParensTm :: Parsec Tm
-pParensTm 
+pCommonTm :: Parsec Tm
+pCommonTm
   =   parens pTm
   <|> pU <|> pB <|> pBot
   <|> pTT <|> pFF
   <|> (Var <$> pVar)
+
+pParensTm :: Parsec Tm
+pParensTm 
+  =   pRfl
+  <|> pCommonTm
 
 pTm :: Parsec Tm
 pTm = 
@@ -150,8 +158,8 @@ pTm =
   <|> pIf pMotive pParensTm pParensTm pParensTm
   <|> pTransp pMotive pParensTm pParensTm
   <|> pId pParensTm pParensTm pParensTm
-  <|> pRfl pParensTm
-  <|> pArrow (pApp pParensTm pParensTm) (pApp pParensTm pParensTm)
+  <|> pRflAnn pParensTm
   <|> pLam pVar pTm pTm
   <|> pPi pVar pTm pTm
-  <|> pParensTm
+  <|> pArrow (pApp pParensTm pParensTm) (pApp pParensTm pParensTm)
+  <|> pCommonTm

@@ -159,7 +159,7 @@ data Model d q g where
   FF    :: Model d (Par B) g
   Id    :: Model d (Par U) g -> Model d (Par q) g -> Model d (Par r) g 
         -> Model d (Par U) g
-  Rfl   :: Model d (Par q) g -> Model d (Par Id) g
+  Rfl   :: Maybe (Model d (Par q) g) -> Model d (Par Id) g
   -- Absurds make no sense in scrutinee positions so giving them a unique sort
   -- seems reasonable.
   -- Of course, this prevents us from trying to enforce equality of sorts
@@ -311,7 +311,7 @@ instance PshThin (Model d q) where
   thin s (Var i)          = Var    (thin s i)
   thin _ TT               = TT
   thin _ FF               = FF
-  thin s (Rfl t)          = Rfl    (thin s t)
+  thin s (Rfl t)          = Rfl    (fThin s t)
   thin _ Absrd            = Absrd
 
 instance Sing SNat g => Show (Val q g) where
@@ -411,7 +411,7 @@ reify (Ne t)     = reifyNe t
 reify (Lam a t)  = Lam (reify <$> a) (reifyBody t)
 reify (Pi a b)   = Pi (reify a) (reifyBody b)
 reify (Id a x y) = Id (reify a) (reify x) (reify y)
-reify (Rfl x)    = Rfl (reify x)
+reify (Rfl x)    = Rfl (reify <$> x)
 reify TT         = TT
 reify FF         = FF
 reify U          = U

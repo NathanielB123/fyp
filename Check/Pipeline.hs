@@ -22,10 +22,18 @@ runParser p s
 
 infer :: String -> TCM (VTy Z)
 infer t = do
-  t'     <- runParser pTm t
+  t'     <- runParser (pTm <* "\n") t
   Ex t'' <- Sanity.check [] t'
   a      <- Check.infer Nil (Emp, []) t''
   pure a
+
+check :: String -> String -> TCM ()
+check t a = do
+  t'     <- runParser (pTm <* "\n") t
+  a'     <- runParser (pTm <* "\n") a
+  Ex t'' <- Sanity.check [] t'
+  a''    <- Sanity.checkOfSort [] SU a'
+  Check.check Nil (Emp, []) a'' t''
 
 parseTest :: String -> TCM (Pre.Tm)
 parseTest = runParser (pTm <* "\n")

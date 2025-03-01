@@ -283,7 +283,7 @@ eval r (Id a x y) = Id a' x' y'
         x' = eval r x
         y' = eval r y
 eval r (Rfl x) = Rfl x'
-  where x' = eval r x
+  where x' = eval r <$> x
 eval r (Transp m p t) = presTM fill $ jVal (eqs r) m' p' t'
   where m' = evalBody (vals r) m
         p' = evalPres r p
@@ -340,6 +340,7 @@ infer g r (App t u) = do
 infer _ _ (SmrtIf Nothing _ _ _) = throw $ cannotInferErr "smart if"
 infer _ _ (Expl Nothing _)       = throw $ cannotInferErr "explode"
 infer _ _ (Lam Nothing _)        = throw $ cannotInferErr "lambda"
+infer _ _ (Rfl Nothing)          = throw $ cannotInferErr "reflexivity"
 infer g r (If m t u v) = do
   check g r B t
   a1 <- infer g r u
@@ -364,7 +365,7 @@ infer g r (SmrtIf (Just m) t u v) = do
   checkMaybeAbsurd g rF m v
   let m' = eval r m 
   pure m'
-infer g r (Rfl x) = do
+infer g r (Rfl (Just x)) = do
   a' <- infer g r x
   let x' = eval r x
   pure (Id a' x' x')
@@ -413,6 +414,9 @@ checkErr t a
 checkLamErr :: Show a => a -> Error
 checkLamErr a = quotes (show a) <> " is convertible to a pi-type."
 
+checkRflErr :: Show a => a -> Error
+checkRflErr a = quotes (show a) <> " is convertible to an Id-type."
+
 -- TODO: Refactor 'infer'/'check' to do proper bidir 
 -- (i.e. don't redundantly check 'a' is of type 'U' - I think the neater
 -- approach here would be for 'infer' to remove annotations, rather
@@ -423,9 +427,20 @@ check @_ @q g r a t = appendError (checkErr t a) $ case t of
     -> discard $ infer @_ @q g r (SmrtIf (Just a) t' u' v')
   Expl Nothing p       
     -> discard $ infer @_ @q g r (Expl (Just a) p)
-  Lam Nothing t' -> case a of
-    Pi a' b' -> check g r (Pi a' b') (Lam (Just a') t')
-    _        -> throw $ checkLamErr a
+  Rfl Nothing -> case a of 
+    (Id _ x _) -> check g r a (Rfl (Just x))
+    _          -> throw $ checkRflErr a
+  Lam a' t' -> case (a, a') of
+    (Pi a0 (Inc b'), Nothing) -> do
+      let a0' = eval r a0
+      checkBody g r a0' b' t'
+    (Pi a0 (Inc b'), Just a1) -> do
+      check g r U a1
+      let a0' = eval r a0
+      let a1' = eval r a1
+      chkConv a0' a1'
+      checkBody g r a0' b' t'
+    _                   -> throw $ checkLamErr a 
   _ -> do
     a' <- infer g r t
     chkConv (eval r a) a'
@@ -452,7 +467,7 @@ notProofTy = Pi B $ Inc $ Id B (Var VZ) (App not (App not (Var VZ)))
 notProof :: Model Syn (Par Pi) g
 notProof = Lam (Just B) $ Inc 
          $ If (Inc (Id B (Var VZ) (App not (App not (Var VZ))))) 
-              (Var VZ) (Rfl TT) (Rfl FF)
+              (Var VZ) (Rfl Nothing) (Rfl Nothing)
 
 -- \(b : B) -> if b then b else b
 ifId :: Model Syn (Par Pi) g
@@ -473,7 +488,7 @@ symProof :: Model Syn (Par Pi) g
 symProof = Lam (Just B) $ Inc $ Lam (Just B) $ Inc 
          $ Lam (Just $ Id B (Var $ VS VZ) (Var VZ)) $ Inc 
          $ Transp (Inc $ Id B (Var VZ) (Var (VS $ VS $ VS VZ))) (Var VZ) 
-             (Rfl (Var $ VS $ VS VZ))
+             (Rfl Nothing)
 
 -- We don't have a unit type, but we can very easily construct proofs of
 -- 'true = true'!
@@ -487,7 +502,7 @@ isTrue = Lam (Just B) $ Inc $ If (Inc U) (Var VZ) unit Bot
 -- '\p. transp (z. isTrue z) p tt'
 disj :: Model Syn (Par Pi) g
 disj = Lam (Just $ Id B TT FF) $ Inc 
-     $ Transp (Inc $ App isTrue (Var VZ)) (Var VZ) (Rfl TT)
+     $ Transp (Inc $ App isTrue (Var VZ)) (Var VZ) (Rfl Nothing)
 
 -- '\f b. if b 
 --    then (if f True then refl else (if f False then refl else refl)) 
@@ -501,8 +516,8 @@ threeNotProof
       (App (Var (VS VZ)) (Var VZ))))) 
     (Var VZ) 
     (SmrtIf Nothing (App (Var (VS VZ)) TT) 
-      (Rfl TT) 
-      (SmrtIf Nothing (App (Var (VS VZ)) FF) (Rfl FF) (Rfl FF))) 
+      (Rfl Nothing) 
+      (SmrtIf Nothing (App (Var (VS VZ)) FF) (Rfl Nothing) (Rfl Nothing))) 
     (SmrtIf Nothing (App (Var (VS VZ)) FF) 
-      (SmrtIf Nothing (App (Var (VS VZ)) TT) (Rfl TT) (Rfl TT)) 
-      (Rfl FF))
+      (SmrtIf Nothing (App (Var (VS VZ)) TT) (Rfl Nothing) (Rfl Nothing)) 
+      (Rfl Nothing))

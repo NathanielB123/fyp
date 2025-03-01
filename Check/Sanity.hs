@@ -10,6 +10,7 @@
 {-# LANGUAGE QuantifiedConstraints #-}
 {-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE TypeAbstractions #-}
+{-# LANGUAGE BlockArguments #-}
 
 -- Sanity checks (i.e. well-scopedness, no ill-typed redexes)
 module Check.Sanity where
@@ -152,5 +153,8 @@ check g (Pre.Id a x y) = do
   Ex y' <- check g y
   pure $ Ex $ Id a' x' y'
 check g (Pre.Rfl x) = do
-  Ex x' <- check g x
-  pure $ Ex $ Rfl x'
+  x' <- traverse (check g) x
+  -- TODO: Can we use a fancy combinator here?
+  case x' of
+    Nothing       -> pure $ Ex $ Rfl Nothing
+    Just (Ex x'') -> pure $ Ex $ Rfl (Just x'')

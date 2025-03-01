@@ -1,8 +1,8 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE TypeFamilies #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
-module Check.Syntax where
 
+module Check.Syntax where
 import Check.Utils
 
 type Var = String
@@ -28,7 +28,7 @@ data Tm = Var String
         | forall a. Pi (Body (S a) Tm)
         | forall a. Lam (Body (S a) (Maybe Tm)) 
         | TT | FF 
-        | Rfl Tm
+        | Rfl (Maybe Tm)
         | Absrd
 
 deriving instance Show Tm
