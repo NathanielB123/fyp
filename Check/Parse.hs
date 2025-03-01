@@ -1,18 +1,29 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE DataKinds #-}
+
+{-# OPTIONS -Wall #-}
+{-# OPTIONS -Wpartial-fields #-}
+{-# OPTIONS -Wno-unrecognised-pragmas #-}
+{-# OPTIONS -Wno-missing-papTTern-synonym-signatures #-}
+{-# LANGUAGE AllowAmbiguousTypes #-}
+{-# LANGUAGE TypeAbstractions #-}
 
 module Check.Parse where
 
-import Prelude hiding (repeat)
-import Text.Gigaparsec (($>), Parsec, (<|>))
-import Text.Gigaparsec.Char (string, spaces, satisfy)
-import Data.Char (ord)
+import Prelude hiding (repeat, last, init)
+import Text.Gigaparsec (($>), Parsec, (<|>), many, atomic)
+import Text.Gigaparsec.Char (string, spaces, letter)
 import Data.String (IsString(..))
 
 import Check.Syntax
-import Check.Utils
+import Check.Utils hiding (parens)
+import Data.List.NonEmpty (NonEmpty (..), init)
+import Text.Gigaparsec.Combinator.NonEmpty (sepBy1)
+import Data.Foldable1 (Foldable1(..))
 
 token :: String -> Parsec ()
-token s = string s *> spaces
+token s = atomic (string s) *> spaces
 
 parens :: Parsec a -> Parsec a
 parens p = "(" *> p <* ")"
@@ -20,51 +31,83 @@ parens p = "(" *> p <* ")"
 brackets :: Parsec a -> Parsec a
 brackets p = "[" *> p <* "]"
 
+braces :: Parsec a -> Parsec a
+braces p = "{" *> p <* "}"
+
 instance a ~ () => IsString (Parsec a) where
   fromString = token
 
-repeat :: Parsec a -> Parsec [a]
-repeat p = repeatSep p pass
+sepByExactly :: SNat n -> Parsec a -> Parsec () -> Parsec (Vec n a)
+sepByExactly SZ     _ _ = pure Emp
+sepByExactly (SS n) p s = flip (:<) <$> p <*> (s *> sepByExactly n p s)
 
-repeatBeginSep :: Parsec () -> Parsec a -> Parsec () -> Parsec [a]
-repeatBeginSep b p s = b *> ((:) <$> p <*> repeatBeginSep s p s) <|> pure []
-
-repeatSep :: Parsec a -> Parsec () -> Parsec [a]
-repeatSep p s = repeatBeginSep pass p s
+optional :: Parsec a -> Parsec (Maybe a)
+optional p = fmap Just p <|> pure Nothing
 
 pair :: Parsec a -> Parsec () -> Parsec b -> Parsec (a, b)
 pair p s q = (,) <$> p <*> (s *> q)
 
 -- Smart constructors
-
-pMotive :: Nat -> Parsec Var -> Parsec Tm -> Parsec Motive
-pMotive Z     _   ty = ([] :|-) <$> ty
-pMotive (S n) var ty = _
-
-pVar :: Parsec Var
-pVar = (pure <$> satisfy (\c -> ord 'a' <= ord c && ord c <= ord 'z')) <* spaces
-
-pVars :: Parsec Var -> Parsec [Var]
-pVars var = repeatSep var "," <* "."
-
-pAnnVars :: Parsec Var -> Parsec Tm -> Parsec [(Var, Tm)]
+bindGen :: (Parsec (Var, a) -> Parsec () -> Parsec r) -> Parsec Var -> Parsec a 
+      -> Parsec r
 -- Note there is some danger of ambiguity with pairs here. I think we can
 -- resolve this by ensuring the parser for types doesn't accept outermost
 -- ","s (because "," is not a type former, after all...)
-pAnnVars var ty = repeatSep (pair var ":" ty) "," <* "."
+bindGen repSep v a = repSep ((,) <$> v <*> a) "," <* "."
+
+pBody :: Sing SNat a => Parsec Var -> Parsec t -> Parsec Tm -> Parsec (Body a t)
+pBody v a b = (:|-) <$> bindGen (sepByExactly fill) v a <*> b
+
+bindSome :: Parsec Var -> Parsec t -> Parsec (NonEmpty (Var, t))
+bindSome = bindGen (\b s -> fmap (uncurry (,)) <$> sepBy1 b s)
+
+pVar :: Parsec Var
+pVar = (pure <$> letter) <* spaces
 
 pApp :: Parsec Tm -> Parsec Tm -> Parsec Tm
-pApp lhs rhs = buildApps <$> lhs <*> repeat rhs
-  where buildApps = foldl App
+pApp l r = buildApps <$> l <*> many r
+  where buildApps = foldl' App
+
+lamSym :: Parsec ()
+lamSym = "λ" <|> "\\"
 
 pLam :: Parsec Var -> Parsec Tm -> Parsec Tm -> Parsec Tm 
-pLam var ty body = token "\\" *> (buildLams <$> pAnnVars var ty <*> body)
-  where buildLams xs t = foldr (uncurry Lam) t xs
+pLam v a t 
+  =   "\\" *> (asNonEmpVec (\bs -> Lam . (bs :|-)) 
+  <$> bindSome v (optional $ ":" *> a) <*> t)
 
--- pIf :: Parsec Tm -> Parsec Tm -> Parsec Tm -> Parsec Tm 
---     -> Parsec Tm
--- pIf m t u v = _
---   where buildIf
+piSym :: Parsec ()
+piSym = "Π" <|> "forall"
+
+pPi :: Parsec Var -> Parsec Tm -> Parsec Tm -> Parsec Tm
+pPi v a b
+  =   piSym *> (asNonEmpVec (\bs -> Pi . (bs :|-)) 
+  <$> bindSome v (":" *> a) <*> b)
+
+arrow :: Tm -> Tm -> Tm
+arrow a b = Pi (Single ("_", a) :|- b)
+
+pArrow :: Parsec Tm -> Parsec Tm -> Parsec Tm
+pArrow l r = buildArrows <$> l <*> many (("→" <|> "->") *> r)
+  where buildArrows a bs = foldr arrow (last as) (init as)
+          where as = a :| bs
+
+pIf :: Parsec (Motive (S Z)) -> Parsec Tm -> Parsec Tm -> Parsec Tm 
+    -> Parsec Tm
+pIf m t u v = "if" *> (If <$> m <*> t <*> ("then" *> u) <*> ("else" *> v))
+
+pSmrtIf :: Parsec (Motive Z) -> Parsec Tm -> Parsec Tm -> Parsec Tm -> Parsec Tm
+pSmrtIf m t u v 
+  = "sif" *> (SmrtIf <$> m <*> t <*> ("then" *> u) <*> ("else" *> v))
+
+pExpl :: Parsec (Motive Z) -> Parsec Tm -> Parsec Tm
+pExpl m p = "!" *> (Expl <$> m <*> p)
+
+pU :: Parsec Tm
+pU = "U" $> U
+
+pB :: Parsec Tm
+pB = "B" $> B
 
 pTT :: Parsec Tm
 pTT = "True" $> TT
@@ -72,40 +115,43 @@ pTT = "True" $> TT
 pFF :: Parsec Tm
 pFF = "False" $> FF
 
+pId :: Parsec Tm -> Parsec Tm -> Parsec Tm -> Parsec Tm
+pId a x y = "Id" *> (Id <$> a <*> x <*> y)
 
--- var :: Parsec String
--- var = (pure <$> satisfy (\c -> ord 'a' <= ord c && ord c <= ord 'z')) <* spaces
+pRfl :: Parsec Tm -> Parsec Tm
+pRfl x = "Rfl" *> (Rfl <$> x)
 
--- parseVars :: Parsec [String]
--- parseVars
---  =   (token "." $> [])
---  <|> ((:) <$> var <*> parseVars)
+pBot :: Parsec Tm
+pBot = ("𝟘" <|> "Empty") $> Bot
 
+-- TODO: I don't like this syntax
+pAbsrd :: Parsec Tm
+pAbsrd = "!!!" $> Absrd
 
--- buildLams :: [v] -> Tm v -> Tm v
--- buildLams xs t = foldr Lam t xs
+pTransp :: Parsec (Motive (S Z)) -> Parsec Tm -> Parsec Tm -> Parsec Tm
+pTransp m p t = "transp" *> (Transp <$> m <*> p <*> t)
 
--- buildApps :: Tm v -> [Tm v] -> Tm v
--- buildApps = foldl App
+pMotive :: Sing SNat a => Parsec (Motive a)
+pMotive @a
+  | SZ   <- fill @_ @a = optional $ braces pTm
+  | SS _ <- fill @_ @a = braces $ pBody pVar pass pTm
 
--- parens :: Parsec a -> Parsec a
--- parens p = token "(" *> p <* token ")"
+pParensTm :: Parsec Tm
+pParensTm 
+  =   parens pTm
+  <|> pU <|> pB <|> pBot
+  <|> pTT <|> pFF
+  <|> (Var <$> pVar)
 
--- repeat :: Parsec a -> Parsec [a]
--- repeat p = ((:) <$> p <*> repeat p) <|> pure []
-
--- lhs :: Parsec (Tm String)
--- lhs =   parens parseTm
---     <|> (token "\\" *> (buildLams <$> parseVars <*> parseTm))
---     <|> (Var <$> var)
-
--- parseTm :: Parsec (Tm String)
--- parseTm = buildApps <$> lhs <*> repeat lhs
-
-
--- parseTm :: Parsec Tm
--- parseTm = _ <|> _
---   where pTT :: Parsec Tm
---         pTT = token "TT" $> TT
---         pFF = token "FF" $> FF
-
+pTm :: Parsec Tm
+pTm = 
+  pSmrtIf pMotive pParensTm pParensTm pParensTm
+  <|> pExpl pMotive pParensTm
+  <|> pIf pMotive pParensTm pParensTm pParensTm
+  <|> pTransp pMotive pParensTm pParensTm
+  <|> pId pParensTm pParensTm pParensTm
+  <|> pRfl pParensTm
+  <|> pArrow (pApp pParensTm pParensTm) (pApp pParensTm pParensTm)
+  <|> pLam pVar pTm pTm
+  <|> pPi pVar pTm pTm
+  <|> pParensTm

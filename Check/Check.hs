@@ -38,15 +38,7 @@ import Check.Common
 type Vals d g = Vec g (UnkVal d)
 type Vars d g = Vec g (Var d)
 
-vLen :: Vec g a -> SNat g
-vLen Emp      = SZ
-vLen (r :< _) = SS (vLen r)
-
-data Tele c g where 
-  Nil  :: Tele c Z
-  (:.) :: Tele c g -> c g -> Tele c (S g)
-
-type Ctx = Tele VTy
+type Ctx = Tele VTy Z
 
 type Env d g = (Vals d g, EqMap d)
 
@@ -85,20 +77,6 @@ presElim FromPar t      = t
 -- Trust me bro
 coeTM :: Model d q1 g -> Model d q2 g
 coeTM = unsafeCoerce
-
-vLookup :: Var g -> Vec g a -> a
-vLookup VZ     (_ :< t) = t
-vLookup (VS i) (r :< _) = vLookup i r
-
-tLookup :: (Sing SNat g, PshThin c) => Var g -> Tele c g -> c g
-tLookup @g VZ (_ :. a)
-  | SS n <- fill @SNat @g
-  , Ev   <- recoverNat n
-  = thin wkTh a
-tLookup @g (VS i) (g :. _) 
-  | SS n <- fill @SNat @g 
-  , Ev   <- recoverNat n
-  = thin wkTh (tLookup i g)
 
 envLookup :: Var g -> Env d g -> UnkVal d
 envLookup i = vLookup i . vals
@@ -173,10 +151,6 @@ complStep (vs, es) = do
 
 complete :: Sing SNat g => Env g g -> Maybe (Env g g)
 complete r = iterMaybeFix complStep r
-
--- evalEnv :: Sing SNat d => Env d g -> EqMap d -> Env g t -> Env d t
--- evalEnv _ _  Emp       = Emp
--- evalEnv r es (ts :< t) = evalEnv r es ts :< eval r es t
 
 evalVals :: Sing SNat t => Env t d -> Vals d g -> Vals t g
 evalVals r (ts :< Ex t) = evalVals r ts :< Ex (eval r t)
@@ -415,14 +389,14 @@ infer g r (Expl (Just m) p) = do
   check g r Bot p
   check g r U m
   pure (eval r m)
-infer g _ (Var i)   = pure $ tLookup i g
-infer _ _ TT        = pure B
-infer _ _ FF        = pure B
-infer _ _ B         = pure U
-infer _ _ Bot       = pure U
+infer g _ (Var i) = pure $ tLookupZ i g
+infer _ _ TT      = pure B
+infer _ _ FF      = pure B
+infer _ _ B       = pure U
+infer _ _ Bot     = pure U
 -- Type in type!
-infer _ _ U         = pure U
-infer _ _ Absrd     = throw "Absurd encountered in non-inconsistent context!"
+infer _ _ U       = pure U
+infer _ _ Absrd   = throw "Absurd encountered in non-inconsistent context!"
 
 checkMaybeAbsurd :: Sing SNat g 
                  => Ctx g -> Maybe (Env g g) -> Ty g -> Tm q g -> TCM ()

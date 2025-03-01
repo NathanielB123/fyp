@@ -7,16 +7,21 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE ImpredicativeTypes #-}
 {-# LANGUAGE MultiWayIf #-}
+{-# LANGUAGE QuantifiedConstraints #-}
+{-# LANGUAGE ExplicitNamespaces #-}
+{-# LANGUAGE TypeAbstractions #-}
 
 -- Sanity checks (i.e. well-scopedness, no ill-typed redexes)
 module Check.Sanity where
+
+import Prelude hiding (unzip)
+import Data.Bifunctor (Bifunctor(..))
+import Data.Data ((:~:) (..))
 
 import Check.Utils
 import qualified Check.Syntax as Pre
 import Check.Model
 import Check.Common
-import Data.Bifunctor (Bifunctor(..))
-import Data.Data ((:~:) (..))
 
 type Ctx g = [(Pre.Var, Var g)]
 
@@ -32,7 +37,7 @@ coeSort q t
   | Left  t'  <- sortOf t = pure t'
   | Right r   <- sortOf t = if
     | Just Refl <- q ~? r -> pure t
-    | Nothing   <- q ~? r -> throw $ wrongSortErr t q r
+    | Nothing   <- q ~? r -> throw $ wrongSortErr t r q
 
 sortOf :: Tm q g -> Either (forall r. Tm r g) (SParSort q)
 sortOf (El Rdx m t) = Left $ El Rdx m t
@@ -66,13 +71,38 @@ checkOfSort g q t = do
   Ex t' <- check g t
   coeSort q t'
 
-checkBodyOfSort :: Ctx g -> SParSort q -> Pre.Body a -> TCM (Tm q (a + g))
-checkBodyOfSort g q t = do
-  Ex t' <- checkBody g t
-  coeSort q t'
+checkTele :: (forall x. Ctx x -> t -> TCM (r x)) -> Ctx g -> Vec d (Pre.Var, t) 
+          -> TCM (Ctx (d + g), Tele r g d)
+checkTele _ g Emp            = pure (g, Nil)
+checkTele f g (bs :< (i, a)) = do
+  (g', as') <- checkTele f g bs
+  a'        <- f g' a
+  pure (bind i g', as' :+ a')
 
-checkBody :: Ctx g -> Pre.Body a -> TCM (UnkTm (a + g))
-checkBody g (vs Pre.:|- t) = check (bindMany vs g) t
+checkBody :: (forall x. Ctx x -> t -> TCM (r x)) -> Ctx g 
+          -> Pre.Body d t -> TCM (Tele r g d, UnkTm (d + g))
+checkBody f g (bs Pre.:|- t) = do
+  (g', bs') <- checkTele f g bs
+  t'        <- check g' t
+  pure (bs', t')
+
+checkBodyOfSort :: (forall x. Ctx x -> t -> TCM (r x)) -> Ctx g -> SParSort q
+                -> Pre.Body d t -> TCM (Tele r g d, Tm q (d + g))
+checkBodyOfSort f g q b = do
+  (bs', Ex t') <- checkBody f g b
+  (bs',) <$> coeSort q t'
+
+checkNoAnnBodyOfSort :: Ctx g -> SParSort q -> Pre.Body d () 
+                     -> TCM (Tm q (d + g))
+checkNoAnnBodyOfSort g q b = snd <$> checkBodyOfSort (\_ _ -> passI) g q b
+
+buildLams :: Tele (Compose Maybe (Tm U)) g a -> Tm q (a + g) -> UnkTm g
+buildLams Nil            t' = Ex t'
+buildLams (as :+ Comp a) t' = buildLams as (Lam a (Inc t'))
+
+buildPis :: Tele (Tm U) g a -> Tm U (a + g) -> Tm U g
+buildPis Nil       b' = b'
+buildPis (as :+ a) b' = buildPis as (Pi a (Inc b'))
 
 check :: Ctx g -> Pre.Tm -> TCM (UnkTm g)
 check g (Pre.Var i)
@@ -82,18 +112,15 @@ check g (Pre.App t u) = do
   t'    <- checkOfSort g SPi t
   Ex u' <- check g u
   pure $ Ex $ App t' u'
-check g (Pre.Lam i a t) = do
-  let g' = bind i g
-  a'    <- traverse (checkOfSort g SU) a
-  Ex t' <- check g' t
-  pure $ Ex $ Lam a' (Inc t')
-check g (Pre.Pi i a b) = do
-  let g' = bind i g
-  a' <- checkOfSort g SU a
-  b' <- checkOfSort g' SU b
-  pure $ Ex $ Pi a' (Inc b')
+check g (Pre.Lam t) = do
+  (as', Ex t') 
+    <- checkBody (\g' -> fmap Comp . traverse (checkOfSort g' SU)) g t
+  pure $ buildLams as' t'
+check g (Pre.Pi b) = do
+  (as', b') <- checkBodyOfSort (\g' -> checkOfSort g' SU) g SU b
+  pure $ Ex $ buildPis as' b'
 check g (Pre.If m t u v) = do
-  m'    <- checkBodyOfSort g SU m
+  m'    <- checkNoAnnBodyOfSort g SU m
   t'    <- checkOfSort g SB t
   Ex u' <- check g u
   Ex v' <- check g v
@@ -109,8 +136,8 @@ check g (Pre.Expl m p) = do
   p' <- checkOfSort g SBot p
   pure $ Ex $ Expl m' p'
 check g (Pre.Transp m p t) = do
-  m' <- checkBodyOfSort g SU m
-  p' <- checkOfSort g SId p
+  m'    <- checkNoAnnBodyOfSort g SU m
+  p'    <- checkOfSort g SId p
   Ex t' <- check g t
   pure $ Ex $ Transp (Inc m') p' t'
 check _ Pre.TT    = pure $ Ex TT
@@ -127,4 +154,3 @@ check g (Pre.Id a x y) = do
 check g (Pre.Rfl x) = do
   Ex x' <- check g x
   pure $ Ex $ Rfl x'
-

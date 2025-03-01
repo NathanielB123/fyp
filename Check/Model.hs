@@ -91,10 +91,10 @@ instance Show (SParSort q) where
   show SId    = "="
   show SAbsrd = "Absurd"
 
-data Var n where
-  VZ :: Var (S n)
-  VS :: Var n -> Var (S n)
-deriving instance Eq (Var n)
+type Var = Fin
+pattern VZ = FZ
+pattern VS i = FS i
+{-# COMPLETE VZ, VS #-}
 
 type data ParSort = B | U | Pi | Id | Bot | V |   Absrd
 
@@ -180,17 +180,9 @@ data (<=) q r where
 
 deriving instance Show (SSort q)
 
-varToInt :: Var g -> Int
-varToInt VZ     = 0
-varToInt (VS i) = varToInt i + 1
-
-instance Show (Var g) where
-  show i = show $ varToInt i
-
 deriving instance Show (ElimSort d q r s)
 instance Show (Body Syn q g) where
   show (Inc t) = show t
-
 
 instance Show (Model Syn q g) where
   show (Lam _ t)        = "λ " <> show t
@@ -213,17 +205,6 @@ instance Show (Model Syn q g) where
   show (Id _ x y)       = parens (show x) <> " = " <> parens (show y)
   show (Rfl _)          = "Refl"
   show Absrd            = "!"
-
-
-recoverNat :: SNat n -> Dict (Sing SNat n)
-recoverNat SZ     = Ev
-recoverNat (SS n)
-  | Ev <- recoverNat n
-  = Ev
-
-addNat :: SNat n -> SNat m -> SNat (n + m)
-addNat SZ     m = m
-addNat (SS n) m = SS $ addNat n m
 
 recoverSub :: q <= r -> Dict (Sing (<=) '(q, r))
 recoverSub FromNeu = Ev
@@ -332,12 +313,6 @@ instance PshThin (Model d q) where
   thin _ FF               = FF
   thin s (Rfl t)          = Rfl    (thin s t)
   thin _ Absrd            = Absrd
-
-instance PshThin Var where
-  thin (Keep _) VZ     = VZ
-  thin (Drop s) i      = VS (thin s i)
-  thin (Keep s) (VS i) = VS (thin s i)
-  thin Eps      i      = case i of
 
 instance Sing SNat g => Show (Val q g) where
   show = show . reify
