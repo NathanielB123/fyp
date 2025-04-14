@@ -70,22 +70,33 @@ anyM f = fmap isJust . findM f
 data Tm = Var Int | App Tm Tm
   deriving (Eq, Show)
 
-spLen :: Tm -> Int
-spLen (Var _)   = 0
-spLen (App _ t) = 1 + spLen t
+-- We arbitrarily attribute sizes to the different constructors of 'Tm'
+-- in order to construct an ordering
+headSize :: Tm -> Int
+headSize (Var _)   = 0
+headSize (App _ _) = 1
+
+-- We also define a way to compute approximate term sizes recursively
+-- by counting variables
+approxSize :: Tm -> Int
+approxSize (Var _)   = 1
+approxSize (App t u) = approxSize t + approxSize u
 
 instance Ord Tm where
+  -- We use a Knuth Bendix Ordering with 'approxSize' as our simplification
+  -- order.
+  -- i.e. We start by comparing w.r.t. simplification order (which must obey
+  -- congruence), then we compare head symbols (i.e. particular 'Tm' formation
+  -- rule) and then finally we proceed lexicographically
   compare :: Tm -> Tm -> Ordering
-  compare t u = case compare (spLen t) (spLen u) of
-    LT -> LT
-    GT -> GT
-    EQ -> case (t, u) of
-      (Var i, Var j) -> compare i j
-      (App t1 t2, App u1 u2) -> case compare t1 u1 of
-        LT -> LT
-        GT -> GT
-        EQ -> compare t2 u2
-      _ -> error "Impossible"
+  compare t u 
+    = case compare (approxSize t, headSize t) (approxSize u, headSize u) of
+      LT -> LT
+      GT -> GT
+      EQ -> case (t, u) of
+        (Var i, Var j) -> compare i j
+        (App t1 t2, App u1 u2) -> compare (t1, t2) (u1, u2)
+        _ -> error "Impossible"
 
 data TmEq = Tm := Tm
   deriving (Show)
