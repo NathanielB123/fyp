@@ -123,39 +123,39 @@ inr p       [ δ ]→ = inr (p [ δ ]→)
 [_]→⁻¹_ {u = true}  δ (rw ¬b _) = true  Σ, rw ([ δ ]¬b⁻¹ ¬b) true  Σ, refl
 [_]→⁻¹_ {u = false} δ (rw ¬b _) = false Σ, rw ([ δ ]¬b⁻¹ ¬b) false Σ, refl
 
-record SN Γ A (t : Tm Γ A) : Set where
+record SN→ Γ A (t : Tm Γ A) : Set where
   constructor acc
   inductive
   pattern
   field
-    sn : t [ q→ ]→ u → SN Γ A u 
-open SN public
+    step : t [ q→ ]→ u → SN→ Γ A u 
+open SN→ public
 
-SN-l· : SN Γ B (t · u) → SN Γ (A ⇒ B) t
-SN-l· (acc f) = acc (λ p → SN-l· (f (l· p)))
+SN→l· : SN→ Γ B (t · u) → SN→ Γ (A ⇒ B) t
+SN→l· (acc f) = acc (λ p → SN→l· (f (l· p)))
 
-SN-·r : SN Γ B (t · u) → SN Γ A u
-SN-·r (acc f) = acc (λ p → SN-·r (f (·r p)))
+SN→·r : SN→ Γ B (t · u) → SN→ Γ A u
+SN→·r (acc f) = acc (λ p → SN→·r (f (·r p)))
 
-SN-𝔹-rec₁ : SN Γ A (𝔹-rec t u v) → SN Γ 𝔹' t
-SN-𝔹-rec₁ (acc f) = acc (λ p → SN-𝔹-rec₁ (f (𝔹-rec₁ p)))
+SN→𝔹-rec₁ : SN→ Γ A (𝔹-rec t u v) → SN→ Γ 𝔹' t
+SN→𝔹-rec₁ (acc f) = acc (λ p → SN→𝔹-rec₁ (f (𝔹-rec₁ p)))
 
-SN-𝔹-rec₂ : SN Γ A (𝔹-rec t u v) → SN Γ A u
-SN-𝔹-rec₂ (acc f) = acc (λ p → SN-𝔹-rec₂ (f (𝔹-rec₂ p)))
+SN→𝔹-rec₂ : SN→ Γ A (𝔹-rec t u v) → SN→ Γ A u
+SN→𝔹-rec₂ (acc f) = acc (λ p → SN→𝔹-rec₂ (f (𝔹-rec₂ p)))
 
-SN-𝔹-rec₃ : SN Γ A (𝔹-rec t u v) → SN Γ A v
-SN-𝔹-rec₃ (acc f) = acc (λ p → SN-𝔹-rec₃ (f (𝔹-rec₃ p)))
+SN→𝔹-rec₃ : SN→ Γ A (𝔹-rec t u v) → SN→ Γ A v
+SN→𝔹-rec₃ (acc f) = acc (λ p → SN→𝔹-rec₃ (f (𝔹-rec₃ p)))
 
-true-sn : SN Γ 𝔹' true
+true-sn : SN→ Γ 𝔹' true
 true-sn = acc (λ where (rw ¬b _) → ⊥-elim (¬b true))
 
-false-sn : SN Γ 𝔹' false
+false-sn : SN→ Γ 𝔹' false
 false-sn = acc (λ where (rw ¬b _) → ⊥-elim (¬b false))
 
-_[_]sn : SN Γ A t → ∀ (δ : Vars Δ Γ) → SN Δ A (t [ δ ])
+_[_]sn : SN→ Γ A t → ∀ (δ : Vars Δ Γ) → SN→ Δ A (t [ δ ])
 acc a [ δ ]sn = acc (λ p → let u⁻¹ Σ, q Σ, r = [ δ ]→⁻¹ p 
-                            in subst (SN _ _) r (a q [ δ ]sn))
+                            in subst (SN→ _ _) r (a q [ δ ]sn))
 
-[_]sn⁻¹_ : (δ : Vars Δ Γ) → SN Δ A (t [ δ ]) → SN Γ A t
+[_]sn⁻¹_ : (δ : Vars Δ Γ) → SN→ Δ A (t [ δ ]) → SN→ Γ A t
 [ δ ]sn⁻¹ acc a = acc (λ p → [ δ ]sn⁻¹ a (p [ δ ]→))
   

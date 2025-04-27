@@ -11,6 +11,23 @@ open import STLC.SubstEq2
 open import STLC.BoolRw.Views
 open import STLC.BoolRw.SpontRed
 
+
+-- This approach fundamentally cannot extend to rewrites to 'inl true'
+-- Consider the substitution [ inl y / x ]
+-- If we put this in '-Sub', then we have to prove that 
+-- 't →* t [ inl y / x ]', which is not true unless we allow general
+-- constructor-headed rewrites (i.e. 'x →* inl y')
+-- If we put this in '+Sub', then we have to prove
+-- 't →1 u → t [ inl y / x ] →1 u [ inl y / x ]' which is even worse
+-- e.g. 'x →1 inr true → inl y →1 inr true'
+
+-- I think tweaking '-Sub' is our best chance to fix this. We can prove
+-- something like 't [ inl y / x ] →* u → stk u → t →* u' as long as there
+-- are no higher-order types involved. If there are though (i.e. we have
+-- a coproduct of functions) then I think we are completely stuck.
+
+-- In conclusion, let's stick with boolean rewrites. I think to do much
+-- better we ought to look into weak head reduction.
 module STLC.BoolRw.Lemmas where
 
 rw* : ¬ t/f {A = A} t → t/f {A = A} u → t [ rw ]→ u
@@ -134,4 +151,3 @@ rec-false   [ δ+ ]→+ = rec-false
 (+-rec₃ p)  [ δ+ ]→+ = +-rec₃ (p [ δ+ ^+ _ ]→+)
 (inl p)     [ δ+ ]→+ = inl (p [ δ+ ]→+)
 (inr p)     [ δ+ ]→+ = inr (p [ δ+ ]→+)
-  

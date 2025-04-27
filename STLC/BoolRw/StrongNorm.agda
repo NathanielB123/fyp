@@ -17,7 +17,7 @@ open import STLC.BoolRw.Lemmas
 -- Based on https://github.com/AndrasKovacs/misc-stuff/blob/master/agda/STLCStrongNorm/StrongNorm.agda
 module STLC.BoolRw.StrongNorm where
 
-t/f-sn : t/f t → SN Γ A t
+t/f-sn : t/f t → SN→ Γ A t
 t/f-sn {t = true}  _ = true-sn
 t/f-sn {t = false} _ = false-sn
 
@@ -40,20 +40,20 @@ _[_]¬lam {t = inl t}       ¬ƛ δ = _[_]¬lam {t = t} ¬ƛ δ
 _[_]¬lam {t = inr t}       ¬ƛ δ = _[_]¬lam {t = t} ¬ƛ δ
 _[_]¬lam {t = +-rec _ _ _} tt δ = tt
 
-reify   : Val Γ A t → SN Γ A t
+reify   : Val Γ A t → SN→ Γ A t
 reflect : ¬lam t → ValAcc Γ A t → Val Γ A t
 eval    : ∀ (t : Tm Γ A) (ρ : Env Δ Γ δ) → Val Δ A (t [ δ ])
 
--- The 'SN's are only necessary here to show termination
+-- The 'SN→'s are only necessary here to show termination
 eval-lam : (∀ {u} → Val Γ A u → Val Γ B (t [ < u > ])) 
-          → SN (Γ , A) B t → Val (Γ , A) B t → SN Γ A u → Val Γ A u 
+          → SN→ (Γ , A) B t → Val (Γ , A) B t → SN→ Γ A u → Val Γ A u 
           → Val Γ B ((ƛ t) · u)
 eval-lam→ : (∀ {u} → Val Γ A u → Val Γ B (t [ < u > ])) 
-          → SN (Γ , A) B t → Val (Γ , A) B t → SN Γ A u → Val Γ A u 
+          → SN→ (Γ , A) B t → Val (Γ , A) B t → SN→ Γ A u → Val Γ A u 
           → ValAcc Γ B ((ƛ t) · u)
 
-SN-str : SN (Γ , A) B (t [ wk ]) → SN Γ B t
-SN-str (acc tˢⁿ) = acc λ p → SN-str (tˢⁿ (p [ wk ]→))
+SN→str : SN→ (Γ , A) B (t [ wk ]) → SN→ Γ B t
+SN→str (acc tˢⁿ) = acc λ p → SN→str (tˢⁿ (p [ wk ]→))
 
 -- Strengthening of computability predicates
 Val-str : Val (Γ , A) B (t [ wk ]) → Val Γ B t
@@ -61,7 +61,7 @@ Val-str : Val (Γ , A) B (t [ wk ]) → Val Γ B t
 +Val-str∣ : (i : Dec∥ inl/inr (t [ wk ]) ∥) → +Val∣ (Γ , A) B C (t [ wk ]) i
           → +Val∣ Γ B C t (map-Dec∥∥ [ wk ]i⁻¹_ _[ wk ]i i)
 
-Val-str {B = 𝔹'}     tⱽ          = SN-str tⱽ
+Val-str {B = 𝔹'}     tⱽ          = SN→str tⱽ
 Val-str {B = B +' C} {t = t} tⱽ  = +Val-str∣ (inl/inr? (t [ wk ])) tⱽ  
 Val-str {B = B ⇒  C} tⱽ δ uⱽ uˢⁿ 
   = Val-str (tⱽ (δ ^ _) (_ ∋ uⱽ [ wk ]V) (uˢⁿ [ wk ]sn))
@@ -81,13 +81,13 @@ eval-lam→ tuⱽ tˢⁿ tⱽ uˢⁿ uⱽ (rw ¬b b)     = t/f-sn b
 eval-lam→ tuⱽ (acc tˢⁿ) tⱽ uˢⁿ uⱽ (l· (ƛ_ {t₂ = t₂} p)) 
   = eval-lam (λ {u = u′} uⱽ′ → case t/f? u′ of λ where 
                 (yes b) → Val-str (Val→* (boolsub→ t₂ < b >-) (Val→ p tⱽ))
-                (no ¬b) → Val→ (p [ < ¬b >+ ]→+) (tuⱽ uⱽ′)) 
+                (no ¬b) → Val→ (p [ < ¬b >+ ]→+) (tuⱽ uⱽ′))
              (tˢⁿ p) (Val→ p tⱽ) uˢⁿ uⱽ
 eval-lam→ tuⱽ tˢⁿ tⱽ (acc uˢⁿ) uⱽ (·r p) 
   = eval-lam tuⱽ tˢⁿ tⱽ (uˢⁿ p) (Val→ p uⱽ)
 
 reflect-app : (t · u) [ q→ ]→ v → ¬lam t → ValAcc _ (A ⇒ B) t 
-            → SN Γ A u → Val _ _ u → Val _ B v
+            → SN→ Γ A u → Val _ _ u → Val _ B v
 
 reflect {A = 𝔹'}             n tⱽ = acc tⱽ          
 reflect {A = A +' B} {t = t} n tⱽ with t | inl/inr? t 
@@ -109,32 +109,32 @@ reflect-app (·r p)         n  tⱽ (acc a) uⱽ
 vz-val : Val (Γ , A) A (` vz)
 vz-val = reflect tt λ where (rw ¬b b) → t/f-sn b
 
-vz-sn  : SN (Γ , A) A (` vz)
+vz-sn  : SN→ (Γ , A) A (` vz)
 vz-sn = acc λ where (rw ¬b b) → t/f-sn b
 
-SN-inl : SN Γ A t → SN Γ (A +' B) (inl t)
-SN-inl (acc tˢⁿ) = acc λ where (inl p) → SN-inl (tˢⁿ p)
+SN→inl : SN→ Γ A t → SN→ Γ (A +' B) (inl t)
+SN→inl (acc tˢⁿ) = acc λ where (inl p) → SN→inl (tˢⁿ p)
 
-SN-inr : SN Γ B t → SN Γ (A +' B) (inr t)
-SN-inr (acc tˢⁿ) = acc λ where (inr p) → SN-inr (tˢⁿ p)
+SN→inr : SN→ Γ B t → SN→ Γ (A +' B) (inr t)
+SN→inr (acc tˢⁿ) = acc λ where (inr p) → SN→inr (tˢⁿ p)
 
-+reify∣ : (i : Dec∥ inl/inr t ∥) → +Val∣ Γ A B t i → SN Γ (A +' B) t
++reify∣ : (i : Dec∥ inl/inr t ∥) → +Val∣ Γ A B t i → SN→ Γ (A +' B) t
 +reify∣             (no  _) (acc tⱽ) = acc λ q → reify (tⱽ q)
-+reify∣ {t = inl _} (yes _) tⱽ       = SN-inl (reify tⱽ)
-+reify∣ {t = inr _} (yes _) tⱽ       = SN-inr (reify tⱽ)
++reify∣ {t = inl _} (yes _) tⱽ       = SN→inl (reify tⱽ)
++reify∣ {t = inr _} (yes _) tⱽ       = SN→inr (reify tⱽ)
 
 reify {A = 𝔹'}     tⱽ = tⱽ
 reify {A = A +' B} tⱽ = +reify∣ (inl/inr? _) tⱽ 
 reify {A = A ⇒ B}  tⱽ 
-  = [ wk ]sn⁻¹ (SN-l· (reify (tⱽ wk vz-val vz-sn)))
+  = [ wk ]sn⁻¹ (SN→l· (reify (tⱽ wk vz-val vz-sn)))
 
 lookup : ∀ (i : Var Γ A) (ρ : Env Δ Γ δ) → Val Δ A (i [ δ ])
 lookup vz     (ρ , u) = u
 lookup (vs i) (ρ , u) = lookup i ρ
 
-eval-𝔹-rec : Val Γ 𝔹' t → SN Γ A u → Val Γ A u → SN Γ A v → Val Γ A v 
+eval-𝔹-rec : Val Γ 𝔹' t → SN→ Γ A u → Val Γ A u → SN→ Γ A v → Val Γ A v 
            → Val Γ A (𝔹-rec t u v)
-eval-𝔹-rec→ : Val Γ 𝔹' t → SN Γ A u₁ → Val Γ A u₁ → SN Γ A u₂ → Val Γ A u₂ 
+eval-𝔹-rec→ : Val Γ 𝔹' t → SN→ Γ A u₁ → Val Γ A u₁ → SN→ Γ A u₂ → Val Γ A u₂ 
             → 𝔹-rec t u₁ u₂ [ q→ ]→ v → Val Γ A v 
 
 eval-𝔹-rec tⱽ uˢⁿ uⱽ vˢⁿ vⱽ = reflect tt (eval-𝔹-rec→ tⱽ uˢⁿ uⱽ vˢⁿ vⱽ)
@@ -149,13 +149,13 @@ eval-𝔹-rec→ tⱽ (acc uˢⁿ) uⱽ vˢⁿ vⱽ (𝔹-rec₂ p)
 eval-𝔹-rec→ tⱽ uˢⁿ uⱽ (acc vˢⁿ) vⱽ (𝔹-rec₃ p) 
   = eval-𝔹-rec tⱽ uˢⁿ uⱽ (vˢⁿ p) (Val→ p vⱽ)
 
-eval-+-rec : Val Γ (A +' B) t → SN Γ (A +' B) t
-           → Val (Γ , A) C u → SN (Γ , A) C u 
-           → Val (Γ , B) C v → SN (Γ , B) C v
+eval-+-rec : Val Γ (A +' B) t → SN→ Γ (A +' B) t
+           → Val (Γ , A) C u → SN→ (Γ , A) C u 
+           → Val (Γ , B) C v → SN→ (Γ , B) C v
            → Val Γ C (+-rec t u v)
-eval-+-rec→ : Val Γ (A +' B) t → SN Γ (A +' B) t
-            → Val (Γ , A) C u₁ → SN (Γ , A) C u₁ 
-            → Val (Γ , B) C u₂ → SN (Γ , B) C u₂
+eval-+-rec→ : Val Γ (A +' B) t → SN→ Γ (A +' B) t
+            → Val (Γ , A) C u₁ → SN→ (Γ , A) C u₁ 
+            → Val (Γ , B) C u₂ → SN→ (Γ , B) C u₂
             → +-rec t u₁ u₂ [ q→ ]→ v → Val Γ C v
 
 eval-+-rec tⱽ tˢⁿ uⱽ uˢⁿ vⱽ vˢⁿ = reflect tt (eval-+-rec→ tⱽ tˢⁿ uⱽ uˢⁿ vⱽ vˢⁿ)
@@ -194,6 +194,6 @@ eval (inr t) ρ = eval t ρ
 idᴱ {Γ = ε}     = ε
 idᴱ {Γ = Γ , A} = idᴱ {Γ = Γ} [ id ⁺ A ]E , vz-val
    
-strong-norm : ∀ t → SN Γ A t
+strong-norm : ∀ t → SN→ Γ A t
 strong-norm t = reify (eval t idᴱ)
         

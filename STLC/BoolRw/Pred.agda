@@ -17,7 +17,7 @@ open import STLC.BoolRw.SpontRed
 module STLC.BoolRw.Pred where
 
 𝔹Val : ∀ Γ → Tm Γ 𝔹' → Set
-𝔹Val Γ t = SN Γ 𝔹' t
+𝔹Val Γ t = SN→ Γ 𝔹' t
 
 +ValRec : ∀ Γ A B (ValA : Tm Γ A → Set) (ValB : Tm Γ B → Set)
             (t : Tm Γ (A +' B)) → Dec∥ inl/inr t ∥ → Set
@@ -51,10 +51,10 @@ Val : ∀ Γ A → Tm Γ A → Set
 
 Val Γ 𝔹' t       = 𝔹Val Γ t
 Val Γ (A +' B) t = +Val Γ A B t
--- Putting 'SN' along with 'Val' on the left of the arrow here is non-standard,
+-- Putting 'SN→' along with 'Val' on the left of the arrow here is non-standard,
 -- but seems to be necessary to ensure termination
 Val Γ (A ⇒ B) t 
-  = ∀ {Δ} (δ : Vars Δ Γ) {u} → Val Δ A u → SN Δ A u → Val Δ B ((t [ δ ]) · u)
+  = ∀ {Δ} (δ : Vars Δ Γ) {u} → Val Δ A u → SN→ Δ A u → Val Δ B ((t [ δ ]) · u)
 
 {-# INJECTIVE_FOR_INFERENCE +ValRec #-}
 {-# INJECTIVE_FOR_INFERENCE Val #-}
