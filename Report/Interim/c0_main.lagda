@@ -45,7 +45,7 @@ module Report.Interim.c0_main where
 
 \pagelayout{wide}
 
-\input{titlepage}
+% \input{titlepage}
 
 % page numbering etc.
 \pagenumbering{roman}
@@ -90,15 +90,13 @@ module Report.Interim.c0_main where
 
 %include c1_introduction.lagda
 %include c2_background.lagda
-%%include c3_simplytyped.lagda
-%%include c4_dependentlytyped.lagda
-%include c5_plan.lagda
-
+%include c3_plan.lagda
 
 %% bibliography
 % \bibliographystyle{apa}
 \setchapterstyle{plain} % Output plain chapters from this point onwards
 \pagelayout{wide}
+\sloppy
 \printbibliography[heading=bibintoc, title=Bibliography]
 
 

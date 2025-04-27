@@ -176,18 +176,14 @@ Before proceeding, it is important to clarify our understanding of
 equality in type theory.
 
 \sideremark[*11]{Since Martin-Löf's first characterisation of intensional type
-theory \sidecite[*13]{martin1975intuitionistic}, 
+theory \sidecite[*9]{martin1975intuitionistic}, 
 propositional equality has
 been extended in numerous ways (the |K| rule 
-\sidecite[*12]{streicher1993investigations}, 
-OTT \sidecite[*14]{altenkirch2007observational}, 
-CTT \sidecite[*16]{cohen2016cubical}), but all major 
+\sidecite[*8]{streicher1993investigations}, 
+OTT \sidecite[*10]{altenkirch2007observational}, 
+CTT \sidecite[*12]{cohen2016cubical}), but all major 
 presentations retain the ability to introduce with |refl| and eliminate with 
-|J| (even if such operations are no longer primitive).\newline
-Inspired by the homotopy 
-interpretation of type theory, coercing with |J| 
-is often called "transporting", and in Agda is written as "|subst|".
-}
+|J| (even if such operations are no longer primitive).}
 \begin{remark}[Definitional vs Propositional Equality] \phantom{a}
 \labremark{defprop}
 
@@ -210,8 +206,13 @@ of the (object) type theory itself. i.e. |_≡_ : A → A → Set| is an
 object-theory type 
 constructor (forming the "identity type") and terms of type |t ≡ u| can be 
 introduced with |refl : t ≡ t|
-and eliminated with the |J| rule (|J : (P : A → Set) → x ≡ y → P x → P y|,
+and applied by "transporting" (|transp : (P : A → Set) → x ≡ y → P x → P y|,
 representing the principle of "indiscernibility of identicals").
+The full dependent elimination rule for identity
+types
+(named axiom |J| or "path induction") allows the motive |P| to also quantify
+over the identity proof itself: 
+|J : ∀ (P : ∀ y → x ≡ y → Set) (p : x ≡ y) → P x refl → P y p|.
 
 The motivation for this division is that in dependently-typed systems, types can
 contain terms that perform real computation, but typechecking requires
@@ -963,7 +964,7 @@ out-of-hand:
 \end{spec}
 
 Along with the huge amount of congruence reasoning, a few of the steps here
-(|coes-cancel|, |coes-cancel2|, |rm-subst|) do nit even correspond to 
+(|coes-cancel|, |coes-cancel2|, |rm-subst|) do not even correspond to 
 "meaningful"\remarknote{Defining "meaningful" here as equations which do not
 trivially hold on untyped syntax/after erasing transports.} laws and only
 exist to move around or cancel out transports.
@@ -972,4 +973,4 @@ Experiencing this pain when mechanising type theory was a significant
 motivation in my selecting the topic of this project. The development
 this final example originates from is available at
 \url{https://github.com/NathanielB123/dep-ty-chk/tree/trunk}.
-Hopefully, Smart Case will assist.
+Hopefully, Smart Case will come to the rescue.

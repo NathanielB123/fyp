@@ -6,20 +6,23 @@ endif
 
 default: main.pdf
 
-main.pdf: main.bbl main.tex
-ifeq (LUALATEX, "True")
-	lualatex main.tex
-else
-	pdflatex main.tex
-endif
+# main.pdf: main.bbl main.tex
+# ifeq (LUALATEX, "True")
+# 	lualatex main.tex
+# else
+# 	pdflatex main.tex
+# endif
+# 
+# main.bbl: main.bib main.bcf
+# 	biber main
+# 
+# main.bcf: main.bib main.tex
+# 	pdflatex -draftmode main.tex
 
-main.bbl: main.bib main.bcf
-	biber main
+main.pdf : main.tex main.bib
+	latexmk -pdf $<
 
-main.bcf: main.bib main.tex
-	pdflatex -draftmode main.tex
-
-main.tex : c0_main.lagda c1_introduction.lagda c2_background.lagda c3_simplytyped.lagda c4_dependentlytyped.lagda c5_plan.lagda lib.fmt
+main.tex : c0_main.lagda c1_introduction.lagda c2_background.lagda c3_plan.lagda lib.fmt
 ifeq (LUALATEX, "True")
 	echo "%let lua = True" > config.lagda
 else
@@ -29,14 +32,14 @@ endif
 
 # Hack for not running pdflatex/lualatex twice because it is sometimes not
 # necessary
-update: main.tex
-ifeq (LUALATEX, "True")
-	biber main
-	lualatex main.tex
-else
-	biber main
-	pdflatex main.tex
-endif
+# update: main.tex
+# ifeq (LUALATEX, "True")
+# 	biber main
+# 	lualatex main.tex
+# else
+# 	biber main
+# 	pdflatex main.tex
+# endif
 
 clean:
 	rm -f *.aux

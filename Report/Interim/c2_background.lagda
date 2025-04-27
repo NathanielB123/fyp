@@ -165,7 +165,7 @@ foo b = case not b of
 \end{spec}
 
 A proper implementation of Smart Case should rule that the case |?0| is
-impossible as the constraint set as the impossible equation |false ≡ true|
+impossible as the impossible equation |false ≡ true|
 is derivable from the constraints |not b ~ true| and |b ~ true| plus
 β-conversion:
 
@@ -212,14 +212,14 @@ if false then A else B
 B
 \end{spec}
 Once all types are definitionally equal, it is easy to
-type self-application (e.g. |Bool ≡ (Bool → Bool)|) and so looping
+type self-application (i.e. we have |Bool ≡ (Bool → Bool)|) and so looping
 terms like the classic |(λ x → x x) (λ x → x x)| are typeable, and
 normalisation of open terms is lost.
 \end{remark}
 
 Despite these difficulties, some systems do implement similar features, to
 varying levels of success. GHC Haskell, is based on a System F$_\text{C}$
-core type theory, but layers on many surface features, including
+core theory, but layers on many surface features, including
 automation of its 
 type-level equality constraints \sidecite{sulzmann2007system}
 (implemented in the
@@ -265,7 +265,8 @@ boolLemma f SFalse  = case f SFalse of
 \end{spec}
 \end{example}
 
-Unfortunately, Haskell's constraint solving is undecidable and in practice many
+Unfortunately, Haskell's constraint solving is undecidable in theory and in 
+practice many
 desirable properties of conversion (such as congruence) do not hold.
 
 \begin{example}[Conversion is not Congruent in GHC Haskell] \phantom{a}
@@ -329,7 +330,7 @@ Andromeda 2 \sidecite{komel2021meta} is a proof assistant that supports
 local equational assumptions via rewriting and indeed goes beyond ground 
 equations,
 with the goal of supporting user-specified type theories. They focus
-primarily on provising soundness of the algorithm, and leave 
+primarily on proving soundness of their equality checking algorithm, and leave 
 confluence/termination checking and completeness results for future work.
 
 \subsection{Type Theories with Global Equational Assumptions}
@@ -418,7 +419,7 @@ are characterised primarily by their elimination rules.
 η laws can also be given for "positive" types (types where the introduction
 rules, or lack thereof, are primary, such as the empty type, coproducts,
 booleans,  natural numbers etc...). It turns out that strict η for these types
-is strongly-related, and is actually more powerful than, Smart Case. 
+is strongly-related to, and is actually more powerful than, Smart Case. 
 In fact, presentations of coproduct
 η \sidecite{dougherty2000equality, altenkirch2001normalization} often include 
 analagous constructions to Smart Case constraint sets.
@@ -745,7 +746,7 @@ original work on Smart Case attacked the problem using this approach
 mappings from neutral terms to normalised expressions enables extending
 normalisation with a step that looks up stuck neutrals in the map.
 
-Unfortunately, but problems start to occur when
+Unfortunately, problems start to occur when
 defining merging of constraint sets (i.e. to justify adding new constraints
 in the branches of case splits). 
 As explained in \refexample{coverage}, for looking up of neutrals to work

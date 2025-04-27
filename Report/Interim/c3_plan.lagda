@@ -1,6 +1,6 @@
 %if False
 \begin{code}
-module Report.Interim.c5_plan where
+module Report.Interim.c3_plan where
 \end{code}
 %endif
 
@@ -55,7 +55,7 @@ and can be expressed with the following diagram:
 & |t₂ [ δ ]|
 \end{tikzcd}
 
-I solved this by categorising single-variable substitutions into ones that 
+I solved this by dividing single-variable substitutions into ones that 
 substitute
 for closed boolean values (|Sub-|) and ones that do not
 (|Sub+|). 
@@ -64,11 +64,11 @@ It then becomes possible to prove:
 single-substitutions applying anywhere in the context rather than only on
 the first variable, but the idea is the same.}
 \begin{spec}
-_[_]→+ : t₁ >> t₂ → Sub+ Δ Γ < u > → (t₁ [ < u > ]) >> (t₂ [ < u > ])
+_[_]>>+ : t₁ >> t₂ → Sub+ Δ Γ < u > → (t₁ [ < u > ]) >> (t₂ [ < u > ])
 \end{spec}
 and
 \begin{spec}
-boolsub→ : Sub- Δ Γ < b > → t₁ >>* t₁ [ < b > ] [ wk ]
+boolsub>> : Sub- Δ Γ < b > → t₁ >>* t₁ [ < b > ] [ wk ]
 \end{spec}
 \textit{Where |_>>*_| is the reflexive, transitive closure of spontaneous
 reduction.}

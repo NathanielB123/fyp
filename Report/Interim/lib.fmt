@@ -35,6 +35,8 @@
 \newunicodechar{ξ}{$\xi$}
 \newunicodechar{θ}{$\theta$}
 \newunicodechar{λ}{$\lambda$}
+\newunicodechar{ρ}{$\rho$}
+\newunicodechar{π}{$\pi$}
 \newunicodechar{ƛ}{$\lambdabar$}
 \newunicodechar{η}{$\eta$}
 \newunicodechar{ε}{$\varepsilon$}
@@ -45,6 +47,7 @@
 \newunicodechar{Θ}{$\Theta$}
 
 \newunicodechar{∀}{$\forall$}
+\newunicodechar{∃}{$\exists$}
 \newunicodechar{≡}{$\equiv$}
 \newunicodechar{⇒}{$\Rightarrow$}
 \newunicodechar{⊎}{$\uplus$}
@@ -54,14 +57,21 @@
 \newunicodechar{∘}{$\circ$}
 \newunicodechar{∎}{$\blacksquare$}
 \newunicodechar{≟}{$\stackrel{?}{=}$}
+\newunicodechar{∷}{$::$}
 
 \newunicodechar{⨾}{$;$}
 \newunicodechar{⟦}{$\llbracket$}
 \newunicodechar{⟧}{$\rrbracket$}
+\newunicodechar{⌜}{$\ulcorner$}
+\newunicodechar{⌝}{$\urcorner$}
+\newunicodechar{⟪}{$\langle\!\langle$}
+\newunicodechar{⟫}{$\rangle\!\rangle$}
 
 \newunicodechar{𝔹}{$\mathbb{B}$}
 \newunicodechar{ℕ}{$\mathbb{N}$}
 \newunicodechar{ℤ}{$\mathbb{Z}$}
+\newunicodechar{𝟙}{$\mathbb{1}$}
+\newunicodechar{𝟘}{$\mathbb{0}$}
 
 \newunicodechar{⊔}{$\sqcup$}
 \newunicodechar{↦}{$\mapsto$}
@@ -83,6 +93,15 @@
 \newunicodechar{ᶠ}{$_{f}$}
 \newunicodechar{ⁱ}{$^{i}$}
 \newunicodechar{ⁿ}{$^{n}$}
+\newunicodechar{ₒ}{$_{o}$}
+\newunicodechar{ᴾ}{$^{P}$}
+\newunicodechar{ˢ}{$^{s}$}
+\newunicodechar{ʰ}{$^{h}$}
+\newunicodechar{ᴺ}{$^{N}$}
+
+\newunicodechar{̂}{$\hat{\ }$}
+
+
 \newunicodechar{∙}{$\bullet$}
 
 \newunicodechar{′}{$'$}
@@ -92,11 +111,25 @@
 %format undefined = "\Varid{ undefined }"
 %format .         = "\Varid{ . }"
 
-%format ƛ    = λ
+%format *    = "\hat{" × "}"
+%format ⇒    = "\hat{" → "}"
+%format 𝟙    = "\hat{\mathbb{1}}"
+%format 𝟘    = "\hat{\mathbb{0}}"
+%format ƛ    = "\hat{" λ "}"
+%format ∣     = "|"
+
 %format ƛ⁻¹  = ƛ ⁻¹
 
-%format ƛ_   = λ _
+%format ƛ_   = ƛ _
 %format ƛ⁻¹_ = ƛ⁻¹ _
+%format ƛ>   = ƛ >
+
+%format _*_ = _ * _
+%format _*  = _ *
+%format  *_ =   * _
+%format _⇒_ = _ ⇒ _
+%format _⇒  = _ ⇒
+%format  ⇒_ =   ⇒ _
 
 %format `_ = "\texttt{\textasciigrave}" _
 %format ` = "\texttt{\textasciigrave}"
@@ -113,6 +146,7 @@
 %format ≡⟨  = "=" "\textit{by}" "\;" "\langle"
 %format ≡⟨⟩ = "=" "\textit{by}" "\;"
 %format =   = "\colonequiv"
+%format ←   = "\equiv"
 %format ==  = "\equiv"
 %format _=_ = _ "\!" == "\!" _
 %format ∀   = "\Pi"
@@ -170,5 +204,43 @@
 %format Sub-  = Sub "^-"
 %format >+    = >   "^+"
 %format >-    = >   "^-"
+%format ]>>+  = ]>> "^+"
+
+%format _>*_  = _ > "^*" _
+%format _>+_  = _ > "^+" _
 
 %format --local-confluence = "\text{\rmfamily-{}-}" local-confluence
+
+% Is this a good idea??
+%format ⊏ = <
+
+%format ᵗʸ     = "^{\Varid{Ty}}"
+%format ᶜᵗˣ    = "^{\Varid{Ctx}}"
+%format ᵗᵐ     = "^{\Varid{Tm}}"
+%format ⟧ᵗʸ    = ⟧ ᵗʸ
+%format ⟧ᶜᵗˣ   = ⟧ ᶜᵗˣ
+%format ⟧ᵗᵐ    = ⟧ ᵗᵐ 
+%format ⟦_⟧ᵗʸ  = ⟦_⟧ ᵗʸ
+%format ⟦_⟧ᶜᵗˣ = ⟦_⟧ ᶜᵗˣ
+%format ⟦_⟧ᵗᵐ  = ⟦_⟧ ᵗᵐ
+
+%format ᴾˢʰ      = "^{\Varid{Psh}}"
+%format ⟧ᴾˢʰ     = ⟧ ᴾˢʰ
+%format ⟦_⟧ᴾˢʰ   = ⟦_⟧ ᴾˢʰ
+
+%format ᴺᶠ      = "^{\Varid{Nf}}"
+%format ᴺᵉ      = "^{\Varid{Ne}}"
+%format tᴺᶠ     = t ᴺᶠ
+%format tᴺᵉ     = t ᴺᵉ
+%format uᴺᶠ     = u ᴺᶠ
+%format tuᴺᶠ    = tu ᴺᶠ
+%format t>tᴺᶠ   = t>t ᴺᶠ
+%format u>uᴺᶠ   = u>u ᴺᶠ
+%format tu>tuᴺᶠ = tu>tu ᴺᶠ
+
+%format Σ, = ,
+%format _Σ, = _,
+%format Σ,_ = ,_
+%format _Σ,_ = _,_
+
+%format AccTm = Acc
