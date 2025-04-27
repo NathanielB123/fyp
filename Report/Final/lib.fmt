@@ -1,0 +1,246 @@
+% "\newunicodechar" and "%format" do similar but not exactly the same thing:
+% - "\newunicodechar" works outside of code blocks and is always required for 
+%   any characters not in "[utf8]{inputenc}". I'm not entirely sure why but 
+%   perhaps it errors before "%format" fires.
+%   Note that traditionally one would use "[utf8x]{inputenc}" which declares
+%   WAY more unicode characters, but this is sadly incompatible with biblatex...
+% - "%format" can replace strings of characters as well as individual ones (in
+%   fact, it only replaces if the entire LHS word matches) and overrides 
+%   "newunicodechar" (specifically, "\newunicodechar" doesn't actually replace 
+%   the unicode character - it only alters how it is displayed, while 
+%   "%format" actually does a replacement)
+
+% Based on this distinction, I am organising this file as follows:
+% - "\newunicodechar" declarations are intended to define as-close-as-possible
+%   translations to the original unicode symbol (even if we might actually
+%   desire it to be displayed a slightly different way in the final .pdf)
+%   i.e. "\newunicodechar"s basically should never change.
+% - "%format" declarations deal with fixing kerning on sequences of unicode, and
+%   perform aesthetic replacements (for example, removing the bar from "ƛ")
+
+% The main downside of this approach that I can think of is that inconsistencies
+% due to words not matching exactly can crop up silently (e.g. one could 
+% "%format ƛ λ" but forget "%format ƛ_ λ_"). I am hoping that ctrl+f-ing the
+% output "main.tex" file for unreplaced characters will be a good-enough
+% solution here.
+
+%seperation 2
+%latency 2
+
+%subst comment a = "{\text{\rmfamily-{}-} \textit{" a "}}"
+
+\newunicodechar{β}{$\beta$}
+\newunicodechar{δ}{$\delta$}
+\newunicodechar{σ}{$\sigma$}
+\newunicodechar{ξ}{$\xi$}
+\newunicodechar{θ}{$\theta$}
+\newunicodechar{λ}{$\lambda$}
+\newunicodechar{ρ}{$\rho$}
+\newunicodechar{π}{$\pi$}
+\newunicodechar{ƛ}{$\lambdabar$}
+\newunicodechar{η}{$\eta$}
+\newunicodechar{ε}{$\varepsilon$}
+\newunicodechar{Γ}{$\Gamma$}
+\newunicodechar{Δ}{$\Delta$}
+\newunicodechar{Π}{$\Pi$}
+\newunicodechar{Σ}{$\Sigma$}
+\newunicodechar{Θ}{$\Theta$}
+
+\newunicodechar{∀}{$\forall$}
+\newunicodechar{∃}{$\exists$}
+\newunicodechar{≡}{$\equiv$}
+\newunicodechar{⇒}{$\Rightarrow$}
+\newunicodechar{⊎}{$\uplus$}
+\newunicodechar{⊤}{$\top$}
+\newunicodechar{⊥}{$\bot$}
+\newunicodechar{⊢}{$\vdash$}
+\newunicodechar{∘}{$\circ$}
+\newunicodechar{∎}{$\blacksquare$}
+\newunicodechar{≟}{$\stackrel{?}{=}$}
+\newunicodechar{∷}{$::$}
+
+\newunicodechar{⨾}{$;$}
+\newunicodechar{⟦}{$\llbracket$}
+\newunicodechar{⟧}{$\rrbracket$}
+\newunicodechar{⌜}{$\ulcorner$}
+\newunicodechar{⌝}{$\urcorner$}
+\newunicodechar{⟪}{$\langle\!\langle$}
+\newunicodechar{⟫}{$\rangle\!\rangle$}
+
+\newunicodechar{𝔹}{$\mathbb{B}$}
+\newunicodechar{ℕ}{$\mathbb{N}$}
+\newunicodechar{ℤ}{$\mathbb{Z}$}
+\newunicodechar{𝟙}{$\mathbb{1}$}
+\newunicodechar{𝟘}{$\mathbb{0}$}
+
+\newunicodechar{⊔}{$\sqcup$}
+\newunicodechar{↦}{$\mapsto$}
+\newunicodechar{⟶}{$\longrightarrow$}
+
+\newunicodechar{∞}{$\infty$}
+\newunicodechar{≥}{$\geq$}
+
+\newunicodechar{₁}{$_{1}$}
+\newunicodechar{₂}{$_{2}$}
+\newunicodechar{₃}{$_{3}$}
+\newunicodechar{ᵢ}{$_{i}$}
+\newunicodechar{ₙ}{$_{n}$}
+
+% \newunicodechar{¹}{$^{1}$}
+\newunicodechar{ᵉ}{$^{e}$}
+\newunicodechar{⁻}{$^{-}$}
+\newunicodechar{⁺}{$^{+}$}
+\newunicodechar{ᶠ}{$_{f}$}
+\newunicodechar{ⁱ}{$^{i}$}
+\newunicodechar{ⁿ}{$^{n}$}
+\newunicodechar{ₒ}{$_{o}$}
+\newunicodechar{ᴾ}{$^{P}$}
+\newunicodechar{ˢ}{$^{s}$}
+\newunicodechar{ʰ}{$^{h}$}
+\newunicodechar{ᴺ}{$^{N}$}
+
+\newunicodechar{̂}{$\hat{\ }$}
+
+
+\newunicodechar{∙}{$\bullet$}
+
+\newunicodechar{′}{$'$}
+
+% Override formatting of "not" as "¬"
+%format not       = "\Varid{ not }"
+%format undefined = "\Varid{ undefined }"
+%format .         = "\Varid{ . }"
+
+%format *    = "\hat{" × "}"
+%format ⇒    = "\hat{" → "}"
+%format 𝟙    = "\hat{\mathbb{1}}"
+%format 𝟘    = "\hat{\mathbb{0}}"
+%format ƛ    = "\hat{" λ "}"
+%format ∣     = "|"
+
+%format ƛ⁻¹  = ƛ ⁻¹
+
+%format ƛ_   = ƛ _
+%format ƛ⁻¹_ = ƛ⁻¹ _
+%format ƛ>   = ƛ >
+
+%format _*_ = _ * _
+%format _*  = _ *
+%format  *_ =   * _
+%format _⇒_ = _ ⇒ _
+%format _⇒  = _ ⇒
+%format  ⇒_ =   ⇒ _
+
+%format `_ = "\texttt{\textasciigrave}" _
+%format ` = "\texttt{\textasciigrave}"
+
+%format Type = "\Keyword{Type}"
+%format Set  = Type
+
+% Some Haskell keywords
+%format type   = "\Keyword{type}"
+%format family = "\Keyword{family}"
+
+%format ≡   = "="
+%format _≡_ = _ "\!" "=" "\!" _
+%format ≡⟨  = "=" "\textit{by}" "\;" "\langle"
+%format ≡⟨⟩ = "=" "\textit{by}" "\;"
+%format =   = "\colonequiv"
+%format ←   = "\equiv"
+%format ==  = "\equiv"
+%format _=_ = _ "\!" == "\!" _
+%format ∀   = "\Pi"
+%format ⊎   = "+"
+%format _⊎_ = _ "\!" "+" "\!" _
+
+%format tm≡       = tm     "_="
+%format A≡        = A      "_="
+%format B≡        = B      "_="
+%format A[]≡      = A[]    "_="
+%format B[]≡      = B[]    "_="
+%format Aδ≡       = Aδ     "_="
+%format M≡        = M      "_="
+%format N≡        = N      "_="
+%format M[]≡      = M[]    "_="
+%format ,≡        = ,      "_="
+%format Πsem≡     = Πsem   "_="
+%format lamM≡     = lamM   "_="
+%format vzo≡      = vzo    "_="
+%format app≡      = app    "_="
+%format lam≡      = lam    "_="
+%format lamsem≡   = lamsem "_="
+%format _[_]≡     = _[_]   "_="
+%format ]≡        = ]      "_="
+%format _[_]tm≡   = _[_]tm "_="
+%format ]tm≡      = ]tm    "_="
+%format []tm≡     = []tm   "_="
+%format ↑[]≡      = ↑[]    "_="
+%format ↑os≡      = ↑os    "_="
+%format ↑∘os≡     = ↑∘os   "_="
+%format ⟦⟧T≡      = ⟦⟧T    "_="
+%format to-coe≡   = to-coe "_="
+%format to-coe≡⁻¹ = to-coe≡ "^-1"
+
+
+%format Bool        = "\mathbb{B}"
+%format Bool-η      = "\mathbb{B}" -η
+%format Bool-η-prop = "\mathbb{B}" -η-prop
+%format ⊤           = "\mathbb{1}"
+%format tt          = "\langle" "\rangle"
+%format ⊥           = "\mathbb{0}"
+%format ⊥-elim      = "\mathbb{0}" "\Varid{-elim }"
+%format ⊤'          = ⊤
+%format 𝔹'          = 𝔹
+%format ℕ'          = ℕ
+
+%format >>*   = >> "^*"
+%format _>>_  = _ "\!" >> "\!" _
+%format _>>*_ = _ "\!" >>* "\!" _
+
+%format δ-    = δ "^-"
+%format δ+    = δ "^+"
+
+%format Sub+  = Sub "^+"
+%format Sub-  = Sub "^-"
+%format >+    = >   "^+"
+%format >-    = >   "^-"
+%format ]>>+  = ]>> "^+"
+
+%format _>*_  = _ > "^*" _
+%format _>+_  = _ > "^+" _
+
+%format --local-confluence = "\text{\rmfamily-{}-}" local-confluence
+
+% Is this a good idea??
+%format ⊏ = <
+
+%format ᵗʸ     = "^{\Varid{Ty}}"
+%format ᶜᵗˣ    = "^{\Varid{Ctx}}"
+%format ᵗᵐ     = "^{\Varid{Tm}}"
+%format ⟧ᵗʸ    = ⟧ ᵗʸ
+%format ⟧ᶜᵗˣ   = ⟧ ᶜᵗˣ
+%format ⟧ᵗᵐ    = ⟧ ᵗᵐ 
+%format ⟦_⟧ᵗʸ  = ⟦_⟧ ᵗʸ
+%format ⟦_⟧ᶜᵗˣ = ⟦_⟧ ᶜᵗˣ
+%format ⟦_⟧ᵗᵐ  = ⟦_⟧ ᵗᵐ
+
+%format ᴾˢʰ      = "^{\Varid{Psh}}"
+%format ⟧ᴾˢʰ     = ⟧ ᴾˢʰ
+%format ⟦_⟧ᴾˢʰ   = ⟦_⟧ ᴾˢʰ
+
+%format ᴺᶠ      = "^{\Varid{Nf}}"
+%format ᴺᵉ      = "^{\Varid{Ne}}"
+%format tᴺᶠ     = t ᴺᶠ
+%format tᴺᵉ     = t ᴺᵉ
+%format uᴺᶠ     = u ᴺᶠ
+%format tuᴺᶠ    = tu ᴺᶠ
+%format t>tᴺᶠ   = t>t ᴺᶠ
+%format u>uᴺᶠ   = u>u ᴺᶠ
+%format tu>tuᴺᶠ = tu>tu ᴺᶠ
+
+%format Σ, = ,
+%format _Σ, = _,
+%format Σ,_ = ,_
+%format _Σ,_ = _,_
+
+%format AccTm = Acc

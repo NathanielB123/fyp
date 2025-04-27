@@ -1,0 +1,164 @@
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% University Assignment Title Page 
+% LaTeX Template
+% Version 1.0 (27/12/12)
+%
+% This template has been downloaded from:
+% http://www.LaTeXTemplates.com
+%
+% Original author:
+% WikiBooks (http://en.wikibooks.org/wiki/LaTeX/Title_Creation)
+%
+% License:
+% CC BY-NC-SA 3.0 (http://creativecommons.org/licenses/by-nc-sa/3.0/)
+% 
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%----------------------------------------------------------------------------------------
+%	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
+%----------------------------------------------------------------------------------------
+
+\usepackage[english]{babel}
+\usepackage{csquotes} % Wanted by babel/polglossia from biblatex
+
+\usepackage{kaobiblio}
+\let\openbox\relax
+\let\thmname\relax
+\usepackage[framed=true]{kaotheorems}
+\usepackage{kaorefs}
+
+\usepackage{textpos}
+\usepackage{tabularx,longtable,multirow,subfigure,caption}%hangcaption
+
+% \usepackage{fancyhdr} % page layout
+\usepackage{scrlayer} % page layout alternative
+
+\newenvironment{abstract}{}{}
+\usepackage{abstract}
+
+\usepackage{url} % URLs
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[only,llbracket,rrbracket]{stmaryrd}
+\usepackage{graphicx}
+\usepackage{dsfont}
+\usepackage{hyperref}
+\usepackage{tikz-cd}
+\let\refeq\relax
+\usepackage{mathtools}
+
+% Not supported by pdflatex
+% \usepackage{fontspec}  
+
+\usepackage{epstopdf} % automatically replace .eps with .pdf in graphics
+\usepackage{array}
+\usepackage{latexsym}
+
+\usepackage{tikz}
+\usepackage[framemethod=TikZ]{mdframed} % framing around side-notes
+
+\usepackage{epigraph}
+% \usepackage{breakurl}
+
+\addbibresource{main.bib} % Bibliography file
+
+% \usepackage[backend=biber]{biblatex}
+
+% \usepackage{natbib} % for bibliography
+% \usepackage{backref} % needed for citations
+% \usepackage[pagebackref,hypertexnames=false,colorlinks]{hyperref} % provide links in pdf
+
+\hypersetup{pdftitle={},
+  pdfsubject={}, 
+  pdfauthor={},
+  pdfkeywords={}, 
+  pdfstartview=FitH,
+  pdfpagemode={UseOutlines},% None, FullScreen, UseOutlines
+  bookmarksnumbered=true, bookmarksopen=true, colorlinks,
+    citecolor=black,%
+    filecolor=black,%
+    linkcolor=black,%
+    urlcolor=black}
+
+\usepackage[all]{hypcap}
+
+
+%\usepackage{color}
+%\usepackage[tight,ugly]{units}
+%\usepackage{float}
+%\usepackage{tcolorbox}
+%\usepackage[colorinlistoftodos]{todonotes}
+% \usepackage{ntheorem}
+% \theoremstyle{break}
+% \newtheorem{lemma}{Lemma}
+% \newtheorem{theorem}{Theorem}
+% \newtheorem{remark}{Remark}
+% \newtheorem{definition}{Definition}
+% \newtheorem{proof}{Proof}
+
+
+% Set fonts for pdflatex
+% Roman font
+% \renewcommand*{\rmdefault}{bch}
+% Sans serif font
+% \rendercommand*{\sfdefault}{???}
+% Code font
+% \renewcommand*{\ttdefault}{cmtt}
+
+
+
+
+%%% Default settings (page layout)
+\setlength{\parindent}{0em}  % indentation of paragraph
+
+\setlength{\parindent}{0em}  % indentation of paragraph
+
+\setlength{\headheight}{14.5pt}
+% \pagestyle{fancy}
+\renewcommand{\chaptermark}[1]{\markboth{\chaptername\ \thechapter.\ #1}{}} 
+%\fancyhead[RO]{\sffamily \textbf{\thepage}} %Page no.in the right on even pages
+%\fancyhead[LE]{\sffamily \textbf{\thepage}} %Page no. in the left on odd pages
+
+% \fancyfoot[ER,OL]{\thepage}%Page no. in the left on
+                                %odd pages and on right on even pages
+% \fancyfoot[OC,EC]{\sffamily }
+% \renewcommand{\headrulewidth}{0.1pt}
+% \renewcommand{\footrulewidth}{0.1pt}
+\captionsetup{margin=10pt,font=small,labelfont=bf}
+
+
+%--- chapter heading
+
+\def\@makechapterhead#1{%
+  \vspace*{10\p@}%
+  {\parindent \z@ \raggedright \sffamily
+    \interlinepenalty\@M
+    \Huge\bfseries \thechapter \space\space #1\par\nobreak
+    \vskip 30\p@
+  }}
+
+%--- chapter heading
+
+\def\@makechapterhead#1{%
+  \vspace*{10\p@}%
+  {\parindent \z@ \raggedright \sffamily
+        %{\Large \MakeUppercase{\@chapapp} \space \thechapter}
+        %\\
+        %\hrulefill
+        %\par\nobreak
+        %\vskip 10\p@
+    \interlinepenalty\@M
+    \Huge\bfseries \thechapter \space\space #1\par\nobreak
+    \vskip 30\p@
+  }}
+
+%---chapter heading for \chapter*  
+\def\@makeschapterhead#1{%
+  \vspace*{10\p@}%
+  {\parindent \z@ \raggedright
+    \sffamily
+    \interlinepenalty\@M
+    \Huge \bfseries  #1\par\nobreak
+    \vskip 30\p@
+  }}	
+\allowdisplaybreaks
