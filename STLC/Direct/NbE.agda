@@ -217,9 +217,25 @@ _[_]Ne⁻ : Ne⁻ Γ A → ∀ (δ : Thin Δ Γ) → Ne⁻ Δ A
 Val Γ (A ⇒ B) = ∀ {Δ} → Thin Δ Γ → Val Δ A → Val Δ B
 Val Γ 𝔹       = Nf⁻ Γ 𝔹
 
+⌜_⌝  : βNf[ ↕ ] Γ A → Tm Γ A
+
+⌜_⌝𝔹 : Bool → Tm Γ 𝔹
+⌜ true  ⌝𝔹 = TT
+⌜ false ⌝𝔹 = FF
+
+-- Conversion
+_~t_ : Tm Γ A → Tm Γ A → Set
+
+-- TODO: Might be easier to index |Env Δ Γ| by the underling substitution
+⌜_⌝* : Env Δ Γ → Tms Δ Γ
+
+_[_]t : Tm Γ A → Tms Δ Γ → Tm Δ A
+
 data Env Δ where
-  ε   : Env Δ ε
-  _,_ : Env Δ Γ → Val Δ A → Env Δ (Γ , A)
+  ε     : Env Δ ε
+  _,_   : Env Δ Γ → Val Δ A → Env Δ (Γ , A)
+  _,rw_ : ∀ (ρ : Env Δ Γ) {p} → (⌜ tᴺᵉ ⌝ [ ⌜ ρ ⌝* ]t) ~t ⌜ b ⌝𝔹 
+        → Env Δ (Γ , tᴺᵉ >rw b ∣ p)
 
 _[_]E : Env Δ Γ → Thin Θ Δ → Env Θ Γ
 _[_]V : Val Γ A → Thin Δ Γ → Val Δ A
@@ -240,13 +256,18 @@ ifVal (ne tᴺᵉ Σ, ne (p Σ, c)) uⱽ vⱽ
   where qu = qval _ uⱽ
         qv = qval _ uⱽ
 
+lookup : Var Γ A → Env Δ Γ → Val Δ A
+lookup vz       (ρ , tⱽ)  = tⱽ
+lookup (vs i)   (ρ , tⱽ)  = lookup i ρ
+lookup (vsrw i) (ρ ,rw _) = lookup i ρ
+
 -- NbE time!
 eval : Env Δ Γ → Tm Γ A → Val Δ A
 eval ρ TT         = TT Σ, TT
 eval ρ FF         = FF Σ, FF
 eval ρ (if t u v) = ifVal (eval ρ t) (eval ρ u) (eval ρ v)
 eval ρ (ƛ t)      = λ δ uⱽ → eval ((ρ [ δ ]E) , uⱽ) t
-eval ρ (` i)      = {!!}
+eval ρ (` i)      = lookup i ρ
 eval ρ (t · u)    = (eval ρ t) idᵀʰ (eval ρ u)
 
 uval (A ⇒ B) tᴺᵉ p c δ uⱽ 
