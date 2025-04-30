@@ -6,10 +6,10 @@ open import Level using (Level) renaming (_⊔_ to _⊔ℓ_; zero to 0ℓ; suc t
   public
 open import Data.Unit using (⊤; tt) public
 open import Data.Empty using (⊥; ⊥-elim) public
-open import Data.Product using (Σ; ∃; _×_; proj₁; proj₂; ∃-syntax)
-  renaming (_,_ to _Σ,_) public
+open import Data.Product using (Σ; ∃; _×_; ∃-syntax)
+  renaming (_,_ to _Σ,_; proj₁ to fst; proj₂ to snd) public
 open import Relation.Binary.PropositionalEquality 
-  using (_≡_; refl; erefl; cong; cong₂; dcong₂; subst; sym)
+  using (_≡_; refl; erefl; cong; cong₂; dcong₂; subst; sym; subst-subst-sym)
   renaming (trans to infixr 4 _∙_)
   public
 open import Relation.Binary.HeterogeneousEquality
@@ -54,10 +54,6 @@ open import Data.Maybe using (Maybe; just; nothing) public
 open import Function 
   using (_∘_; case_of_; flip) 
   public
-open import Data.Vec 
-  using (Vec; _∷_; []; _[_]≔_; lookup; updateAt; removeAt) 
-  renaming (map to vmap)
-  public
 
 variable
   ℓ : Level
@@ -68,7 +64,6 @@ private variable
   P Q   : Prop ℓ
   n m   : ℕ
   x y z : A
-  xs ys zs : Vec A n
   i j k : Fin n
   r r₁ r₂ r₃ r₄ : A → A → Set ℓ
 
@@ -89,6 +84,10 @@ x [ r ]? y = ReflClosure r x y
 
 _[_∣_]_ : A → (A → A → Set ℓ₁) → (A → A → Set ℓ₂) → A → Set _
 x [ r₁ ∣ r₂ ] y = (r₁ ∪ r₂) x y 
+
+_∷+_ : r x y → Star r y z → TransClosure r x z
+p ∷+ ε        = ⟪ p ⟫
+p ∷+ (q ∶> r) = p ∷ (q ∷+ r)
 
 pattern ⟪_⟫* p = p ∷ ε
 
