@@ -9,7 +9,7 @@ open import Utils
 -- version)
 --
 -- Should be a nice setting to do a soundness proof.
-module Dependent.SCBool where
+module Dependent.SCBool.Syntax where
 
 infixr 4 _∙~_
 
@@ -47,6 +47,19 @@ data Ctx where
 
 𝔹~′ : Ty~ Γ~ 𝔹′ 𝔹′
 
+data Ty where
+  coe~ : Ctx~ Γ₁ Γ₂ → Ty Γ₁ → Ty Γ₂
+
+  𝔹 : Ty Γ   
+  Π : ∀ A → Ty (Γ , A) → Ty Γ
+
+  _[_] : Ty Γ → Tms Δ Γ → Ty Δ
+  
+𝔹′ = 𝔹
+
+⌜_⌝𝔹 : Bool → Tm Γ 𝔹
+_[_]′ : Tm Γ A → ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ])
+
 data Ctx~ where
   -- Equivalence
   rfl~ : Ctx~ Γ Γ
@@ -56,19 +69,6 @@ data Ctx~ where
   -- Congruence
   _,_    : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Ctx~ (Γ₁ , A₁) (Γ₂ , A₂)
   _,_>rw : ∀ Γ~ → Tm~ Γ~ 𝔹~′ t₁ t₂ → Ctx~ (Γ₁ , t₁ >rw b) (Γ₂ , t₂ >rw b)
-
-data Ty where
-  coe~ : Ctx~ Γ₁ Γ₂ → Ty Γ₁ → Ty Γ₂
-
-  𝔹 : Ty Γ   
-  Π : ∀ A → Ty (Γ , A) → Ty Δ
-
-  _[_] : Ty Γ → Tms Δ Γ → Ty Δ
-  
-𝔹′ = 𝔹
-
-⌜_⌝𝔹 : Bool → Tm Γ 𝔹
-_[_]′ : Tm Γ A → ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ])
 
 𝔹[]′ : Ty~ rfl~ (𝔹 [ δ ]) 𝔹
 
@@ -266,3 +266,4 @@ incon {Γ₁ = Γ₁} {Γ₂ = Γ₂} {Γ~ = Γ~} {A~ = A~} {t₁ = t₁} {t₂ 
               t₂
     if~t₂ =  ifFF ∙~ [][] ∙~ rfl~ [ sym~ π₁rw⨾ ∙~ π₁rw (FF rfl~) id⨾ ∙~ π₁rw, ] 
           ∙~ [id]
+ 
