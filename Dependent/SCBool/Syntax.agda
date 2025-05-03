@@ -53,6 +53,7 @@ data Ty where
   𝔹 : Ty Γ   
   Π : ∀ A → Ty (Γ , A) → Ty Γ
 
+  if   : Tm Γ 𝔹 → Ty Γ → Ty Γ → Ty Γ
   _[_] : Ty Γ → Tms Δ Γ → Ty Δ
   
 𝔹′ = 𝔹
@@ -77,13 +78,18 @@ data Tms where
 
   ε     : Tms Δ ε
   _,_   : ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]) → Tms Δ (Γ , A) 
-  _,rw_ : ∀ (δ : Tms Δ Γ) → Tm~ rfl~ 𝔹[]′ (t [ δ ]′) ⌜ b ⌝𝔹 
-        → Tms Δ (Γ , t >rw b)
+  -- We do some Fording here to enforce that |t [ δ ]| and |⌜ b ⌝𝔹| are 
+  -- structural sub-terms.
+  ,rwℱ : ∀ (δ : Tms Δ Γ) {u} → t [ δ ]′ ≡ u → ⌜ b ⌝𝔹 ≡ v 
+         → Tm~ rfl~ 𝔹[]′ u v
+         → Tms Δ (Γ , t >rw b)
   id  : Tms Γ Γ
   _⨾_ : Tms Δ Γ → Tms Θ Δ → Tms Θ Γ
 
   π₁   : Tms Δ (Γ , A) → Tms Δ Γ
   π₁rw : Tms Δ (Γ , t >rw b) → Tms Δ Γ
+
+pattern _,rw_ δ t~ = ,rwℱ δ refl refl t~
 
 data Tm where
   coe~ : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Tm Γ₁ A₁ → Tm Γ₂ A₂
@@ -152,7 +158,7 @@ data Tms~ where
   -- Congruence
   _,_   : ∀ (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) → Tm~ Δ~ (A~ [ δ~ ]) t₁ t₂
         → Tms~ Δ~ (Γ~ , A~) (δ₁ , t₁) (δ₂ , t₂)
-  _,rw_ : ∀ {Δ~ : Ctx~ Δ₁ Δ₂} (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) 
+  ,rw~  : ∀ {Δ~ : Ctx~ Δ₁ Δ₂} (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) 
             {t₁~ : Tm~ rfl~ _ _ ⌜ b ⌝𝔹}            
         → Tms~ Δ~ (Γ~ , t~ >rw) (δ₁ ,rw t₁~) (δ₂ ,rw t₂~) 
   
