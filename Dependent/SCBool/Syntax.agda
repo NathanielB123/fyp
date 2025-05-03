@@ -136,9 +136,12 @@ data Ty~ where
 𝔹[]′ = 𝔹[]
 
 data _⊢_>rw_ : ∀ Γ → Tm Γ 𝔹 → Bool → Set where
-  rz   : (Γ , t >rw b) ⊢ coe~ rfl~ 𝔹[] (t [ π₁rw id ]) >rw b
-  rs   : Γ ⊢ t >rw b → (Γ , A) ⊢ coe~ rfl~ 𝔹[] (t [ π₁ id ]) >rw b
-  rsrw : Γ ⊢ t >rw b₁ → (Γ , u >rw b₂) ⊢ coe~ rfl~ 𝔹[] (t [ π₁rw id ]) >rw b₁
+  rzℱ   : ∀ {B} → B ≡ Ty.𝔹 {Γ = Γ , t >rw b}
+        → (Γ , t >rw b) ⊢ coe~ rfl~ 𝔹[] (t [ π₁rw id ]) >rw b
+  rs    : Γ ⊢ t >rw b → (Γ , A) ⊢ coe~ rfl~ 𝔹[] (t [ π₁ id ]) >rw b
+  rsrw  : Γ ⊢ t >rw b₁ → (Γ , u >rw b₂) ⊢ coe~ rfl~ 𝔹[] (t [ π₁rw id ]) >rw b₁
+
+pattern rz = rzℱ refl
 
 π₂rw′ : ∀ (δ : Tms Δ (Γ , t >rw b)) → Tm~ rfl~ 𝔹[] (t [ π₁rw δ ]) ⌜ b ⌝𝔹
 
@@ -170,7 +173,7 @@ data Tms~ where
   -- Computation
   εη   : Tms~ rfl~ rfl~ δ ε
   ,η   : Tms~ rfl~ rfl~ δ (π₁ δ , π₂ δ)
-  πrwη : Tms~ rfl~ rfl~ (π₁rw δ ,rw π₂rw′ δ) δ
+  πrwη : Tms~ rfl~ rfl~ (π₁rw δ ,rw π₂rw′ {b = b} δ) δ
 
   π₁rw, : ∀ {δ : Tms Δ Γ} {t~ : Tm~ _ _ (t [ δ ]) ⌜ b ⌝𝔹} 
         → Tms~ rfl~ rfl~ (π₁rw (δ ,rw t~)) δ

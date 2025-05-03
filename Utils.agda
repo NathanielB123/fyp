@@ -9,7 +9,8 @@ open import Data.Empty using (⊥; ⊥-elim) public
 open import Data.Product using (Σ; ∃; _×_; ∃-syntax)
   renaming (_,_ to _Σ,_; proj₁ to fst; proj₂ to snd) public
 open import Relation.Binary.PropositionalEquality 
-  using (_≡_; refl; erefl; cong; cong₂; dcong₂; subst; sym; subst-subst-sym)
+  using (_≡_; refl; erefl; cong; cong₂; dcong₂; subst; sym; subst-subst-sym
+        ; cong-app)
   renaming (trans to infixr 4 _∙_)
   public
 open import Relation.Binary.HeterogeneousEquality
@@ -55,17 +56,21 @@ open import Function
   using (_∘_; case_of_; flip) 
   public
 
+1ℓ : Level
+1ℓ = suℓ 0ℓ
+
 variable
   ℓ : Level
   ℓ₁ ℓ₂ ℓ₃ : Level
 
 private variable
-  A B   : Set ℓ
+  A B C : Set ℓ
   P Q   : Prop ℓ
   n m   : ℕ
   x y z : A
   i j k : Fin n
   r r₁ r₂ r₃ r₄ : A → A → Set ℓ
+  p : x ≡ y
 
 SN : (A → A → Set ℓ) → A → Set _
 SN r = Acc (flip r)
@@ -177,19 +182,23 @@ map-Dec∥∥ pq qp (b because p) = b because map-∥reflects∥ pq qp p
 map-Dec : (A → B) → (B → A) → Dec A → Dec B
 map-Dec pq qp (b because p) = b because map-reflects pq qp p
 
-_≡[_]≡_ : ∀ {A B : Set ℓ} → A → A ≡ B → B 
-        → Set ℓ
-x ≡[ refl ]≡ y = x ≡ y
-
-infix 4 _≡[_]≡_
-
 -- A variation on heterogeneous equality which isn't as much of a pain to use
 -- without type-constructor injectivity
 data HEq (f : A → Set) {x} (fx : f x) : ∀ {y} → f y → Set where
   refl : HEq f fx fx
 
-coe : ∀ {A B : Set ℓ} → A ≡ B → A → B
+coe : A ≡ B → A → B
 coe refl x = x
+
+_≡[_]≡_ : A → A ≡ B → B → Set _
+x ≡[ p ]≡ y = coe p x ≡ y
+
+infix 4 _≡[_]≡_
+
+{-# DISPLAY _≡_ (coe p x) y = x ≡[ p ]≡ y #-}
+
+sym[] : x ≡[ p ]≡ y → y ≡[ sym p ]≡ x
+sym[] {p = refl} refl = refl
 
 pred : ℕ → ℕ
 pred ze     = ze
@@ -199,3 +208,11 @@ data _+_+_ (A : Set ℓ₁) (B : Set ℓ₂) (C : Set ℓ₃) : Set (ℓ₁ ⊔�
   inl : A → A + B + C
   inm : B → A + B + C
   inr : C → A + B + C
+
+Bool-split : ∀ (b : Bool) → (b ≡ true → A) → (b ≡ false → A) → A
+Bool-split true  t f = t refl
+Bool-split false t f = f refl
+
+Bool-rec : ∀ (b : Bool) → A → A → A
+Bool-rec true  t f = t
+Bool-rec false t f = f
