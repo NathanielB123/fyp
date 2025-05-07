@@ -209,6 +209,12 @@ Tm[]≡-inst refl refl = refl
 ⟦ Π {Γ~ = Γ~} A~ B~ ⟧Ty~ = Π≡ ⟦ Γ~ ⟧Ctx~ ⟦ A~ ⟧Ty~ ⟦ B~ ⟧Ty~
 ⟦ _[_] {Γ~ = Γ~} {Δ~ = Δ~} A~ δ~ ⟧Ty~ 
   = []T≡ ⟦ Γ~ ⟧Ctx~ ⟦ Δ~ ⟧Ctx~ ⟦ A~ ⟧Ty~ (⟦ δ~ ⟧Tms~)
+⟦ if t~ A~ B~ ⟧Ty~ = {!   !}
+
+⟦ ifTT              ⟧Ty~ = refl
+⟦ ifFF              ⟧Ty~ = refl
+⟦ Π[]               ⟧Ty~ = refl
+⟦ if[]              ⟧Ty~ = refl
 ⟦ 𝔹[]               ⟧Ty~ = refl
 ⟦ [][]              ⟧Ty~ = refl
 ⟦ [id]              ⟧Ty~ = refl
@@ -224,6 +230,9 @@ cohTm : ∀ {⟦t⟧ : ⟦Tm⟧ ⟦Γ₁⟧ ⟦A₁⟧} {Γ≡ : ⟦Γ₁⟧ ≡
 
 ⟦ coh {Γ~ = Γ~} {A~ = A~} ⟧Tm~ = cohTm {Γ≡ = ⟦ Γ~ ⟧Ctx~} {A≡ = ⟦ A~ ⟧Ty~}
 
+⟦ ƛ t~         ⟧Tm~ = {!   !}
+⟦ ƛ⁻¹ t~       ⟧Tm~ = {!   !}
+⟦ π₂ δ~        ⟧Tm~ = {!   !}
 ⟦ TT Γ~        ⟧Tm~ = TT≡ ⟦ Γ~ ⟧Ctx~
 ⟦ FF Γ~        ⟧Tm~ = FF≡ ⟦ Γ~ ⟧Ctx~
 ⟦ if {Γ~ = Γ~} {A~ = A~} t~ u~ v~  ⟧Tm~ 
@@ -235,10 +244,15 @@ cohTm : ∀ {⟦t⟧ : ⟦Tm⟧ ⟦Γ₁⟧ ⟦A₁⟧} {Γ≡ : ⟦Γ₁⟧ ≡
 ... | ⟦δ⟧ = funextᴾ (λ ρ → ⟦δ⟧ ρ .snd .unbox)
 ⟦ TT[]               ⟧Tm~ = refl
 ⟦ FF[]               ⟧Tm~ = refl
+⟦ ƛ[]                ⟧Tm~ = refl
+⟦ if[]               ⟧Tm~ = refl
 ⟦ [id]               ⟧Tm~ = refl
 ⟦ [][]               ⟧Tm~ = refl
 ⟦ ifTT               ⟧Tm~ = refl
 ⟦ ifFF               ⟧Tm~ = refl
+⟦ β                  ⟧Tm~ = refl
+⟦ η                  ⟧Tm~ = refl
+⟦ π₂,                ⟧Tm~ = refl
 ⟦ π₂⨾                ⟧Tm~ = refl
 
 cohTm {Γ≡ = refl} {A≡ = refl} = refl
@@ -247,21 +261,25 @@ cohTm {Γ≡ = refl} {A≡ = refl} = refl
 ⟦ sym~ δ~           ⟧Tms~ = sym[]ᴾ ⟦ δ~ ⟧Tms~
 ⟦ δ₁₂~ ∙~ δ₂₃~      ⟧Tms~ = ⟦ δ₁₂~ ⟧Tms~ ∙[]ᴾ ⟦ δ₂₃~ ⟧Tms~
 ⟦ coh               ⟧Tms~ = coh[]ᴾ
+⟦ ε                 ⟧Tms~ = {!   !}
 ⟦ δ~ , t~           ⟧Tms~ = {!   !}
 ⟦ ,rw~ δ~           ⟧Tms~ = {!   !}
 ⟦ id                ⟧Tms~ = {!   !}
 ⟦ δ~ ⨾ σ~           ⟧Tms~ = {!   !}
+⟦ π₁ A~ δ~          ⟧Tms~ = {!   !}
 ⟦ π₁rw t~ δ~        ⟧Tms~ = {!   !}
 ⟦ εη                ⟧Tms~ = refl
 ⟦ ,η                ⟧Tms~ = refl
-⟦ πrwη {b = true}   ⟧Tms~ = refl
-⟦ πrwη {b = false}  ⟧Tms~ = refl
+⟦ ,rwη {b = true}   ⟧Tms~ = refl
+⟦ ,rwη {b = false}  ⟧Tms~ = refl
+⟦ π₁,               ⟧Tms~ = refl
 ⟦ π₁rw, {b = false} ⟧Tms~ = refl
 ⟦ π₁rw, {b = true}  ⟧Tms~ = refl
 ⟦ π₁⨾               ⟧Tms~ = refl
 ⟦ π₁rw⨾             ⟧Tms~ = refl
 ⟦ id⨾               ⟧Tms~ = refl
 ⟦ ⨾id               ⟧Tms~ = refl
+⟦ ⨾⨾                ⟧Tms~ = refl
 ⟦ ,⨾                ⟧Tms~ = refl
 ⟦ ,rw⨾ {b = true}   ⟧Tms~ = refl
 ⟦ ,rw⨾ {b = false}  ⟧Tms~ = refl

@@ -252,8 +252,8 @@ Tm[]≡-inst refl refl = refl
 ⟦ π₁rw t~ δ~        ⟧Tms~ = {!   !}
 ⟦ εη                ⟧Tms~ = refl
 ⟦ ,η                ⟧Tms~ = refl
-⟦ πrwη {b = true}   ⟧Tms~ = refl
-⟦ πrwη {b = false}  ⟧Tms~ = refl
+⟦ ,rwη {b = true}   ⟧Tms~ = refl
+⟦ ,rwη {b = false}  ⟧Tms~ = refl
 ⟦ π₁rw, {b = false} ⟧Tms~ = refl
 ⟦ π₁rw, {b = true}  ⟧Tms~ = refl
 ⟦ π₁⨾               ⟧Tms~ = refl

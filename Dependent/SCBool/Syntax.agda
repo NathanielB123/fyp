@@ -22,7 +22,7 @@ variable
   Γ Δ Θ Γ₁ Γ₂ Γ₃ Δ₁ Δ₂ Δ₃ : Ctx
   A B C A₁ A₂ A₃ B₁ B₂ : Ty Γ
   t u v t₁ t₂ t₃ u₁ u₂ u₃ v₁ v₂ v₃ : Tm Γ A
-  δ σ τ δ₁ δ₂ δ₃ σ₁ σ₂ : Tms Δ Γ
+  δ σ γ δ₁ δ₂ δ₃ σ₁ σ₂ : Tms Δ Γ
   b b₁ b₂ : Bool
 
 data Ctx~ : Ctx → Ctx → Prop
@@ -31,8 +31,8 @@ data Tm~  : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Tm Γ₁ A₁ → Tm Γ₂ A₂ �
 data Tms~ : Ctx~ Δ₁ Δ₂ → Ctx~ Γ₁ Γ₂ → Tms Δ₁ Γ₁ → Tms Δ₂ Γ₂ → Prop
 
 variable
-  Γ~ Δ~ Θ~ Γ₁₂~ Γ₂₃~ Δ₁₂~ Δ₂₃~ : Ctx~ Γ₁ Γ₂
-  A~ A₁₂~ A₂₃~ : Ty~ _ A₁ A₂
+  Γ~ Δ~ Θ~ Γ₁₂~ Γ₂₃~ Δ₁₂~ Δ₂₃~ Γ₁~ Γ₂~ Γ₃~ Γ₄~ : Ctx~ Γ₁ Γ₂
+  A~ B~ A₁₂~ A₂₃~ A₁~ A₂~ A₃~ A₄~ : Ty~ _ A₁ A₂
   t~ t₁~ t₂~ : Tm~ _ _ t₁ t₂
 
 -- Forward reference can be avoided by defining |Ctx|/|Ty|/|Tm|/|Tms| mutually
@@ -78,13 +78,15 @@ data Tms where
 
   ε     : Tms Δ ε
   _,_   : ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]) → Tms Δ (Γ , A) 
-  -- We do some Fording here to enforce that |t [ δ ]| is a structural subterm.
+  -- We do some Fording here to enforce that |t [ δ ]| is considered a 
+  -- structural subterm.
   ,rwℱ : ∀ (δ : Tms Δ Γ) {u} → t [ δ ]′ ≡ u
          → Tm~ rfl~ 𝔹[]′ (t [ δ ]′) ⌜ b ⌝𝔹
          → Tms Δ (Γ , t >rw b)
-  id  : Tms Γ Γ
-  _⨾_ : Tms Δ Γ → Tms Θ Δ → Tms Θ Γ
-
+  
+  id   : Tms Γ Γ
+  _⨾_  : Tms Δ Γ → Tms Θ Δ → Tms Θ Γ
+  
   π₁   : Tms Δ (Γ , A) → Tms Δ Γ
   π₁rw : Tms Δ (Γ , t >rw b) → Tms Δ Γ
 
@@ -111,6 +113,14 @@ data Tm where
 
 _[_]′ = _[_]
 
+_⁺_ : Tms Δ Γ → ∀ A → Tms (Δ , A) Γ
+δ ⁺ A = δ ⨾ π₁ id
+
+_⁺rw_ : Tms Δ Γ → ∀ t → Tms (Δ , t >rw b) Γ
+δ ⁺rw t = δ ⨾ π₁rw id
+
+_^_ : ∀ (δ : Tms Δ Γ) A → Tms (Δ , (A [ δ ])) (Γ , A)
+
 data Ty~ where
   -- Equivalence
   rfl~ : Ty~ rfl~ A A
@@ -125,14 +135,27 @@ data Ty~ where
   Π    : ∀ A~ → Ty~ (Γ~ , A~) B₁ B₂ → Ty~ Γ~ (Π A₁ B₁) (Π A₂ B₂)
   _[_] : ∀ (A~ : Ty~ Γ~ A₁ A₂) (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) 
        → Ty~ Δ~ (A₁ [ δ₁ ]) (A₂ [ δ₂ ])
+  if   : Tm~ Γ~ 𝔹 t₁ t₂ → Ty~ Γ~ A₁ A₂ → Ty~ Γ~ B₁ B₂ 
+       → Ty~ Γ~ (if t₁ A₁ B₁) (if t₂ A₂ B₂)
 
   -- Computation
+  ifTT : Ty~ rfl~ (if TT A B) A
+  ifFF : Ty~ rfl~ (if FF A B) B
+
   𝔹[]  : Ty~ rfl~ (𝔹 [ δ ]) 𝔹
-  [][] : Ty~ rfl~ (A [ δ ] [ σ ]) (A [ δ ⨾ σ ])
+  Π[]  : Ty~ rfl~ (Π A B [ δ ]) (Π (A [ δ ]) (B [ δ ^ A ]))
+  if[] : Ty~ rfl~ (if t A B [ δ ]) 
+                  (if (coe~ rfl~ 𝔹[] (t [ δ ])) (A [ δ ]) (B [ δ ]))
   [id] : Ty~ rfl~ (A [ id ]) A
+  [][] : Ty~ rfl~ (A [ δ ] [ σ ]) (A [ δ ⨾ σ ])
 
 𝔹~′ = 𝔹
 𝔹[]′ = 𝔹[]
+
+δ ^ A = (δ ⁺ _) , (coe~ rfl~ [][] (π₂ id))
+
+_·_ : Tm Γ (Π A B) → ∀ (u : Tm Γ A) → Tm Γ (B [ id , coe~ rfl~ (sym~ [id]) u ])
+t · u = (ƛ⁻¹ t) [ id , coe~ rfl~ (sym~ [id]) u ]
 
 π₂rw′ : ∀ (δ : Tms Δ (Γ , t >rw b)) → Tm~ rfl~ 𝔹[] (t [ π₁rw δ ]) ⌜ b ⌝𝔹
 
@@ -150,6 +173,7 @@ data Tms~ where
   coh  : Tms~ Δ~ Γ~ δ (coe~ Δ~ Γ~ δ)
 
   -- Congruence
+  ε     : Tms~ Δ~ rfl~ ε ε
   _,_   : ∀ (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) → Tm~ Δ~ (A~ [ δ~ ]) t₁ t₂
         → Tms~ Δ~ (Γ~ , A~) (δ₁ , t₁) (δ₂ , t₂)
   ,rw~  : ∀ {Δ~ : Ctx~ Δ₁ Δ₂} (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) 
@@ -158,14 +182,18 @@ data Tms~ where
   
   id   : Tms~ Γ~ Γ~ id id
   _⨾_  : Tms~ Δ~ Γ~ δ₁ δ₂ → Tms~ Θ~ Δ~ σ₁ σ₂ → Tms~ Θ~ Γ~ (δ₁ ⨾ σ₁) (δ₂ ⨾ σ₂)
+  
+  π₁   : ∀ (A~ : Ty~ Γ~ A₁ A₂) → Tms~ Δ~ (Γ~ , A~) δ₁ δ₂ 
+       → Tms~ Δ~ Γ~ (π₁ δ₁) (π₁ δ₂)
   π₁rw : ∀ (t~ : Tm~ Γ~ 𝔹 t₁ t₂)
        → Tms~ Δ~ (Γ~ , t~ >rw) δ₁ δ₂ → Tms~ Δ~ Γ~ (π₁rw δ₁) (π₁rw δ₂)
 
   -- Computation
   εη   : Tms~ rfl~ rfl~ δ ε
   ,η   : Tms~ rfl~ rfl~ δ (π₁ δ , π₂ δ)
-  πrwη : Tms~ rfl~ rfl~ (π₁rw δ ,rw π₂rw′ {b = b} δ) δ
+  ,rwη : Tms~ rfl~ rfl~ (π₁rw δ ,rw π₂rw′ {b = b} δ) δ
 
+  π₁,   : Tms~ rfl~ rfl~ (π₁ (δ , t)) δ
   π₁rw, : ∀ {δ : Tms Δ Γ} {t~ : Tm~ _ _ (t [ δ ]) ⌜ b ⌝𝔹} 
         → Tms~ rfl~ rfl~ (π₁rw (δ ,rw t~)) δ
 
@@ -174,16 +202,25 @@ data Tms~ where
 
   id⨾ : Tms~ rfl~ rfl~ (id ⨾ δ) δ
   ⨾id : Tms~ rfl~ rfl~ (δ ⨾ id) δ
+  ⨾⨾  : Tms~ rfl~ rfl~ ((δ ⨾ σ) ⨾ γ) (δ ⨾ (σ ⨾ γ))
 
   ,⨾   : Tms~ rfl~ rfl~ ((δ , t) ⨾ σ) ((δ ⨾ σ) , (coe~ rfl~ [][] (t [ σ ])))
   ,rw⨾ : {σ : Tms Θ Δ} {t~ : Tm~ rfl~ 𝔹[] (t [ δ ]) ⌜ b ⌝𝔹} 
        → Tms~ rfl~ rfl~ ((δ ,rw t~) ⨾ σ) ((δ ⨾ σ) ,rw ,rw⨾-helper t~)
 
+_^rw_ : ∀ (δ : Tms Δ Γ) t 
+      → Tms (Δ , coe~ rfl~ 𝔹[] (t [ δ ]) >rw b) (Γ , t >rw b)
+
 ⌜⌝𝔹 : ∀ (Γ~ : Ctx~ Γ₁ Γ₂) → Tm~ Γ~ 𝔹 (⌜ b ⌝𝔹) (⌜ b ⌝𝔹)
 ⌜⌝𝔹[] : Tm~ rfl~ 𝔹[] (⌜ b ⌝𝔹 [ δ ]) (⌜ b ⌝𝔹)
 
-wk<b> : Ty~ (rfl~ {Γ = Γ}) (A [ π₁rw id ] [ id ,rw (⌜⌝𝔹[] {b = b})  ]) A
-wk<b> = [][] ∙~ rfl~ [ sym~ π₁rw⨾ ∙~ π₁rw (⌜⌝𝔹 rfl~) id⨾ ∙~ π₁rw, ] ∙~ [id]
+wk<>rw : Ty~ (rfl~ {Γ = Γ}) (A [ π₁rw id ] [ id ,rw (⌜⌝𝔹[] {b = b}) ]) A
+wk<>rw = [][] ∙~ rfl~ [ sym~ π₁rw⨾ ∙~ π₁rw (⌜⌝𝔹 rfl~) id⨾ ∙~ π₁rw, ] ∙~ [id]
+
+wk^rw : Ty~ rfl~ (A [ π₁rw {b = b} id ] [ δ ^rw t ]) (A [ δ ] [ π₁rw id ])
+
+-- foo : Ty~ (rfl~ {Γ = Γ}) (A [ π₁rw id ] [ δ ^rw t ]) (A [ δ ] [ π₁rw id ])
+-- foo = [][] Ty~.∙~ rfl~ [ sym~ π₁rw⨾ ∙~ π₁rw {!⌜⌝𝔹 rfl~!} id⨾ ∙~ π₁rw, ]
 
 data Tm~ where
   -- Equivalence
@@ -196,28 +233,44 @@ data Tm~ where
   coh  : Tm~ Γ~ A~ t (coe~ Γ~ A~ t)
 
   --Congruence  
-  TT : ∀ (Γ~ : Ctx~ Γ₁ Γ₂) → Tm~ Γ~ 𝔹 TT TT
-  FF : ∀ (Γ~ : Ctx~ Γ₁ Γ₂) → Tm~ Γ~ 𝔹 FF FF
-  if : ∀ (t~ : Tm~ Γ~ 𝔹 t₁ t₂) 
-     → Tm~ (Γ~ , t~ >rw) (A~ [ π₁rw t~ id ]) u₁ u₂
-     → Tm~ (Γ~ , t~ >rw) (A~ [ π₁rw t~ id ]) v₁ v₂
-     → Tm~ Γ~ A~ (if t₁ u₁ v₁) (if t₂ u₂ v₂)
+  ƛ_   : Tm~ (Γ~ , A~) B~ t₁ t₂ → Tm~ Γ~ (Π A~ B~) (ƛ t₁) (ƛ t₂)
+  ƛ⁻¹_ : Tm~ Γ~ (Π A~ B~) t₁ t₂ → Tm~ (Γ~ , A~) B~ (ƛ⁻¹ t₁) (ƛ⁻¹ t₂)
+  TT   : ∀ (Γ~ : Ctx~ Γ₁ Γ₂) → Tm~ Γ~ 𝔹 TT TT
+  FF   : ∀ (Γ~ : Ctx~ Γ₁ Γ₂) → Tm~ Γ~ 𝔹 FF FF
+  if   : ∀ (t~ : Tm~ Γ~ 𝔹 t₁ t₂) 
+       → Tm~ (Γ~ , t~ >rw) (A~ [ π₁rw t~ id ]) u₁ u₂
+       → Tm~ (Γ~ , t~ >rw) (A~ [ π₁rw t~ id ]) v₁ v₂
+       → Tm~ Γ~ A~ (if t₁ u₁ v₁) (if t₂ u₂ v₂)
     
   _[_] : Tm~ Γ~ A~ t₁ t₂ → ∀ (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) 
        → Tm~ Δ~ (A~ [ δ~ ]) (t₁ [ δ₁ ]) (t₂ [ δ₂ ]) 
+  π₂   : ∀ (δ~ : Tms~ Δ~ (Γ~ , A~) δ₁ δ₂) 
+       → Tm~ Δ~ (A~ [ π₁ A~ δ~ ]) (π₂ δ₁) (π₂ δ₂) 
 
+  -- Projection
   π₂rw : ∀ (δ : Tms Δ (Γ , t >rw b)) → Tm~ rfl~ 𝔹[] (t [ π₁rw δ ]) ⌜ b ⌝𝔹
 
   -- Computation
-  TT[] : Tm~ rfl~ 𝔹[] (TT [ δ ]) TT
-  FF[] : Tm~ rfl~ 𝔹[] (FF [ δ ]) FF
+  ƛ[]   : Tm~ rfl~ Π[] ((ƛ t) [ δ ]) (ƛ (t [ δ ^ A ]))
+  TT[]  : Tm~ rfl~ 𝔹[] (TT [ δ ]) TT
+  FF[]  : Tm~ rfl~ 𝔹[] (FF [ δ ]) FF
+  if[]  : Tm~ rfl~ rfl~ (if t u v [ δ ]) 
+                        (if (coe~ rfl~ 𝔹[] (t [ δ ])) 
+                        (coe~ rfl~ wk^rw (u [ δ ^rw t ])) 
+                        (coe~ rfl~ wk^rw (v [ δ ^rw t ])))
 
   [id] : Tm~ rfl~ [id] (t [ id ]) t
   [][] : Tm~ rfl~ [][] (t [ δ ] [ σ ]) (t [ δ ⨾ σ ])
 
-  ifTT : Tm~ rfl~ (sym~ wk<b>) (if TT u v) (u [ id ,rw TT[] ])
-  ifFF : Tm~ rfl~ (sym~ wk<b>) (if FF u v) (v [ id ,rw FF[] ])
+  ifTT : Tm~ rfl~ (sym~ wk<>rw) (if TT u v) (u [ id ,rw TT[] ])
+  ifFF : Tm~ rfl~ (sym~ wk<>rw) (if FF u v) (v [ id ,rw FF[] ])
 
+  β    : Tm~ rfl~ rfl~ (ƛ⁻¹ ƛ t) t
+  η    : Tm~ rfl~ rfl~ (ƛ ƛ⁻¹ t) t
+
+  π₂, : Tm~ rfl~ (rfl~ [ π₁, ]) (π₂ (δ , t)) t
+
+  -- Note this is what we would expect from |π₂[]|, but reversed
   π₂⨾ : Tm~ rfl~ (rfl~ [ π₁⨾ ] ∙~ sym~ {Γ~ = Γ~} [][]) (π₂ (δ ⨾ σ)) (π₂ δ [ σ ])
 
 ⌜⌝𝔹 {b = true}  = TT
@@ -230,6 +283,21 @@ data Tm~ where
   =  sym~ {Γ~ = rfl~} [][] ∙~ (t~ [ rfl~ ]) ∙~ ⌜⌝𝔹[]
   
 π₂rw′ = π₂rw
+
+δ ^rw t = (δ ⁺rw _) ,rw (sym~ [][] ∙~ coh [ rfl~ ] ∙~ π₂rw id)
+
+wk^rw = [][] ∙~ rfl~ [ sym~ π₁rw⨾ ∙~ π₁rw rfl~ id⨾ ∙~ π₁rw, ] ∙~ sym~ [][]
+
+coeTm~ : Tm~ Γ~ A~ t₁ t₂ 
+       → Tm~ (sym~ Γ₁~ ∙~ Γ~ ∙~ Γ₂~) (sym~ A₁~ ∙~ A~ ∙~ A₂~) 
+             (coe~ Γ₁~ A₁~ t₁) (coe~ Γ₂~ A₂~ t₂)
+coeTm~ t~ = sym~ coh ∙~ t~ ∙~ coh
+
+-- We derive the substitution law for |ƛ⁻¹| as in 
+-- https://people.cs.nott.ac.uk/psztxa/publ/tt-in-tt.pdf
+ƛ⁻¹[] : Tm~ rfl~ rfl~ ((ƛ⁻¹ t) [ δ ^ A ]) (ƛ⁻¹ (coe~ rfl~ Π[] (t [ δ ])))
+ƛ⁻¹[] =  sym~ β ∙~ ƛ⁻¹_ {A~ = rfl~} {B~ = rfl~} (coh {A~ = rfl~} 
+      ∙~ coeTm~ (sym~ ƛ[] ∙~ η [ rfl~ ]))
 
 -- In an inconsistent context, all terms are convertible
 -- Therefore, decidability of conversion is dependent on decidability of
