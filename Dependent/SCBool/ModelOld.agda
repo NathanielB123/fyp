@@ -4,13 +4,11 @@ open import Utils
 open import Utils.IdExtras
 
 open import Dependent.SCBool.Syntax
+open import Dependent.SCBool.MutualInd
 
--- Like "ModelOld.agda" but without asserting termination.
---
--- To achieve this, we use some trickery with forward references, with-clauses 
--- and specialising helpers, which makes unfortunately the definitions a bit 
--- clunkier in places.
-module Dependent.SCBool.Model where
+-- First attempt at "Model.agda". Unfortunately, Agda's termination checker is
+-- not happy.
+module Dependent.SCBool.ModelOld where
 
 ⟦Ctx⟧ : Set₁
 ⟦Ctx⟧ = Set
@@ -112,24 +110,43 @@ if≡ : ∀ (Γ≡ : ⟦Γ₁⟧ ≡ᴾ ⟦Γ₂⟧) (A≡ : ⟦A₁⟧ ≡[ Ty�
     → ⟦if⟧ ⟦t₁⟧ ⟦u₁⟧ ⟦v₁⟧ ≡[ Tm≡ Γ≡ A≡ ]≡ᴾ ⟦if⟧ ⟦t₂⟧ ⟦u₂⟧ ⟦v₂⟧
 if≡ refl refl refl refl refl = refl
 
+⟦_⟧Sortℓ : Sort → Level
+
+⟦ ctx     ⟧Sortℓ = 1ℓ
+⟦ ty _    ⟧Sortℓ = 1ℓ
+⟦ tm _ _  ⟧Sortℓ = 0ℓ
+⟦ tms _ _ ⟧Sortℓ = 0ℓ
+
+⟦_⟧Sort : ∀ 𝒮 → Set ⟦ 𝒮 ⟧Sortℓ
+
+{-# TERMINATING #-}
+⟦_⟧_ : Syn 𝒮 → SortMarker 𝒮 → ⟦ 𝒮 ⟧Sort
 ⟦_⟧Ctx : Ctx → ⟦Ctx⟧
 ⟦_⟧Ty  : Ty Γ → ⟦Ty⟧ ⟦ Γ ⟧Ctx
 ⟦_⟧Tm  : Tm Γ A → ⟦Tm⟧ ⟦ Γ ⟧Ctx ⟦ A ⟧Ty
 ⟦_⟧Tms : Tms Δ Γ → ⟦Tms⟧ ⟦ Δ ⟧Ctx ⟦ Γ ⟧Ctx
+
+⟦ ctx     ⟧Sort = Set
+⟦ ty Γ    ⟧Sort = ⟦Ty⟧ ⟦ Γ ⟧Ctx
+⟦ tm Γ A  ⟧Sort = ⟦Tm⟧ ⟦ Γ ⟧Ctx ⟦ A ⟧Ty
+⟦ tms Δ Γ ⟧Sort = ⟦Tms⟧ ⟦ Δ ⟧Ctx ⟦ Γ ⟧Ctx
+
+⟦_⟧Ctx = ⟦_⟧ CTX
+⟦_⟧Ty  = ⟦_⟧ TY
+⟦_⟧Tm  = ⟦_⟧ TM
+⟦_⟧Tms = ⟦_⟧ TMS
 
 variable
   ρ ρ₁ ρ₂ : ⟦Γ⟧
 
 ⟦_⟧Ctx~ : Ctx~ Γ₁ Γ₂ → ⟦ Γ₁ ⟧Ctx ≡ᴾ ⟦ Γ₂ ⟧Ctx
 ⟦_⟧Ty~  : Ty~ Γ~ A₁ A₂ → ⟦ A₁ ⟧Ty ≡[ congᴾ ⟦Ty⟧ ⟦ Γ~ ⟧Ctx~ ]≡ᴾ ⟦ A₂ ⟧Ty
-⟦_⟧Tm~ : Tm~ Γ~ A~ t₁ t₂ 
-        → ⟦ t₁ ⟧Tm ≡[ Tm≡ ⟦ Γ~ ⟧Ctx~ ⟦ A~ ⟧Ty~ ]≡ᴾ ⟦ t₂ ⟧Tm
+⟦_⟧Tm~  : Tm~ Γ~ A~ t₁ t₂ 
+         → ⟦ t₁ ⟧Tm ≡[ Tm≡ ⟦ Γ~ ⟧Ctx~ ⟦ A~ ⟧Ty~ ]≡ᴾ ⟦ t₂ ⟧Tm
 ⟦_⟧Tms~ : Tms~ Δ~ Γ~ δ₁ δ₂ 
          → ⟦ δ₁ ⟧Tms ≡[ Tms≡ ⟦ Δ~ ⟧Ctx~ ⟦ Γ~ ⟧Ctx~ ]≡ᴾ ⟦ δ₂ ⟧Tms
 
 ⟦𝔹⟧′ : ⟦ 𝔹 {Γ = Γ} ⟧Ty ≡ᴾ λ ρ → Bool 
-⌜⌝𝔹≡ : ⟦ ⌜ b ⌝𝔹 ⟧Tm ≡[ Tm≡ (refl {x = ⟦ Γ ⟧Ctx}) ⟦𝔹⟧′ ]≡ᴾ λ ρ → b
-
 
 Ty≡-inst : ⟦A₁⟧ ≡ᴾ ⟦A₂⟧ → ⟦A₁⟧ ρ ≡ᴾ ⟦A₂⟧ ρ
 Ty≡-inst refl = refl
@@ -141,59 +158,47 @@ Tm[]≡-inst : ∀ {ρ : ⟦ Γ ⟧Ctx} (A≡ : ⟦A₁⟧ ≡ᴾ ⟦A₂⟧) �
            → ⟦t₁⟧ ρ ≡[ Ty≡-inst A≡ ]≡ᴾ ⟦t₂⟧ ρ
 Tm[]≡-inst refl refl = refl
 
+⟦ ε     ⟧ CTX = ⊤
+⟦ Γ , A ⟧ CTX = Σ ⟦ Γ ⟧Ctx ⟦ A ⟧Ty
 
-⟦ ε     ⟧Ctx = ⊤
-⟦ Γ , A ⟧Ctx = Σ ⟦ Γ ⟧Ctx ⟦ A ⟧Ty
+⟦ 𝔹 ⟧ TY = λ ρ → Bool
 
-⟦ Γ , t >rw b ⟧Ctx = Σ ⟦ Γ ⟧Ctx (λ ρ → Box (⟦ t ⟧Tm ρ ≡[ Ty≡-inst ⟦𝔹⟧′ ]≡ᴾ b))
+⟦ Γ , t >rw b ⟧ CTX = Σ ⟦ Γ ⟧Ctx (λ ρ → Box (⟦ t ⟧Tm ρ ≡ᴾ b))
 
-⟦ 𝔹 ⟧Ty = λ ρ → Bool
-⟦ coe~ Γ~ A ⟧Ty = coeᴾ (Ty≡ ⟦ Γ~ ⟧Ctx~) ⟦ A ⟧Ty
-⟦ Π A B     ⟧Ty = λ ρ → ∀ x → ⟦ B ⟧Ty (ρ Σ, x)
-⟦ A [ δ ]   ⟧Ty = λ ρ → ⟦ A ⟧Ty (⟦ δ ⟧Tms ρ)
-⟦ if t A B  ⟧Ty = λ ρ → Bool-rec (⟦ t ⟧Tm ρ) (⟦ A ⟧Ty ρ) (⟦ B ⟧Ty ρ)
+⟦ coe~ Γ~ A ⟧ TY = coeᴾ (Ty≡ ⟦ Γ~ ⟧Ctx~) ⟦ A ⟧Ty
+⟦ Π A B     ⟧ TY = λ ρ → ∀ x → ⟦ B ⟧Ty (ρ Σ, x)
+⟦ A [ δ ]   ⟧ TY = λ ρ → ⟦ A ⟧Ty (⟦ δ ⟧Tms ρ)
+⟦ if t A B  ⟧ TY = λ ρ → Bool-rec (⟦ t ⟧Tm ρ) (⟦ A ⟧Ty ρ) (⟦ B ⟧Ty ρ)
 
+⟦ coe~ Γ~ A~ t ⟧ TM = coeᴾ (Tm≡ ⟦ Γ~ ⟧Ctx~ ⟦ A~ ⟧Ty~) ⟦ t ⟧Tm
 
-⟦TT⟧′ : ⟦ TT {Γ = Γ} ⟧Tm ≡ᴾ λ ρ → true
-⟦FF⟧′ : ⟦ FF {Γ = Γ} ⟧Tm ≡ᴾ λ ρ → false
-⟦[]⟧′ : ⟦ t [ δ ] ⟧Tm ≡ᴾ λ ρ → ⟦ t ⟧Tm (⟦ δ ⟧Tms ρ)
+⟦ ƛ t     ⟧ TM = λ ρ        x → ⟦ t ⟧Tm (ρ Σ, x)
+⟦ ƛ⁻¹ t   ⟧ TM = λ (ρ Σ, x)   → ⟦ t ⟧Tm ρ x
+⟦ TT      ⟧ TM = λ ρ          → true
+⟦ FF      ⟧ TM = λ ρ          → false
+⟦ t [ δ ] ⟧ TM = λ ρ          → ⟦ t ⟧Tm (⟦ δ ⟧Tms ρ)
 
-⟦ π₁ δ  ⟧Tms = λ ρ → ⟦ δ ⟧Tms ρ .fst
+⟦ π₁ δ  ⟧ TMS = λ ρ → ⟦ δ ⟧Tms ρ .fst
 
+⟦ π₂ δ  ⟧ TM = λ ρ → ⟦ δ ⟧Tms ρ .snd
 
-⟦ id     ⟧Tms = λ ρ → ρ
-⟦ π₁rw δ ⟧Tms = λ ρ → ⟦ δ ⟧Tms ρ .fst                             
-⟦ coe~ Δ~ Γ~ δ ⟧Tms = coeᴾ (Tms≡ ⟦ Δ~ ⟧Ctx~ ⟦ Γ~ ⟧Ctx~) ⟦ δ ⟧Tms
-⟦ ε            ⟧Tms = λ ρ → tt
-⟦ δ , t        ⟧Tms = λ ρ → ⟦ δ ⟧Tms ρ Σ, ⟦ t ⟧Tm ρ
+⟦ id     ⟧ TMS = λ ρ → ρ
+⟦ π₁rw δ ⟧ TMS = λ ρ → ⟦ δ ⟧Tms ρ .fst
 
-⟦ ,rwℱ {b = true} δ refl t~ ⟧Tms 
-  with symᴾ (⟦[]⟧′ {δ = δ}) ∙ᴾ ⟦ t~ ⟧Tm~ ∙ᴾ ⟦TT⟧′
-... | eq = λ ρ → ⟦ δ ⟧Tms ρ Σ, box (Tm≡-inst eq)
-⟦ ,rwℱ {b = false} δ refl t~ ⟧Tms 
-  with symᴾ (⟦[]⟧′ {δ = δ}) ∙ᴾ ⟦ t~ ⟧Tm~ ∙ᴾ ⟦FF⟧′
-... | eq = λ ρ → ⟦ δ ⟧Tms ρ Σ,  box (Tm≡-inst eq)
+⟦ if t u v ⟧ TM = λ ρ → Bool-splitᴾ (⟦ t ⟧Tm ρ) (λ t~ → ⟦ u ⟧Tm (ρ Σ, box t~)) 
+                                                (λ t~ → ⟦ v ⟧Tm (ρ Σ, box t~))
+                                          
+⟦ coe~ Δ~ Γ~ δ ⟧ TMS = coeᴾ (Tms≡ ⟦ Δ~ ⟧Ctx~ ⟦ Γ~ ⟧Ctx~) ⟦ δ ⟧Tms
+⟦ ε            ⟧ TMS = λ ρ → tt
+⟦ δ , t        ⟧ TMS = λ ρ → ⟦ δ ⟧Tms ρ Σ, ⟦ t ⟧Tm ρ
 
-⟦ δ ⨾ σ ⟧Tms = λ ρ → ⟦ δ ⟧Tms (⟦ σ ⟧Tms ρ)
-
-⟦ coe~ Γ~ A~ t ⟧Tm = coeᴾ (Tm≡ ⟦ Γ~ ⟧Ctx~ ⟦ A~ ⟧Ty~) ⟦ t ⟧Tm
-
-⟦ ƛ t     ⟧Tm = λ ρ        x → ⟦ t ⟧Tm (ρ Σ, x)
-⟦ ƛ⁻¹ t   ⟧Tm = λ (ρ Σ, x)   → ⟦ t ⟧Tm ρ x
-⟦ TT      ⟧Tm = λ ρ          → true
-⟦ FF      ⟧Tm = λ ρ          → false
-⟦ t [ δ ] ⟧Tm = λ ρ          → ⟦ t ⟧Tm (⟦ δ ⟧Tms ρ)
-⟦ π₂ δ  ⟧Tm = λ ρ → ⟦ δ ⟧Tms ρ .snd
-⟦ if t u v ⟧Tm = λ ρ → Bool-splitᴾ (⟦ t ⟧Tm ρ) (λ t~ → ⟦ u ⟧Tm (ρ Σ, box t~)) 
-                                               (λ t~ → ⟦ v ⟧Tm (ρ Σ, box t~))
-⟦TT⟧′ = refl
-⟦FF⟧′ = refl
-⟦[]⟧′ = refl
-
+⟦ ,rwℱ {b = true} δ refl t~ ⟧ TMS 
+  = λ ρ → ⟦ δ ⟧Tms ρ Σ, box (Tm≡-inst ⟦ t~ ⟧Tm~)
+⟦ ,rwℱ {b = false} δ refl t~ ⟧ TMS 
+  = λ ρ → ⟦ δ ⟧Tms ρ Σ, box (Tm≡-inst ⟦ t~ ⟧Tm~)
+⟦ δ ⨾ σ ⟧ TMS = λ ρ → ⟦ δ ⟧Tms (⟦ σ ⟧Tms ρ)
+  
 ⟦𝔹⟧′ = refl
-
-⌜⌝𝔹≡ {b = false} = refl
-⌜⌝𝔹≡ {b = true}  = refl
 
 ⟦ rfl~         ⟧Ctx~ = refl
 ⟦ sym~ Γ~      ⟧Ctx~ = symᴾ ⟦ Γ~ ⟧Ctx~
@@ -207,32 +212,27 @@ Tm[]≡-inst refl refl = refl
 ⟦ coh               ⟧Ty~ = coh[]ᴾ
 ⟦ 𝔹 {Γ~ = Γ~}       ⟧Ty~ = 𝔹≡ ⟦ Γ~ ⟧Ctx~
 ⟦ Π {Γ~ = Γ~} A~ B~ ⟧Ty~ = Π≡ ⟦ Γ~ ⟧Ctx~ ⟦ A~ ⟧Ty~ ⟦ B~ ⟧Ty~
+
 ⟦ _[_] {Γ~ = Γ~} {Δ~ = Δ~} A~ δ~ ⟧Ty~ 
   = []T≡ ⟦ Γ~ ⟧Ctx~ ⟦ Δ~ ⟧Ctx~ ⟦ A~ ⟧Ty~ (⟦ δ~ ⟧Tms~)
-⟦ 𝔹[]               ⟧Ty~ = refl
-⟦ [][]              ⟧Ty~ = refl
-⟦ [id]              ⟧Ty~ = refl
 
--- Specialisation of |coh[]ᴾ| to assist with termination
-cohTm : ∀ {⟦t⟧ : ⟦Tm⟧ ⟦Γ₁⟧ ⟦A₁⟧} {Γ≡ : ⟦Γ₁⟧ ≡ᴾ ⟦Γ₂⟧} 
-          {A≡ : ⟦A₁⟧ ≡[ Ty≡ Γ≡ ]≡ᴾ ⟦A₂⟧} 
-      → ⟦t⟧ ≡[ Tm≡ Γ≡ A≡ ]≡ᴾ coeᴾ (Tm≡ Γ≡ A≡) ⟦t⟧
+⟦ 𝔹[]  ⟧Ty~ = refl
+⟦ [][] ⟧Ty~ = refl
+⟦ [id] ⟧Ty~ = refl
 
-⟦ rfl~         ⟧Tm~ = refl
-⟦ sym~ t~      ⟧Tm~ = sym[]ᴾ ⟦ t~ ⟧Tm~
-⟦ t₁₂~ ∙~ t₂₃~ ⟧Tm~ = ⟦ t₁₂~ ⟧Tm~ ∙[]ᴾ ⟦ t₂₃~ ⟧Tm~
+⟦ rfl~               ⟧Tm~ = refl
+⟦ sym~ t~            ⟧Tm~ = sym[]ᴾ ⟦ t~ ⟧Tm~
+⟦ t₁₂~ ∙~ t₂₃~       ⟧Tm~ = ⟦ t₁₂~ ⟧Tm~ ∙[]ᴾ ⟦ t₂₃~ ⟧Tm~
+⟦ coh                ⟧Tm~ = coh[]ᴾ
+⟦ TT Γ~              ⟧Tm~ = TT≡ ⟦ Γ~ ⟧Ctx~
+⟦ FF Γ~              ⟧Tm~ = FF≡ ⟦ Γ~ ⟧Ctx~
 
-⟦ coh {Γ~ = Γ~} {A~ = A~} ⟧Tm~ = cohTm {Γ≡ = ⟦ Γ~ ⟧Ctx~} {A≡ = ⟦ A~ ⟧Ty~}
-
-⟦ TT Γ~        ⟧Tm~ = TT≡ ⟦ Γ~ ⟧Ctx~
-⟦ FF Γ~        ⟧Tm~ = FF≡ ⟦ Γ~ ⟧Ctx~
-⟦ if {Γ~ = Γ~} {A~ = A~} t~ u~ v~  ⟧Tm~ 
+⟦ if {Γ~ = Γ~} {A~ = A~} t~ u~ v~ ⟧Tm~ 
   = if≡ ⟦ Γ~ ⟧Ctx~ ⟦ A~ ⟧Ty~ ⟦ t~ ⟧Tm~ ⟦ u~ ⟧Tm~ ⟦ v~ ⟧Tm~
-⟦ t~ [ δ~ ]    ⟧Tm~ = {!   !}
-⟦ π₂rw {b = true}  δ ⟧Tm~ with ⟦ δ ⟧Tms
-... | ⟦δ⟧ = funextᴾ (λ ρ → ⟦δ⟧ ρ .snd .unbox)
-⟦ π₂rw {b = false} δ ⟧Tm~ with ⟦ δ ⟧Tms
-... | ⟦δ⟧ = funextᴾ (λ ρ → ⟦δ⟧ ρ .snd .unbox)
+
+⟦ t~ [ δ~ ]          ⟧Tm~ = {!   !}
+⟦ π₂rw {b = true}  δ ⟧Tm~ = funextᴾ (λ ρ → ⟦ δ ⟧Tms ρ .snd .unbox)
+⟦ π₂rw {b = false} δ ⟧Tm~ = funextᴾ (λ ρ → ⟦ δ ⟧Tms ρ .snd .unbox)
 ⟦ TT[]               ⟧Tm~ = refl
 ⟦ FF[]               ⟧Tm~ = refl
 ⟦ [id]               ⟧Tm~ = refl
@@ -240,8 +240,6 @@ cohTm : ∀ {⟦t⟧ : ⟦Tm⟧ ⟦Γ₁⟧ ⟦A₁⟧} {Γ≡ : ⟦Γ₁⟧ ≡
 ⟦ ifTT               ⟧Tm~ = refl
 ⟦ ifFF               ⟧Tm~ = refl
 ⟦ π₂⨾                ⟧Tm~ = refl
-
-cohTm {Γ≡ = refl} {A≡ = refl} = refl
 
 ⟦ rfl~              ⟧Tms~ = refl
 ⟦ sym~ δ~           ⟧Tms~ = sym[]ᴾ ⟦ δ~ ⟧Tms~
@@ -265,4 +263,3 @@ cohTm {Γ≡ = refl} {A≡ = refl} = refl
 ⟦ ,⨾                ⟧Tms~ = refl
 ⟦ ,rw⨾ {b = true}   ⟧Tms~ = refl
 ⟦ ,rw⨾ {b = false}  ⟧Tms~ = refl
- 

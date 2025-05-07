@@ -78,10 +78,9 @@ data Tms where
 
   ε     : Tms Δ ε
   _,_   : ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]) → Tms Δ (Γ , A) 
-  -- We do some Fording here to enforce that |t [ δ ]| and |⌜ b ⌝𝔹| are 
-  -- structural sub-terms.
-  ,rwℱ : ∀ (δ : Tms Δ Γ) {u} → t [ δ ]′ ≡ u → ⌜ b ⌝𝔹 ≡ v 
-         → Tm~ rfl~ 𝔹[]′ u v
+  -- We do some Fording here to enforce that |t [ δ ]| is a structural subterm.
+  ,rwℱ : ∀ (δ : Tms Δ Γ) {u} → t [ δ ]′ ≡ u
+         → Tm~ rfl~ 𝔹[]′ (t [ δ ]′) ⌜ b ⌝𝔹
          → Tms Δ (Γ , t >rw b)
   id  : Tms Γ Γ
   _⨾_ : Tms Δ Γ → Tms Θ Δ → Tms Θ Γ
@@ -89,7 +88,7 @@ data Tms where
   π₁   : Tms Δ (Γ , A) → Tms Δ Γ
   π₁rw : Tms Δ (Γ , t >rw b) → Tms Δ Γ
 
-pattern _,rw_ δ t~ = ,rwℱ δ refl refl t~
+pattern _,rw_ δ t~ = ,rwℱ δ refl t~
 
 data Tm where
   coe~ : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Tm Γ₁ A₁ → Tm Γ₂ A₂
@@ -134,14 +133,6 @@ data Ty~ where
 
 𝔹~′ = 𝔹
 𝔹[]′ = 𝔹[]
-
-data _⊢_>rw_ : ∀ Γ → Tm Γ 𝔹 → Bool → Set where
-  rzℱ   : ∀ {B} → B ≡ Ty.𝔹 {Γ = Γ , t >rw b}
-        → (Γ , t >rw b) ⊢ coe~ rfl~ 𝔹[] (t [ π₁rw id ]) >rw b
-  rs    : Γ ⊢ t >rw b → (Γ , A) ⊢ coe~ rfl~ 𝔹[] (t [ π₁ id ]) >rw b
-  rsrw  : Γ ⊢ t >rw b₁ → (Γ , u >rw b₂) ⊢ coe~ rfl~ 𝔹[] (t [ π₁rw id ]) >rw b₁
-
-pattern rz = rzℱ refl
 
 π₂rw′ : ∀ (δ : Tms Δ (Γ , t >rw b)) → Tm~ rfl~ 𝔹[] (t [ π₁rw δ ]) ⌜ b ⌝𝔹
 
@@ -204,9 +195,7 @@ data Tm~ where
   -- Coherence
   coh  : Tm~ Γ~ A~ t (coe~ Γ~ A~ t)
 
-  --Congruence
-  rw   : Γ ⊢ t >rw b → Tm~ rfl~ rfl~ t ⌜ b ⌝𝔹
-  
+  --Congruence  
   TT : ∀ (Γ~ : Ctx~ Γ₁ Γ₂) → Tm~ Γ~ 𝔹 TT TT
   FF : ∀ (Γ~ : Ctx~ Γ₁ Γ₂) → Tm~ Γ~ 𝔹 FF FF
   if : ∀ (t~ : Tm~ Γ~ 𝔹 t₁ t₂) 
@@ -275,4 +264,6 @@ incon {Γ₁ = Γ₁} {Γ₂ = Γ₂} {Γ~ = Γ~} {A~ = A~} {t₁ = t₁} {t₂ 
               t₂
     if~t₂ =  ifFF ∙~ [][] ∙~ rfl~ [ sym~ π₁rw⨾ ∙~ π₁rw (FF rfl~) id⨾ ∙~ π₁rw, ] 
           ∙~ [id]
- 
+
+rw : Tm~ (rfl~ {Γ = Γ , t >rw b}) 𝔹[] (t [ π₁rw id ]) ⌜ b ⌝𝔹
+rw = π₂rw id
