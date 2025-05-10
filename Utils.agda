@@ -1,4 +1,4 @@
-{-# OPTIONS --prop #-}
+{-# OPTIONS --prop --safe #-}
 
 module Utils where
 
@@ -8,14 +8,20 @@ open import Data.Unit using (⊤; tt) public
 open import Data.Empty using (⊥; ⊥-elim) public
 open import Data.Product using (Σ; ∃; _×_; ∃-syntax)
   renaming (_,_ to _Σ,_; proj₁ to fst; proj₂ to snd) public
-open import Relation.Binary.PropositionalEquality 
-  using (_≡_; refl; erefl; cong; cong₂; dcong₂; subst; sym; subst-subst-sym
-        ; cong-app)
+open import Relation.Binary.PropositionalEquality as EQ
+  using ( _≡_; refl; erefl; cong; cong₂; subst; sym; subst-subst-sym
+        ; subst-sym-subst; sym-cong; cong-app)
   renaming (trans to infixr 4 _∙_)
   public
-open import Relation.Binary.HeterogeneousEquality
+open EQ.≡-Reasoning using (begin_; _≡⟨⟩_; _∎) public
+open import Relation.Binary.HeterogeneousEquality as HEQ
   using (_≅_; refl)
-  renaming (cong to hcong; cong₂ to hcong₂) 
+  renaming ( ≅-to-≡ to ≅→≡; sym to hsym; cong to hcong; cong₂ to hcong₂
+           ; ≡-subst-removable to subst-removable
+           ; icong-≡-subst-removable to cong-subst-removable) 
+  public
+open HEQ.≅-Reasoning using ()
+  renaming (begin_ to hbegin_; _≡⟨_⟩_ to _≅⟨_⟩≡_; _≅⟨_⟩_ to _≅⟨_⟩≅_; _∎ to _≅∎)
   public
 open import Data.Bool 
   using (Bool; true; false) 
@@ -56,6 +62,9 @@ open import Function
   using (_∘_; case_of_; flip) 
   public
 
+infixr 2 step-≡
+infix  1 begin≅_
+
 1ℓ : Level
 1ℓ = suℓ 0ℓ
 
@@ -71,6 +80,22 @@ private variable
   i j k : Fin n
   r r₁ r₂ r₃ r₄ : A → A → Set ℓ
   p : x ≡ y
+
+-- We add an extra |≡| to the right of |step-≡| as defined in the standard 
+-- library to make it easier to format
+step-≡ : ∀ (x {y z} : A) → y ≡ z → x ≡ y → x ≡ z
+step-≡ _ p q = q ∙ p
+syntax step-≡ x p q = x ≡⟨ q ⟩≡ p
+
+begin≅_ : x HEQ.≅-Reasoning.IsRelatedTo y → x ≡ y
+begin≅ p = ≅→≡ (hbegin p)
+
+-- |dcong₂| that computes slightly better than the one in the standard library
+dcong₂ : ∀ {B : A → Set ℓ}
+           (f : (x : A) → B x → C) {x₁ x₂ y₁ y₂}
+           (p : x₁ ≡ x₂) 
+       → subst B p y₁ ≡ y₂ → f x₁ y₁ ≡ f x₂ y₂
+dcong₂ f refl p = cong (f _) p
 
 SN : (A → A → Set ℓ) → A → Set _
 SN r = Acc (flip r)
@@ -197,8 +222,11 @@ infix 4 _≡[_]≡_
 
 {-# DISPLAY _≡_ (coe p x) y = x ≡[ p ]≡ y #-}
 
-sym[] : x ≡[ p ]≡ y → y ≡[ sym p ]≡ x
+sym[] : coe p x ≡ y → coe (sym p) y ≡ x
 sym[] {p = refl} refl = refl
+
+shift : coe p x ≡ y → x ≡ coe (sym p) y
+shift p = sym (sym[] p)
 
 pred : ℕ → ℕ
 pred ze     = ze
@@ -216,3 +244,27 @@ Bool-split false t f = f refl
 Bool-rec : ∀ (b : Bool) → A → A → A
 Bool-rec true  t f = t
 Bool-rec false t f = f
+
+coh[] : x ≡[ p ]≡ coe p x
+coh[] {p = refl} = refl
+
+-- Subst in terms of |coe|
+csubst : (P : A → Set ℓ) → x ≡ y → P x → P y
+csubst P p x = coe (cong P p) x
+
+csubst⁻¹ : (P : A → Set ℓ) → x ≡ y → P y → P x
+csubst⁻¹ P p x = coe (sym (cong P p)) x
+
+csubst-csubst-sym : {P : A → Set ℓ} (x≡y : x ≡ y) {p : P y} 
+                  → csubst P x≡y (csubst P (sym x≡y) p) ≡ p
+csubst-csubst-sym refl = refl
+
+csubst⁻¹-csubst⁻¹-sym : {P : A → Set ℓ} (y≡x : y ≡ x) {p : P y} 
+                      → csubst⁻¹ P y≡x (csubst⁻¹ P (sym y≡x) p) ≡ p
+csubst⁻¹-csubst⁻¹-sym refl = refl
+
+csubst⁻¹-sym-csubst⁻¹ : {P : A → Set ℓ} (x≡y : x ≡ y) {p : P y} 
+                      → csubst⁻¹ P (sym x≡y) (csubst⁻¹ P x≡y p) ≡ p
+csubst⁻¹-sym-csubst⁻¹ refl = refl
+
+

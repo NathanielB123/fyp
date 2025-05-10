@@ -1,4 +1,4 @@
-{-# OPTIONS --prop --show-irrelevant #-}
+{-# OPTIONS --prop --show-irrelevant --safe #-}
 
 open import Utils
 

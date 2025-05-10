@@ -68,6 +68,15 @@ subst-coecong {p = refl} = refl
 
 {-# REWRITE subst-coecong #-}
 
+{-# REWRITE sym-cong #-}
+
+sym-sym : ∀ {p : x ≡ y} → sym (sym p) ≡ p
+sym-sym {p = refl} = refl
+
+{-# REWRITE sym-sym #-}
+
+{-# DISPLAY coe (cong f p) x = subst f p x #-}
+
 coh[]ᴾ : x ≡[ pᴾ ]≡ᴾ coeᴾ pᴾ x
 coh[]ᴾ {pᴾ = refl} = refl
 
