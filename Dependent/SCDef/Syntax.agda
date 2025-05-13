@@ -27,21 +27,19 @@ obj : ObjSort → Set
 obj SIG = Sig
 obj CTX = Σ Sig Ctx
 
-data Sub[_] : ∀ q → obj q → obj q → Set
-
 variable
   q : ObjSort
   -- Heavily relies on definitional injectivity - thanks Agda!
   Ψ Φ Ξ Ψ₁ Ψ₂ Ψ₃ Φ₁ Φ₂ Φ₃ : obj q
   
-Tms : Ctx Φ → Ctx Ψ → Set
-Tms Δ Γ = Sub[ CTX ] (_ Σ, Δ) (_ Σ, Γ)
-
-Wk : Sig → Sig → Set
-Wk = Sub[ SIG ]
-
 data Ty : Ctx Ψ → Set
 data Tm : ∀ (Γ : Ctx Ψ) → Ty Γ → Set
+data Wk : Sig → Sig → Set
+data Tms : Ctx Φ → Ctx Ψ → Set
+
+Sub[_] : ∀ q → obj q → obj q → Set
+Sub[ SIG ]                   = Wk
+Sub[ CTX ] (_ Σ, Δ) (_ Σ, Γ) = Tms Δ Γ
 
 variable
   Γ Δ Θ Γ₁ Γ₂ Γ₃ Δ₁ Δ₂ Δ₃ : Ctx Ψ
@@ -115,7 +113,12 @@ adddef[_]_,_⇒_if_then_else_ : ∀ q Ψ (Γ : Ctx (sig[ q ] Ψ)) A → (t : Tm 
                             → Tm (Γ , t >rw false) (A [ wkrw ])
                             → obj q
 
-data Sub[_] where
+data Wk where
+  id  : Wk Ψ Ψ
+  _⨾_ : Wk Φ Ψ → Wk Ξ Φ → Wk Ξ Ψ
+  wk𝒮 : Wk (Ψ ,def Γ ⇒ A if t then u else v) Ψ
+
+data Tms where
   coe~ : Ctx~ Δ₁ Δ₂ → Ctx~ Γ₁ Γ₂ → Tms Δ₁ Γ₁ → Tms Δ₂ Γ₂
 
   -- If we want to carve out a subset of |Tms| that avoids needing to deal with
@@ -131,10 +134,10 @@ data Sub[_] where
          → Tm~ rflCtx′ 𝔹[]′ (t [ δ ]′) ⌜ b ⌝𝔹
          → Tms Δ (Γ , t >rw b)
   
-  id   : Sub[ q ] Ψ Ψ
-  _⨾_  : Sub[ q ] Φ Ψ → Sub[ q ] Ξ Φ → Sub[ q ] Ξ Ψ
+  id   : Tms {Ψ = Ψ} Γ Γ
+  _⨾_  : Tms Δ Γ → Tms Θ Δ → Tms Θ Γ
   
-  wk𝒮  : Sub[ q ] (adddef[ q ] Ψ , Γ ⇒ A if t then u else v) Ψ
+  wk𝒮  : Tms (Γ [ wk𝒮 {t = t} {u = u} {v = v} ]) Γ
 
   π₁   : Tms Δ (Γ , A) → Tms Δ Γ
   π₁rw : Tms Δ (Γ , t >rw b) → Tms Δ Γ
@@ -308,7 +311,7 @@ data Tms~ where
 
 rflTm′ : Tm~ rfl~ rfl~ t t
 
-wk-comm : Tms~ (,>rw[] {t = t}) rfl~ 
+wk-comm : Tms~ (,>rw[] {t = t} {b = b}) rfl~ 
                (π₁rw id ⨾ wk𝒮 {t = u₁} {u = u₂} {v = u₃}) 
                (wk𝒮 ⨾ π₁rw id)
 wk-comm =  sym~ π₁rw⨾ ∙~ (π₁rw rflTm′ (id⨾ ∙~ coh {Δ~ = ,>rw[]} {Γ~ = rfl~} 
