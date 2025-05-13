@@ -2,14 +2,23 @@
 
 open import Utils
 
+-- For "true" SCDef (i.e. the theory which I aim to prove normalisation for)
+-- we need a bunch of side-conditions ensuring that the LHSs of rewrites do not
+-- overlap (no critical pairs).
+--
+-- These side conditions are an absolute nightmare in Agda, so I have elided
+-- them.
 module Dependent.SCDef.Syntax where
 
 infixr 4 _∙~_
 
--- Substitutions can be restricted to only signature mappings if necessary
+-- In an ordinary CwF, the objects are contexts and the morphisms are 
+-- substitutions
+-- In SCDef, we have to worry two categories - that of signature weakenings
+-- (objects are signatures) and substitutions (objects are paired-up signatures 
+-- and contexts)
 data SubSort : Set where
   SIG CTX : SubSort
-
 
 data Sig : Set
 data Ctx  : Sig → Set
@@ -22,7 +31,7 @@ data Sub[_] : ∀ q → obj q → obj q → Set
 
 variable
   q : SubSort
-  -- Heavily relies on definitional injectivity
+  -- Heavily relies on definitional injectivity - thanks Agda!
   Ψ Φ Ξ Ψ₁ Ψ₂ Ψ₃ Φ₁ Φ₂ Φ₃ : obj q
   
 Tms : Ctx Φ → Ctx Ψ → Set
