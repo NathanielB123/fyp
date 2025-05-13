@@ -1,4 +1,4 @@
-{-# OPTIONS --prop --show-irrelevant --safe #-}
+{-# OPTIONS --prop --show-irrelevant #-}
 
 open import Utils
 
@@ -17,20 +17,20 @@ infixr 4 _∙~_
 -- In SCDef, we have to worry two categories - that of signature weakenings
 -- (objects are signatures) and substitutions (objects are paired-up signatures 
 -- and contexts)
-data SubSort : Set where
-  SIG CTX : SubSort
+data ObjSort : Set where
+  SIG CTX : ObjSort
 
 data Sig : Set
 data Ctx  : Sig → Set
 
-obj : SubSort → Set
+obj : ObjSort → Set
 obj SIG = Sig
 obj CTX = Σ Sig Ctx
 
 data Sub[_] : ∀ q → obj q → obj q → Set
 
 variable
-  q : SubSort
+  q : ObjSort
   -- Heavily relies on definitional injectivity - thanks Agda!
   Ψ Φ Ξ Ψ₁ Ψ₂ Ψ₃ Φ₁ Φ₂ Φ₃ : obj q
   
@@ -53,10 +53,12 @@ variable
 -- We don't define conversion for signatures only because it simply isn't 
 -- necessary (a truly faithful translation of a QIIT-based definition would
 -- include it though)
+--
+-- We also don't explicitly define equivalence of weakenings. We consider all
+-- weakenings that map between equal signatures to be equal. 
 data Ctx~ : Ctx Ψ → Ctx Ψ → Prop
 data Ty~  : Ctx~ Γ₁ Γ₂ → Ty Γ₁ → Ty Γ₂ → Prop
 data Tm~  : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Tm Γ₁ A₁ → Tm Γ₂ A₂ → Prop
-data Wk~ : Wk Φ Ψ → Wk Φ Ψ → Prop
 data Tms~ : Ctx~ Δ₁ Δ₂ → Ctx~ Γ₁ Γ₂ → Tms Δ₁ Γ₁ → Tms Δ₂ Γ₂ → Prop
 
 variable
@@ -121,7 +123,7 @@ data Sub[_] where
   -- > ε : ∀ 𝒯 → Tms (Γ ++ 𝒯) Γ
   -- And remove |π₁rw|
 
-  ε     : Tms {Ψ = Ψ} Δ ε
+  ε     : Tms {Φ = Ψ} {Ψ = Ψ} Δ ε
   _,_   : ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]) → Tms Δ (Γ , A) 
   -- We do some Fording here to enforce that |t [ δ ]| is considered a 
   -- structural subterm.
@@ -156,7 +158,7 @@ data Tm where
   FF : Tm Γ 𝔹
   
   call : (δ : Tms {Ψ = Ψ ,def Δ ⇒ A if t then u else v} Γ (Δ [ wk𝒮 ])) 
-       → Tm Γ (A [ wk𝒮 ⨾ δ ])
+       → Tm {Ψ = Ψ ,def Δ ⇒ A if t then u else v} Γ (A [ wk𝒮 ⨾ δ ])
 
   π₂   : ∀ (δ : Tms Δ (Γ , A)) → Tm Δ (A [ π₁ δ ])
   _[_] : Tm Γ A → ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ])
@@ -191,7 +193,8 @@ data Ctx~ where
   _,_    : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Ctx~ (Γ₁ , A₁) (Γ₂ , A₂)
   _,_>rw : ∀ Γ~ → Tm~ Γ~ 𝔹~′ t₁ t₂ → Ctx~ (Γ₁ , t₁ >rw b) (Γ₂ , t₂ >rw b)
 
-  _[_] : Ctx~ Γ₁ Γ₂ → Wk~ δ₁ δ₂ → Ctx~ (Γ₁ [ δ₁ ]) (Γ₂ [ δ₂ ])  
+  -- All weakenings are convertible
+  _[] : Ctx~ Γ₁ Γ₂ → Ctx~ (Γ₁ [ δ₁ ]) (Γ₂ [ δ₂ ])  
 
   -- Computation
   ε[]    : Ctx~ (ε [ δ ]) ε
@@ -248,15 +251,6 @@ t · u = (ƛ⁻¹ t) [ id , coe~ rfl~ (sym~ [id]) u ]
 ,rw⨾-helper : Tm~ rfl~ 𝔹[] (t [ δ ]) ⌜ b ⌝𝔹 
             → Tm~ rfl~ 𝔹[]′ (t [ δ ⨾ σ ]′) ⌜ b ⌝𝔹
 
-data Wk~ where
-  rfl~ : Wk~ δ δ
-  sym~ : Wk~ δ₁ δ₂ → Wk~ δ₂ δ₁
-  _∙~_ : Wk~ δ₁ δ₂ → Wk~ δ₂ δ₃ → Wk~ δ₁ δ₃
-
-  ⨾⨾  : Wk~ (δ ⨾ (σ ⨾ γ)) ((δ ⨾ σ) ⨾ γ)
-  id⨾ : Wk~ (id ⨾ δ) δ
-  ⨾id : Wk~ (δ ⨾ id) δ
-
 π₂rw′ : ∀ (δ : Tms Δ (Γ , t >rw b)) → Tm~ rfl~ 𝔹[] (t [ π₁rw δ ]) ⌜ b ⌝𝔹
 
 data Tms~ where
@@ -285,7 +279,7 @@ data Tms~ where
   π₁rw : ∀ (t~ : Tm~ Γ~ 𝔹 t₁ t₂)
        → Tms~ Δ~ (Γ~ , t~ >rw) δ₁ δ₂ → Tms~ Δ~ Γ~ (π₁rw δ₁) (π₁rw δ₂)
 
-  wk𝒮 : Tms~ (Γ~ [ rfl~ ]) Γ~ (wk𝒮 {t = t} {u = u} {v = v}) wk𝒮
+  wk𝒮 : Tms~ (Γ~ []) Γ~ (wk𝒮 {t = t} {u = u} {v = v}) wk𝒮
 
   -- Computation
   εη   : Tms~ rfl~ rfl~ δ ε
@@ -351,16 +345,16 @@ data Tm~ where
   π₂rw : ∀ (δ : Tms Δ (Γ , t >rw b)) → Tm~ rfl~ 𝔹[] (t [ π₁rw δ ]) ⌜ b ⌝𝔹
 
   -- Computation
-  ƛ[]   : Tm~ rfl~ Π[] ((ƛ t) [ δ ]) (ƛ (t [ δ ^ A ]))
-  TT[]  : Tm~ rfl~ 𝔹[] (TT [ δ ]) TT
-  FF[]  : Tm~ rfl~ 𝔹[] (FF [ δ ]) FF
+  ƛ[]    : Tm~ rfl~ Π[] ((ƛ t) [ δ ]) (ƛ (t [ δ ^ A ]))
+  call[] : Tm~ rfl~ ([][] ∙~ rfl~ [ ⨾⨾ ]) 
+               (call {t = t} {u = u} {v = v} δ [ σ ]) 
+               (call (δ ⨾ σ))
+  TT[]   : Tm~ rfl~ 𝔹[] (TT [ δ ]) TT
+  FF[]   : Tm~ rfl~ 𝔹[] (FF [ δ ]) FF
   
   [id] : Tm~ rfl~ [id] (t [ id ]) t
   [][] : Tm~ rfl~ [][] (t [ δ ] [ σ ]) (t [ δ ⨾ σ ])
 
-  call[] : Tm~ rfl~ ([][] ∙~ rfl~ [ ⨾⨾ ]) 
-               (call {t = t} {u = u} {v = v} δ [ σ ]) 
-               (call (δ ⨾ σ))
 
   -- Calls to definitions reduce exactly when the neutral they block on
   -- reduces to a closed Boolean
@@ -381,8 +375,8 @@ data Tm~ where
                (v [ wk𝒮 ⨾ coe~ rfl~ (sym~ (,>rw[] {b = false})) 
                                (δ ,rw (sym~ coh [ rfl~ ] ∙~ [][] ∙~ t~)) ])
 
-  β    : Tm~ rfl~ rfl~ (ƛ⁻¹ ƛ t) t
-  η    : Tm~ rfl~ rfl~ (ƛ ƛ⁻¹ t) t
+  β : Tm~ rfl~ rfl~ (ƛ⁻¹ ƛ t) t
+  η : Tm~ rfl~ rfl~ (ƛ ƛ⁻¹ t) t
 
   π₂, : Tm~ rfl~ (rfl~ [ π₁, ]) (π₂ (δ , t)) t
 
