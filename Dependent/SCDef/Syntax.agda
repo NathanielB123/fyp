@@ -31,14 +31,14 @@ Tms Δ Γ = Sub[ CTX ] (_ Σ, Δ) (_ Σ, Γ)
 Wk : Sig → Sig → Set
 Wk = Sub[ SIG ]
 
-data Ty   : Ctx Ψ → Set
-data Tm   : ∀ (Γ : Ctx Ψ) → Ty Γ → Set
+data Ty : Ctx Ψ → Set
+data Tm : ∀ (Γ : Ctx Ψ) → Ty Γ → Set
 
 variable
   Γ Δ Θ Γ₁ Γ₂ Γ₃ Δ₁ Δ₂ Δ₃ : Ctx Ψ
   A B C A₁ A₂ A₃ B₁ B₂ : Ty Γ
   t u v t₁ t₂ t₃ u₁ u₂ u₃ v₁ v₂ v₃ : Tm Γ A
-  δ σ γ δ₁ δ₂ δ₃ σ₁ σ₂ : Sub[ q ] _ _
+  δ σ γ δ₁ δ₂ δ₃ σ₁ σ₂ : Sub[ q ] Φ Ψ
   b b₁ b₂ : Bool
 
 -- We don't define conversion for signatures only because it simply isn't 
@@ -50,15 +50,14 @@ data Tm~  : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Tm Γ₁ A₁ → Tm Γ₂ A₂ �
 data Wk~ : Wk Φ Ψ → Wk Φ Ψ → Prop
 data Tms~ : Ctx~ Δ₁ Δ₂ → Ctx~ Γ₁ Γ₂ → Tms Δ₁ Γ₁ → Tms Δ₂ Γ₂ → Prop
 
-
 variable
   Γ~ Δ~ Θ~ Γ₁₂~ Γ₂₃~ Δ₁₂~ Δ₂₃~ Γ₁~ Γ₂~ Γ₃~ Γ₄~ : Ctx~ Γ₁ Γ₂
   A~ B~ A₁₂~ A₂₃~ A₁~ A₂~ A₃~ A₄~ : Ty~ _ A₁ A₂
   t~ t₁~ t₂~ : Tm~ _ _ t₁ t₂
 
--- Forward reference can be avoided by defining |Ctx|/|Ty|/|Tm|/|Tms| mutually
--- in a single (telescopic) inductive definition or by using an 
--- inductive-inductive predicate
+-- Forward references can be avoided by defining |Ctx|/|Ty|/|Tm|/|Sub[_]| 
+-- mutually in a single (telescopic) inductive definition or by using 
+-- inductive-inductive predicates
 𝔹′ : Ty Γ
 
 data Ctx where
@@ -100,7 +99,7 @@ sig[_] : ∀ q → obj q → Sig
 sig[ SIG ] Ψ        = Ψ
 sig[ CTX ] (Ψ Σ, Γ) = Ψ
 
-appdef[_]_,_⇒_if_then_else_ : ∀ q Ψ (Γ : Ctx (sig[ q ] Ψ)) A → (t : Tm Γ 𝔹′) 
+adddef[_]_,_⇒_if_then_else_ : ∀ q Ψ (Γ : Ctx (sig[ q ] Ψ)) A → (t : Tm Γ 𝔹′) 
                             → Tm (Γ , t >rw true) (A [ wkrw ]) 
                             → Tm (Γ , t >rw false) (A [ wkrw ])
                             → obj q
@@ -124,7 +123,7 @@ data Sub[_] where
   id   : Sub[ q ] Ψ Ψ
   _⨾_  : Sub[ q ] Φ Ψ → Sub[ q ] Ξ Φ → Sub[ q ] Ξ Ψ
   
-  wk𝒮  : Sub[ q ] (appdef[ q ] Ψ , Γ ⇒ A if t then u else v) Ψ
+  wk𝒮  : Sub[ q ] (adddef[ q ] Ψ , Γ ⇒ A if t then u else v) Ψ
 
   π₁   : Tms Δ (Γ , A) → Tms Δ Γ
   π₁rw : Tms Δ (Γ , t >rw b) → Tms Δ Γ
@@ -133,9 +132,9 @@ pattern _,rw_ δ t~ = ,rwℱ δ refl t~
 
 id′ = id
 
-appdef[ SIG ] Ψ        , Δ ⇒ A if t then u else v 
+adddef[ SIG ] Ψ        , Δ ⇒ A if t then u else v 
   = Ψ ,def Δ ⇒ A if t then u else v
-appdef[ CTX ] (Ψ Σ, Γ) , Δ ⇒ A if t then u else v 
+adddef[ CTX ] (Ψ Σ, Γ) , Δ ⇒ A if t then u else v 
   = Ψ ,def Δ ⇒ A if t then u else v Σ, Γ [ wk𝒮 ]
 
 data Tm where
@@ -262,7 +261,7 @@ data Tms~ where
   coh  : Tms~ Δ~ Γ~ δ (coe~ Δ~ Γ~ δ)
 
   -- Congruence
-  -- ε     : Tms~ Δ~ rfl~ ε ε
+  ε     : Tms~ Δ~ rfl~ (ε {Ψ = Ψ}) ε
   _,_   : ∀ (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) → Tm~ Δ~ (A~ [ δ~ ]) t₁ t₂
         → Tms~ Δ~ (Γ~ , A~) (δ₁ , t₁) (δ₂ , t₂)
   ,rw~  : ∀ {Δ~ : Ctx~ {Ψ = Ψ} Δ₁ Δ₂} (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) 
