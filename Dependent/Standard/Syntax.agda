@@ -52,7 +52,6 @@ data Ctx~ where
   -- Note we don't need a case for |ε| because it takes no arguments
   _,_ : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Ctx~ (Γ₁ , A₁) (Γ₂ , A₂)
  
-
 <_> : Tm Γ A → Tms Γ (Γ , A)
 
 data Tms where

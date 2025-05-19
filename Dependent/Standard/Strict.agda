@@ -54,8 +54,7 @@ data Ty where
 
   if   : Tm Γ 𝔹 → Ty Γ → Ty Γ → Ty Γ
 
-postulate
-  _[_]T : Ty Γ → Tms Δ Γ → Ty Δ
+_[_]T : Ty Γ → Tms Δ Γ → Ty Δ
 
 data Ctx~ where
   -- Equivalence
@@ -74,10 +73,9 @@ data Tms where
   ε     : Tms Δ ε
   _,_   : ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]T) → Tms Δ (Γ , A) 
   
-postulate
-  id  : Tms Γ Γ
-  _⨾_ : Tms Δ Γ → Tms Θ Δ → Tms Θ Γ
-  _⁺_ : Tms Δ Γ → ∀ A → Tms (Δ , A) Γ
+id  : Tms Γ Γ
+_⨾_ : Tms Δ Γ → Tms Θ Δ → Tms Θ Γ
+_⁺_ : Tms Δ Γ → ∀ A → Tms (Δ , A) Γ
 
 wk : Tms (Γ , A) Γ
 wk = id ⁺ _
@@ -102,10 +100,9 @@ data Tm where
      → Tm Γ (A [ < FF > ]T)
      → Tm Γ (A [ < t > ]T)
 
-postulate
-  lookup : Var Γ A → ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]T)
-  _[_]   : Tm Γ A → ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]T)
-  suc    : ∀ A → Tm Γ B → Tm (Γ , A) (B [ wk ]T)
+lookup : Var Γ A → ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]T)
+_[_]   : Tm Γ A → ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]T)
+suc    : ∀ A → Tm Γ B → Tm (Γ , A) (B [ wk ]T)
 
 _^_ : ∀ (δ : Tms Δ Γ) A → Tms (Δ , (A [ δ ]T)) (Γ , A)
 
@@ -134,26 +131,29 @@ postulate
          → Ty~ Δ~ (A₁ [ δ₁ ]T) (A₂ [ δ₂ ]T)
 
 -- Strictified computation
-postulate  𝔹[] : 𝔹 [ δ ]T ≡ 𝔹
-{-# REWRITE 𝔹[] #-}
-
-postulate Π[] : Π A B [ δ ]T ≡ Π (A [ δ ]T) (B [ δ ^ A ]T)
-{-# REWRITE Π[] #-}
-
-postulate if[]T : if t A B [ δ ]T ≡ if (t [ δ ]) (A [ δ ]T) (B [ δ ]T)
-{-# REWRITE if[]T #-}
+{-# TERMINATING #-}
+coe~ Γ~ A [ δ ]T = A [ coe~ rfl~ (sym~ Γ~) δ ]T
+𝔹         [ δ ]T = 𝔹
+Π A B     [ δ ]T = Π (A [ δ ]T) (B [ δ ^ A ]T)
+if t A B  [ δ ]T = if (t [ δ ]) (A [ δ ]T) (B [ δ ]T)
 
 postulate [id]T : A [ id ]T ≡ A
 {-# REWRITE [id]T #-}
 
 -- |id| is not convertible with its unfolding
-postulate [id,]T : A [ (id ⁺ B) , (` vz) ]T ≡ A
-{-# REWRITE [id,]T #-}
+postulate [id^]T : A [ (id ⁺ B) , (` vz) ]T ≡ A
+{-# REWRITE [id^]T #-}
 
 postulate [][]T : A [ δ ]T [ σ ]T ≡ A [ δ ⨾ σ ]T
 {-# REWRITE [][]T #-}
 
 < t > = id , t
+
+-- Reducing |id| is actually probably a bad idea
+-- We want |[id]|, |⨾id|, |id⨾| etc... to fire
+abstract
+  id {Γ = ε}     = ε
+  id {Γ = Γ , A} = id ^ A
 
 -- Strictified computation
 postulate id⨾ : id ⨾ δ ≡ δ
@@ -164,20 +164,16 @@ postulate ⨾id : δ ⨾ id ≡ δ
 
 postulate ⨾⨾ : (δ ⨾ σ) ⨾ γ ≡ δ ⨾ (σ ⨾ γ)
 {-# REWRITE ⨾⨾ #-}
-
-postulate ,⨾ : (δ , t) ⨾ σ ≡ (δ ⨾ σ) , (t [ σ ])
-{-# REWRITE ,⨾ #-}
+coe~ Δ~ Γ~ δ ⨾ σ = coe~ rfl~ Γ~ (δ ⨾ coe~ rfl~ (sym~ Δ~) σ)
+ε            ⨾ σ = ε
+(δ , t)      ⨾ σ = (δ ⨾ σ) , (t [ σ ])
 
 postulate ⨾⁺ : δ ⨾ (σ ⁺ A) ≡ (δ ⨾ σ) ⁺ A
 {-# REWRITE ⨾⁺ #-}
 
-postulate 
-  ,⁺ : ∀ {δ : Tms Δ Γ} {t : Tm Δ (A [ δ ]T)}
-     → (_,_ {A = A} δ t) ⁺ B ≡ (δ ⁺ B) , (suc B t)
-{-# REWRITE ,⁺ #-}
-
-postulate id, : id {Γ = Γ , A} ≡ (id ⁺ A) , (` vz)
-{-# REWRITE id, #-}
+coe~ Δ~ Γ~ δ ⁺ B = coe~ (Δ~ , sym~ coh) Γ~ (δ ⁺ coe~ (sym~ Δ~) B)
+ε            ⁺ B = ε
+(δ , t)      ⁺ B = (δ ⁺ B) , (suc B t)
 
 postulate ⁺, : (δ ⁺ A) ⨾ (σ , t) ≡ δ ⨾ σ
 {-# REWRITE ⁺, #-}
@@ -225,42 +221,18 @@ data Var~ where
   vs : Var~ Γ~ B~ i₁ i₂ → Var~ (Γ~ , A~) (B~ [ wk~ A~ ]T~) (vs i₁) (vs i₂)
 
 -- Strict computation
-postulate lookup-vz : lookup vz (δ , t) ≡ t
-{-# REWRITE lookup-vz #-}
-postulate lookup-vs : lookup (vs i) (δ , t) ≡ lookup i δ
-{-# REWRITE lookup-vs #-}
+-- TODO: Make this covering...
+{-# NON_COVERING #-}
+lookup vz     (δ , t)        = t
+lookup (vs i) (δ , t)        = lookup i δ
 
--- Epic rewrite fail
--- https://github.com/agda/agda/issues/7602
-lookup-vz₁′ : lookup vz (id , (t [ δ ])) ≡ t [ δ ]
-lookup-vz₁′ {t = t} {δ = δ} = lookup-vz {δ = id} {t = t [ δ ]}
-{-# REWRITE lookup-vz₁′ #-}
-
-lookup-vz₂′ : lookup vz (id {Γ = Γ} , TT) ≡ TT
-lookup-vz₂′ = lookup-vz {δ = id} {t = TT}
-{-# REWRITE lookup-vz₂′ #-}
-
-lookup-vz₃′ : lookup vz (id {Γ = Γ} , FF) ≡ FF
-lookup-vz₃′ = lookup-vz {δ = id} {t = FF}
-{-# REWRITE lookup-vz₃′ #-}
-
-lookup-vz₄′ : ∀ {t : Tm Γ 𝔹} → lookup vz (id , (t [ δ ])) ≡ t [ δ ]
-lookup-vz₄′ {δ = δ} {t = t} = lookup-vz {δ = id} {t = t [ δ ]}
-{-# REWRITE lookup-vz₄′ #-}
-
-postulate suc`  : suc A (` i) ≡ ` vs i
-{-# REWRITE suc` #-}
-postulate sucTT : suc A TT ≡ TT
-{-# REWRITE sucTT #-}
-postulate sucFF : suc A FF ≡ FF
-{-# REWRITE sucFF #-}
-postulate sucƛ : suc A (ƛ t) ≡ (ƛ t) [ wk ]
-{-# REWRITE sucƛ #-}
-  -- We could do slightly better here, |suc A (t · u) = suc A t · suc A u|,
-  -- plus transports, but ultimately it doesn't really matter. The key
-  -- case is to short circuit on variables
-postulate suc·  : suc A (t · u) ≡ (t · u) [ wk ]
-{-# REWRITE suc· #-}
+suc A (coe~ Γ~ A~ t) 
+  = coe~ (Γ~ , sym~ coh) (A~ [ id~ ⁺~ sym~ coh ]T~) (suc (coe~ (sym~ Γ~) A) t)
+suc A (` i)          = ` vs i
+suc A TT             = TT
+suc A FF             = FF
+suc A (ƛ t)          = (ƛ t) [ wk ]
+suc A (t · u)        = (t · u) [ wk ]
 
 postulate lookup-id : lookup i id ≡ (` i)
 {-# REWRITE lookup-id #-}
@@ -272,31 +244,13 @@ postulate [id] : t [ id ] ≡ t
 postulate [][] : t [ δ ] [ σ ] ≡ t [ δ ⨾ σ ]
 {-# REWRITE [][] #-}
 
-postulate `[] : (` i) [ δ ] ≡ lookup i δ
-{-# REWRITE `[] #-}
-postulate ƛ[] : (ƛ t) [ δ ] ≡ ƛ (t [ δ ^ A ])
-{-# REWRITE ƛ[] #-}
-postulate ·[]  : (t · u) [ δ ] ≡ (t [ δ ]) · (u [ δ ])
-{-# REWRITE ·[] #-}
-
-postulate TT[] : TT [ δ ] ≡ TT
-{-# REWRITE TT[] #-}
-postulate FF[] : FF [ δ ] ≡ FF
-{-# REWRITE FF[] #-}
-
-postulate 
-  if[] : if {A = A} t u v [ δ ] 
-       ≡ if {A = A [ δ ^ 𝔹 ]T} (t [ δ ]) (u [ δ ]) (v [ δ ])
-{-# REWRITE if[] #-}
-
--- Should be implied by the other rewrites, but #7602 strikes again
-postulate wkvz : Tms~ rfl~ rfl~ ((wk ^ A) ⨾ < ` vz >) id
-
--- The proof is something along the lines of
--- wkvz = ,⨾~
---     ∙~ _,_ {A~ = rfl~} (⁺,~ ∙~ ⨾id~) 
---            (sym~ coh ∙~ sym~ coh [ rfl~ ]~ ∙~ `[]~ ∙~ lookup-vz~ ∙~ sym~ coh) 
---     ∙~ sym~ id,~
+coe~ Γ~ A~ t [ δ ]
+  = coe~ rfl~ (A~ [ sym~ coh ]T~) (t [ coe~ rfl~ (sym~ Γ~) δ ])
+(` i)      [ δ ] = lookup i δ
+(ƛ t)      [ δ ] = ƛ (t [ δ ^ _ ])
+(t · u)    [ δ ] = (t [ δ ]) · (u [ δ ])
+TT         [ δ ] = TT
+FF         [ δ ] = FF
 
 <_>~ : Tm~ Γ~ A~ t₁ t₂ → Tms~ Γ~ (Γ~ , A~) < t₁ > < t₂ >
 
@@ -329,8 +283,8 @@ data Tm~ where
   ifFF : Tm~ rfl~ rfl~ (if {A = A} FF u v) v
 
   β    : Tm~ rfl~ rfl~ ((ƛ t) · u) (t [ < u > ])
-  η    : Tm~ rfl~ (Π rfl~ (rfl~ [ sym~ wkvz ]T~))
-             t (ƛ_ {A = A} ((t [ wk ]) · (` vz))) 
+  η    : Tm~ (rfl~ {Γ = Γ}) (rfl~ {A = Π A B}) t 
+              (ƛ ((t [ wk ]) · (` vz))) 
 
 -- Additional congruences
 postulate
