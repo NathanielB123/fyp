@@ -9,10 +9,15 @@ open import Utils.IdExtras
 -- Still ultimately setoid-based because of β/η equations (cannot strictify
 -- these without assuming normalisation)
 --
--- I haven't yet inserted cases for recursive operations applied to |coe|
--- Given I have committed to interleaving rewrites with definitions, it might
--- also make sense to define recursive functions recursively instead of purely
--- postulating...
+-- Heavily relies on unsafe features (only justified by vaguely gesturing 
+-- towards https://pujet.fr/pdf/strictification_preprint.pdf
+-- and https://hal.science/hal-03367052)
+-- In fact, only typechecks on my fork of Agda which adds the flag
+-- |--mutual-rewriting| to disable the check for |REWRITE| rules in mutual
+-- blocks.
+--
+-- I have commented out the cases for recursive operations applied to |coe|
+-- because in practice these are usually unhelpful (one |coe| becomes two).
 module Dependent.Standard.Strict where
 
 infixr 4 _∙~_
