@@ -195,10 +195,7 @@ data Tms~ where
   _,_   : ∀ (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) → Tm~ Δ~ (A~ [ δ~ ]T~) t₁ t₂
         → Tms~ Δ~ (Γ~ , A~) (δ₁ , t₁) (δ₂ , t₂)
 
-  -- TODO: do we need η-rules?
-  -- The η-rule for |_,_| requires |π₁| and |π₂| operations, which I don't
-  -- particularly want to write out all the laws for...
-  -- εη : Tms~ Δ~ Γ~ δ ε
+  εη : Tms~ Δ~ Γ~ δ ε
 
 -- Additional congruences
 postulate
