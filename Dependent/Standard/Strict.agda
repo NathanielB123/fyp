@@ -100,7 +100,7 @@ data Tm where
 
   TT : Tm Γ 𝔹
   FF : Tm Γ 𝔹
-  if : ∀ (t : Tm Γ 𝔹) 
+  if : ∀ A (t : Tm Γ 𝔹) 
      → Tm Γ (A [ < TT > ]T) 
      → Tm Γ (A [ < FF > ]T)
      → Tm Γ (A [ < t > ]T)
@@ -253,6 +253,7 @@ postulate [][] : t [ δ ] [ σ ] ≡ t [ δ ⨾ σ ]
 (t · u)    [ δ ] = (t [ δ ]) · (u [ δ ])
 TT         [ δ ] = TT
 FF         [ δ ] = FF
+if A t u v [ δ ] = if (A [ δ ^ 𝔹 ]T) (t [ δ ]) (u [ δ ]) (v [ δ ])
 
 <_>~ : Tm~ Γ~ A~ t₁ t₂ → Tms~ Γ~ (Γ~ , A~) < t₁ > < t₂ >
 
@@ -278,11 +279,11 @@ data Tm~ where
        → Tm~ Γ~ (A~ [ < TT Γ~ >~ ]T~) u₁ u₂
        → Tm~ Γ~ (A~ [ < FF Γ~ >~ ]T~) v₁ v₂
        → Tm~ Γ~ (A~ [ < t~ >~ ]T~) 
-                (if {A = A₁} t₁ u₁ v₁) (if {A = A₂} t₂ u₂ v₂)
+                (if A₁ t₁ u₁ v₁) (if A₂ t₂ u₂ v₂)
 
   -- Computation
-  ifTT : Tm~ rfl~ rfl~ (if {A = A} TT u v) u
-  ifFF : Tm~ rfl~ rfl~ (if {A = A} FF u v) v
+  ifTT : ∀ (A : Ty (Γ , 𝔹)) {u v} → Tm~ rfl~ rfl~ (if A TT u v) u
+  ifFF : ∀ (A : Ty (Γ , 𝔹)) {u v} → Tm~ rfl~ rfl~ (if A FF u v) v
 
   β    : Tm~ rfl~ rfl~ ((ƛ t) · u) (t [ < u > ])
   η    : Tm~ (rfl~ {Γ = Γ}) (rfl~ {A = Π A B}) t 
