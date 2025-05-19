@@ -14,6 +14,8 @@ data Ne where
 
   `_  : ∀ i → Ne Γ A (` i)
   _·_ : Ne Γ (Π A B) t → Nf Γ A u → Ne Γ (B [ < u > ]T) (t · u)
+  if  : Ne Γ 𝔹 t → Nf Γ (A [ < TT > ]T) u → Nf Γ (A [ < FF > ]T) v
+      → Ne Γ (A [ < t > ]T) (if t u v)
 
 data Nf where
   coe~ : ∀ Γ~ A~ → Tm~ Γ~ A~ t₁ t₂ → Nf Γ₁ A₁ t₁ → Nf Γ₂ A₂ t₂
@@ -203,30 +205,33 @@ shift𝒱₂ (Π A B)     δ σ tⱽ {_} {γ} γᵀʰ {u} uⱽ
 shift𝒱₂ (if b A B)  δ σ tⱽ = {!   !}
 
 lookupℰ : ∀ (i : Var Γ A) (ρ : Env Δ Γ δ) → Val Γ A Δ δ (lookup i δ) ρ
-lookupℰ (coe~ Γ~ x i)  ρ                 = {!   !}
-lookupℰ i              (coe~ Δ~ Γ~ δ~ ρ) = {!   !}
-lookupℰ (vz {A = A})   (_,_ {δ = δ} {t = u} ρ uⱽ) 
+lookupℰ (coe~ Γ~ A~ i)  ρ                 = {!   !}
+lookupℰ i               (coe~ Δ~ Γ~ δ~ ρ) = {!   !}
+lookupℰ (vz {A = A})    (_,_ {δ = δ} {t = u} ρ uⱽ) 
   = shift𝒱₁ A wk (δ , u) uⱽ
-lookupℰ (vs {B = B} i) (_,_ {δ = δ} {t = u} ρ uⱽ)  
+lookupℰ (vs {B = B} i)  (_,_ {δ = δ} {t = u} ρ uⱽ)  
   = shift𝒱₁ B wk (δ , u) (lookupℰ i ρ)
 
-eval (coe~ Γ~ A~ t) ρ = {!!}
+eval (coe~ Γ~ A~ t) ρ = coe𝒱→ A~ (sym~ coh) (coh [ sym~ coh ]~) tⱽ′
+  where tⱽ′ = eval t (coe~ rfl~ (sym~ Γ~) coh ρ)
 eval (` i)          ρ = lookupℰ i ρ
 eval {A = Π A B} (ƛ t) ρ γᵀʰ {u} uⱽ
   = coe𝒱→ rfl~ rfl~ (sym~ (β {t = t [ (_ ⨾ _) ^ _ ]} {u = u})) tuⱽ
   where tuⱽ = eval t ((ρ [ γᵀʰ ]ℰ) , uⱽ)
 eval {δ = δ} (_·_ {B = B} t u) ρ 
   = shift𝒱₁ B < u > δ (eval t ρ idᵀʰ (eval u ρ))
-eval TT             ρ = TT rfl~
-eval FF             ρ = FF rfl~
-eval (if t u v)     ρ = {!   !}
+eval TT         ρ = TT rfl~
+eval FF         ρ = FF rfl~
+eval (if t u v) ρ = {!   !}
 
-uval (coe~ Γ~ A) tᴺᵉ = {!   !}
+uval (coe~ Γ~ A) tᴺᵉ 
+  = uval A (coe~ rfl~ (sym~ coh [ coh ]T~) coh tᴺᵉ)
 uval 𝔹           tᴺᵉ            = ne rfl~ tᴺᵉ
 uval (Π A B)     tᴺᵉ γᵀʰ {u} uⱽ = uval B ((tᴺᵉ [ γᵀʰ ]Ne) · qval A uⱽ)
 uval (if b A B)  tᴺᵉ = {!   !}
 
-qval (coe~ Γ~ A)     tⱽ = {!   !}
+qval (coe~ Γ~ A)     tⱽ = coe~ rfl~ (coh [ sym~ coh ]T~) (sym~ coh) tᴺᶠ
+  where tᴺᶠ = qval A tⱽ
 qval 𝔹               tⱽ = q𝔹Val tⱽ
 qval {δ = δ }(Π A B) tⱽ = coe~ rfl~ rfl~ (sym~ η) tᴺᶠ 
   where vzⱽ = uval {δ = δ ⁺ (A [ δ ]T)} A (` vz)
