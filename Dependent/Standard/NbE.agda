@@ -141,12 +141,14 @@ qval-if : ∀ A B {u[] t} (uⱽ : Val Γ 𝔹 Δ δ u[] ρ)
         → if-Val Γ A B Δ δ t ρ uⱽ
         → Nf Δ (if u[] (A [ δ ]T) (B [ δ ]T)) t
 
+{-# TERMINATING #-}
 _[_]ℰ : Env Δ Γ δ → Thin Θ Δ σ → Env Θ Γ (δ ⨾ σ)
 _∋_[_]𝒱 : ∀ A {t} → Val Γ A Δ δ t ρ → ∀ (σᵀʰ : Thin Θ Δ σ) 
         → Val Γ A Θ (δ ⨾ σ) (t [ σ ]) (ρ [ σᵀʰ ]ℰ)
 
-coe~ Δ~ Γ~ δ~ ρ [ δᵀʰ ]ℰ = coe~ rfl~ Γ~ (δ~ ⨾~ sym~ coh) ρ[]
-  where ρ[] = ρ [ coe~ rfl~ (sym~ Δ~) coh δᵀʰ ]ℰ
+coe~ Δ~ Γ~ δ~ ρ [ δᵀʰ ]ℰ 
+  = coe~ rfl~ Γ~ (δ~ ⨾~ sym~ coh) 
+         (ρ [ coe~ rfl~ (sym~ Δ~) coh δᵀʰ ]ℰ)
 ε               [ δᵀʰ ]ℰ = ε
 (ρ , tⱽ)        [ δᵀʰ ]ℰ = (ρ [ δᵀʰ ]ℰ) , (_ ∋ tⱽ [ δᵀʰ ]𝒱)
 
@@ -169,27 +171,40 @@ Val Γ (Π A B)     Δ δ t ρ
   → Val (Γ , A) B Θ ((δ ⨾ γ) , u) ((t [ γ ]) · u) ((ρ [ γᵀʰ ]ℰ) , uⱽ)
 Val Γ (if b A B)  Δ δ t ρ = if-Val Γ A B Δ δ t ρ (eval b ρ)
 
-coe𝒱→ : ∀ (A~ : Ty~ Γ~ A₁ A₂) (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂)  
-      → Tm~ Δ~ (A~ [ δ~ ]T~) t₁ t₂
-      → Val Γ₁ A₁ Δ₁ δ₁ t₁ ρ₁ → Val Γ₂ A₂ Δ₂ δ₂ t₂ ρ₂
+-- In a the QII(R)T presentation, this would merely be a transport.
+-- Of course, this transport would only be justified as long as we proved that
+-- |Val| preserves conversion.
+--
+-- In our setting, proving |Val| preserves conversion would require constructing
+-- an IR universe (which |Val| produces codes for) containing e.g. |𝔹Val Γ t|s,
+-- pi-types, thinnings etc...
+--
+-- Another potential strategy here could be to induct on |A₁| and |A₂|, but
+-- that would rely on injectivity/disjointness of type constructors that is
+-- non-trivial to prove in our setting (with large elimination).
+--
+-- Therefore, I just postulate this principle. At least the lack of equation
+-- between environments can be justified by |env-irr|.
+postulate
+  coe𝒱 : ∀ (A~ : Ty~ Γ~ A₁ A₂) (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂)  
+        → Tm~ Δ~ (A~ [ δ~ ]T~) t₁ t₂
+        → Val Γ₁ A₁ Δ₁ δ₁ t₁ ρ₁ → Val Γ₂ A₂ Δ₂ δ₂ t₂ ρ₂
 
-coe𝒱← : ∀ (A~ : Ty~ Γ~ A₁ A₂) (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂)  
-      → Tm~ Δ~ (A~ [ δ~ ]T~) t₁ t₂
-      → Val Γ₂ A₂ Δ₂ δ₂ t₂ ρ₂ → Val Γ₁ A₁ Δ₁ δ₁ t₁ ρ₁
-
-_∋_[_]𝒱 {σ = σ} (coe~ Γ~ A) {t = t} tⱽ σᵀʰ 
-  = coe𝒱→ {t₁ = (coe~ rfl~ (sym~ coh [ coh ]T~) t [ σ ])}
-          {t₂ = (coe~ rfl~ (sym~ coh [ coh ]T~) (t [ σ ]))}
-          rfl~ 
-          (sym~ coh ⨾~ rfl~ ∙~ coh) 
-          (sym~ (coh  {A~ = (sym~ coh [ coh ]T~)}) [ rfl~ ]~ ∙~ coh) 
-          t[]ⱽ
-  where t[]ⱽ = A ∋ tⱽ [ σᵀʰ ]𝒱
+_∋_[_]𝒱 {δ = δ} {ρ = ρ} {σ = σ} (coe~ Γ~ A) {t = t} tⱽ σᵀʰ 
+  = coe𝒱 {t₁ = (coe~ rfl~ (sym~ coh [ coh ]T~) t [ σ ])}
+         {t₂ = (coe~ rfl~ (sym~ coh [ coh ]T~) (t [ σ ]))}
+         {ρ₁ = coe~ rfl~ (sym~ Γ~) (coh ⨾~ sym~ coh)
+                    (ρ [ coe~ rfl~ (sym~ rfl~) coh σᵀʰ ]ℰ)}
+         {ρ₂ = coe~ rfl~ (sym~ Γ~) coh (ρ [ σᵀʰ ]ℰ)}
+         rfl~ 
+         (sym~ coh ⨾~ rfl~ ∙~ coh) 
+         (sym~ (coh  {A~ = (sym~ coh [ coh ]T~)}) [ rfl~ ]~ ∙~ coh) 
+         (A ∋ tⱽ [ σᵀʰ ]𝒱)
 𝔹         ∋ tⱽ [ σᵀʰ ]𝒱 = tⱽ [ σᵀʰ ]𝔹Val
 Π A B     ∋ tⱽ [ σᵀʰ ]𝒱 = λ γᵀʰ uⱽ → tⱽ (σᵀʰ ⨾ᵀʰ γᵀʰ) uⱽ
 if b A B  ∋ tⱽ [ σᵀʰ ]𝒱 = {!   !}
 
--- Special case of |coe𝒱|
+-- Special case of |coe𝒱| (justifies ignoring environments)
 env-irr    : ∀ A {t} → Val Γ A Δ δ t ρ₁ → Val Γ A Δ δ t ρ₂
 env-irr-if : ∀ A B {t} {uⱽ₁ : Val Γ 𝔹 Δ δ u ρ₁} {uⱽ₂ : Val Γ 𝔹 Δ δ u ρ₂}
            → Mut𝔹Val uⱽ₁ uⱽ₂
@@ -214,11 +229,6 @@ env-irr-if A B TT tⱽ = env-irr A tⱽ
 env-irr-if A B FF tⱽ = env-irr B tⱽ
 env-irr-if A B ne tⱽ = tⱽ
 
--- This will be a massive pain to implement, because we have to induct on both
--- types mutually and rule-out impossible cases like |Ty~ Γ~ 𝔹 (Π A B)|.
-coe𝒱→ A~ δ~ t~ = {!!}
-coe𝒱← A~ δ~ t~ = {!!}
-
 shift𝒱₁ : ∀ A (δ : Tms Δ Γ) (σ : Tms Θ Δ) {ρ₁ ρ₂ t} 
         → Val Γ A Θ (δ ⨾ σ) t ρ₁ → Val Δ (A [ δ ]T) Θ σ t ρ₂
 shift𝒱₂ : ∀ A (δ : Tms Δ Γ) (σ : Tms Θ Δ) {ρ₁ ρ₂ t} 
@@ -226,13 +236,13 @@ shift𝒱₂ : ∀ A (δ : Tms Δ Γ) (σ : Tms Θ Δ) {ρ₁ ρ₂ t}
 
 shift𝒱₁ (coe~ Γ~ A) δ σ {ρ₁ = ρ₁} {ρ₂ = ρ₂} tⱽ
   = stⱽ′
-  where tⱽ′ = coe𝒱→ {ρ₂ = (coe~ rfl~ (sym~ Γ~) (coh ⨾~ rfl~) ρ₁)} 
+  where tⱽ′ = coe𝒱 {ρ₂ = (coe~ rfl~ (sym~ Γ~) (coh ⨾~ rfl~) ρ₁)} 
                     (rfl~ {A = A}) 
                     (sym~ coh ∙~ coh ⨾~ rfl~) coh tⱽ
         stⱽ = shift𝒱₁ A (coe~ rfl~ (sym~ Γ~) δ) σ 
                       {ρ₂ = ρ₂}
                       tⱽ′
-        stⱽ′ = coe𝒱→ {A₁ = (A [ coe~ rfl~ (sym~ Γ~) δ ]T)} 
+        stⱽ′ = coe𝒱 {A₁ = (A [ coe~ rfl~ (sym~ Γ~) δ ]T)} 
                      (coh [ sym~ coh ]T~)
                      rfl~ (sym~ coh ∙~ sym~ coh)
                      stⱽ
@@ -256,52 +266,30 @@ lookupℰ (vz {A = A})    (_,_ {δ = δ} {t = u} ρ uⱽ)
 lookupℰ (vs {B = B} i)  (_,_ {δ = δ} {t = u} ρ uⱽ)  
   = shift𝒱₁ B wk (δ , u) (lookupℰ i ρ)
 
--- eval-if : ∀ {t : Tm Γ 𝔹} {u : Tm Γ (A [ < TT > ]T)} {v : Tm Γ (A [ < FF > ]T)}
---             (tⱽ : Val Γ 𝔹 Γ id t idℰ)
---         → Val (Γ , 𝔹) A Γ < TT > u (idℰ , TT rfl~)
---         → Val (Γ , 𝔹) A Γ < FF > v (idℰ , FF rfl~)
---         → Val (Γ , 𝔹) A Γ < t > (if A t u v) (idℰ , tⱽ) 
--- eval-if {A = A} (TT {Γ~ = Γ~} t~) uⱽ vⱽ 
---   = coe𝒱→ (rfl~ {A = A}) < TT Γ~ ∙~ sym~ t~ >~ 
---           (sym~ ifTT ∙~ if rfl~ (TT Γ~ ∙~ sym~ t~) rfl~ rfl~)
---           uⱽ
--- eval-if {A = A} (FF {Γ~ = Γ~} t~) uⱽ vⱽ
---   = coe𝒱→ (rfl~ {A = A}) < FF Γ~ ∙~ sym~ t~ >~ 
---           (sym~ ifFF ∙~ if rfl~ (FF Γ~ ∙~ sym~ t~) rfl~ rfl~)
---           vⱽ
--- eval-if {A = A} (ne A~ tᴺᵉ) uⱽ vⱽ 
---   = uval A (if tᴺᵉ (qval A uⱽ) (qval A vⱽ))
-
 eval-if : ∀ A {t u v} (tⱽ : Val Γ 𝔹 Δ δ t ρ)
         → Val (Γ , 𝔹) A Δ (δ , TT) u (ρ , TT rfl~)
         → Val (Γ , 𝔹) A Δ (δ , FF) v (ρ , FF rfl~)
         → Val (Γ , 𝔹) A Δ (δ , t) (if (A [ δ ^ 𝔹 ]T) t u v) (ρ , tⱽ)
 eval-if {δ = δ} A (TT {Γ~ = Γ~} t~)     uⱽ vⱽ 
-  = coe𝒱→ (rfl~ {A = A}) 
-          (_,_ {A~ = 𝔹} (rfl~ {δ = δ}) (TT Γ~ ∙~ sym~ t~)) 
-          (sym~ (ifTT (A [ δ ^ 𝔹 ]T)) 
-             ∙~ if (rfl~ {A = A [ δ ^ 𝔹 ]T}) (TT Γ~ ∙~ sym~ t~) rfl~ rfl~)
-          uⱽ
+  = coe𝒱 (rfl~ {A = A}) 
+         (_,_ {A~ = 𝔹} (rfl~ {δ = δ}) (TT Γ~ ∙~ sym~ t~)) 
+         (sym~ (ifTT (A [ δ ^ 𝔹 ]T)) 
+            ∙~ if (rfl~ {A = A [ δ ^ 𝔹 ]T}) (TT Γ~ ∙~ sym~ t~) rfl~ rfl~)
+         uⱽ
 eval-if {δ = δ} A (FF {Γ~ = Γ~} t~) uⱽ vⱽ 
-  = coe𝒱→ (rfl~ {A = A}) 
-          (_,_ {A~ = 𝔹} (rfl~ {δ = δ}) (FF Γ~ ∙~ sym~ t~)) 
-          (sym~ (ifFF (A [ δ ^ 𝔹 ]T)) 
-             ∙~ if (rfl~ {A = A [ δ ^ 𝔹 ]T}) (FF Γ~ ∙~ sym~ t~) rfl~ rfl~)
-          vⱽ
+  = coe𝒱 (rfl~ {A = A}) 
+         (_,_ {A~ = 𝔹} (rfl~ {δ = δ}) (FF Γ~ ∙~ sym~ t~)) 
+         (sym~ (ifFF (A [ δ ^ 𝔹 ]T)) 
+            ∙~ if (rfl~ {A = A [ δ ^ 𝔹 ]T}) (FF Γ~ ∙~ sym~ t~) rfl~ rfl~)
+         vⱽ
 eval-if {δ = δ} A (ne A~ tᴺᵉ) uⱽ vⱽ 
   = uval A (if (A [ δ ^ 𝔹 ]T) tᴺᵉ (qval A uⱽ) (qval A vⱽ))
 
-        -- → Val Γ (A [ < TT > ]T) Γ δ u ρ
-
-        -- → Val (Γ , 𝔹) A Γ < TT > u (idℰ , TT rfl~)
-        -- → Val (Γ , 𝔹) A Γ < FF > v (idℰ , FF rfl~)
-        -- → Val (Γ , 𝔹) A Γ < t > (if A t u v) (idℰ , tⱽ) 
-
-eval (coe~ Γ~ A~ t) ρ = coe𝒱→ A~ (sym~ coh) (coh [ sym~ coh ]~) tⱽ′
+eval (coe~ Γ~ A~ t) ρ = coe𝒱 A~ (sym~ coh) (coh [ sym~ coh ]~) tⱽ′
   where tⱽ′ = eval t (coe~ rfl~ (sym~ Γ~) coh ρ)
 eval (` i)          ρ = lookupℰ i ρ
 eval {A = Π A B} (ƛ t) ρ γᵀʰ {u} uⱽ
-  = coe𝒱→ rfl~ rfl~ (sym~ (β {t = t [ (_ ⨾ _) ^ _ ]} {u = u})) tuⱽ
+  = coe𝒱 rfl~ rfl~ (sym~ (β {t = t [ (_ ⨾ _) ^ _ ]} {u = u})) tuⱽ
   where tuⱽ = eval t ((ρ [ γᵀʰ ]ℰ) , uⱽ)
 eval {δ = δ} (_·_ {B = B} t u) ρ 
   = shift𝒱₁ B < u > δ (eval t ρ idᵀʰ (eval u ρ))
@@ -319,7 +307,7 @@ uval (coe~ Γ~ A) tᴺᵉ
   = uval A (coe~ rfl~ (sym~ coh [ coh ]T~) coh tᴺᵉ)
 uval 𝔹           tᴺᵉ            = ne rfl~ tᴺᵉ
 uval (Π A B)     tᴺᵉ γᵀʰ {u} uⱽ = uval B ((tᴺᵉ [ γᵀʰ ]Ne) · qval A uⱽ)
-uval (if b A B)  tᴺᵉ = uval-if A B (eval b _) tᴺᵉ
+uval (if b A B)  tᴺᵉ            = uval-if A B (eval b _) tᴺᵉ
 
 uval-if A B (TT u~)     tᴺᵉ = uval A tᴺᵉ′
   where tᴺᵉ′ = coe~ rfl~ (if u~ coh coh ∙~ ifTT ∙~ sym~ coh) coh tᴺᵉ
