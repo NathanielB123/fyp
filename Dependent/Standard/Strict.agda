@@ -132,7 +132,7 @@ postulate
 
 -- Strictified computation
 {-# TERMINATING #-}
-coe~ Γ~ A [ δ ]T = A [ coe~ rfl~ (sym~ Γ~) δ ]T
+-- coe~ Γ~ A [ δ ]T = A [ coe~ rfl~ (sym~ Γ~) δ ]T
 𝔹         [ δ ]T = 𝔹
 Π A B     [ δ ]T = Π (A [ δ ]T) (B [ δ ^ A ]T)
 if t A B  [ δ ]T = if (t [ δ ]) (A [ δ ]T) (B [ δ ]T)
@@ -149,11 +149,8 @@ postulate [][]T : A [ δ ]T [ σ ]T ≡ A [ δ ⨾ σ ]T
 
 < t > = id , t
 
--- Reducing |id| is actually probably a bad idea
--- We want |[id]|, |⨾id|, |id⨾| etc... to fire
-abstract
-  id {Γ = ε}     = ε
-  id {Γ = Γ , A} = id ^ A
+id {Γ = ε}     = ε
+id {Γ = Γ , A} = id ^ A
 
 -- Strictified computation
 postulate id⨾ : id ⨾ δ ≡ δ
@@ -164,14 +161,14 @@ postulate ⨾id : δ ⨾ id ≡ δ
 
 postulate ⨾⨾ : (δ ⨾ σ) ⨾ γ ≡ δ ⨾ (σ ⨾ γ)
 {-# REWRITE ⨾⨾ #-}
-coe~ Δ~ Γ~ δ ⨾ σ = coe~ rfl~ Γ~ (δ ⨾ coe~ rfl~ (sym~ Δ~) σ)
+-- coe~ Δ~ Γ~ δ ⨾ σ = coe~ rfl~ Γ~ (δ ⨾ coe~ rfl~ (sym~ Δ~) σ)
 ε            ⨾ σ = ε
 (δ , t)      ⨾ σ = (δ ⨾ σ) , (t [ σ ])
 
 postulate ⨾⁺ : δ ⨾ (σ ⁺ A) ≡ (δ ⨾ σ) ⁺ A
 {-# REWRITE ⨾⁺ #-}
 
-coe~ Δ~ Γ~ δ ⁺ B = coe~ (Δ~ , sym~ coh) Γ~ (δ ⁺ coe~ (sym~ Δ~) B)
+-- coe~ Δ~ Γ~ δ ⁺ B = coe~ (Δ~ , sym~ coh) Γ~ (δ ⁺ coe~ (sym~ Δ~) B)
 ε            ⁺ B = ε
 (δ , t)      ⁺ B = (δ ⁺ B) , (suc B t)
 
@@ -226,8 +223,8 @@ data Var~ where
 lookup vz     (δ , t)        = t
 lookup (vs i) (δ , t)        = lookup i δ
 
-suc A (coe~ Γ~ A~ t) 
-  = coe~ (Γ~ , sym~ coh) (A~ [ id~ ⁺~ sym~ coh ]T~) (suc (coe~ (sym~ Γ~) A) t)
+-- suc A (coe~ Γ~ A~ t) 
+--   = coe~ (Γ~ , sym~ coh) (A~ [ id~ ⁺~ sym~ coh ]T~) (suc (coe~ (sym~ Γ~) A) t)
 suc A (` i)          = ` vs i
 suc A TT             = TT
 suc A FF             = FF
@@ -244,8 +241,8 @@ postulate [id] : t [ id ] ≡ t
 postulate [][] : t [ δ ] [ σ ] ≡ t [ δ ⨾ σ ]
 {-# REWRITE [][] #-}
 
-coe~ Γ~ A~ t [ δ ]
-  = coe~ rfl~ (A~ [ sym~ coh ]T~) (t [ coe~ rfl~ (sym~ Γ~) δ ])
+-- coe~ Γ~ A~ t [ δ ]
+--   = coe~ rfl~ (A~ [ sym~ coh ]T~) (t [ coe~ rfl~ (sym~ Γ~) δ ])
 (` i)      [ δ ] = lookup i δ
 (ƛ t)      [ δ ] = ƛ (t [ δ ^ _ ])
 (t · u)    [ δ ] = (t [ δ ]) · (u [ δ ])
