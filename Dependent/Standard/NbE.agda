@@ -1,13 +1,27 @@
 {-# OPTIONS --rewriting --prop --show-irrelevant --mutual-rewriting #-}
 
 open import Utils
+open import Utils.IdExtras
 
+-- |Strict| or |StrictAlt| syntaxes work here
 open import Dependent.Standard.Strict
 
+-- Normalisation by Evaluation for dependent types
+--
+-- We skip proving preservation of conversion (in fact, we don't even define
+-- convertability of normal/neutral forms or values) because the setoid
+-- (congruence) boilerplate is boring. Instead, I plan on justifying
+-- preservation of congruence in the report, considering only the
+-- non-trivial cases.
+--
+-- Even without these preservation results, because we do at least ensure
+-- normal/neutral forms are always convertible with their index, we can
+-- still get through most of the proof without cheating. The problem
+-- is |coe𝒱|.
 module Dependent.Standard.NbE where 
 
 variable
-  Γ′ : Ctx
+  Γ′ Ξ : Ctx
 
 -- Extra rewrites
 -- See https://github.com/agda/agda/issues/7602
@@ -16,6 +30,10 @@ rw₁ : ∀ {δ : Tms Γ Γ′} {σ : Tms Δ Γ} {γ : Tms Θ Δ}
     → t [ σ ] [ γ ] ≡ t [ σ ⨾ γ ]
 rw₁ {t = t} = [][] {t = t}
 {-# REWRITE rw₁ #-}
+
+rw₂ : lookup vz δ [ σ ] ≡ lookup vz (δ ⨾ σ)
+rw₂ = lookup-⨾ {i = vz}
+{-# REWRITE rw₂ #-}
 
 data Ne : ∀ Γ A → Tm Γ A → Set
 data Nf : ∀ Γ A → Tm Γ A → Set
@@ -53,11 +71,6 @@ q𝔹Val (TT t~)     = coe~ _ _ (sym~ t~) TT
 q𝔹Val (FF t~)     = coe~ _ _ (sym~ t~) FF
 q𝔹Val (ne A~ tᴺᵉ) = coe~ _ _ rfl~ (ne𝔹 tᴺᵉ)
 
--- TODO: Prove these disjointness properties
-TTFF-disj : Tm~ Γ~ A~ TT FF → ⊥
-TTne-disj : Ne Γ 𝔹 TT → ⊥
-FFne-disj : Ne Γ 𝔹 FF → ⊥
-
 variable
   A~₁ A~₂ : Ty~ Γ~ A₁ A₂
   t~₁ t~₂ : Tm~ Γ~ A~ t₁ t₂
@@ -70,10 +83,10 @@ data Thin : ∀ Δ Γ → Tms Δ Γ → Set where
 
   ε     : Thin ε ε ε
   _^ᵀʰ_ : Thin Δ Γ δ → ∀ A → Thin (Δ , (A [ δ ]T)) (Γ , A) (δ ^ A)
-  _⁺ᵀʰ_ : Thin Δ Γ δ → ∀ A → Thin (Δ , A) Γ (δ ⁺ A)
+  _⁺ᵀʰ_ : Thin Δ Γ δ → ∀ A → Thin (Δ , A) Γ (δ ⨾ wk)
 
 variable
-  δᵀʰ σᵀʰ : Thin Δ Γ δ
+  δᵀʰ σᵀʰ γᵀʰ : Thin Δ Γ δ
 
 idᵀʰ : Thin Γ Γ id
 idᵀʰ {Γ = ε}     = ε
@@ -96,9 +109,9 @@ coe~ Δ~ Γ~ δ~ δᵀʰ ⨾ᵀʰ σᵀʰ
 δᵀʰ ⨾ᵀʰ (σᵀʰ ⁺ᵀʰ A)         
   = (δᵀʰ ⨾ᵀʰ σᵀʰ) ⁺ᵀʰ A 
 (δᵀʰ ^ᵀʰ A) ⨾ᵀʰ coe~ Θ~ Δ~ σ~ σᵀʰ 
-  = {!δᵀʰ ^ᵀʰ ⨾   !}
+  = {!!}
 (δᵀʰ ⁺ᵀʰ A) ⨾ᵀʰ coe~ Θ~ Δ~ σ~ σᵀʰ 
-  = {!   !}
+  = {!!}
 
 _[_]Nf   : Nf Γ A t → Thin Δ Γ δ → Nf Δ (A [ δ ]T) (t [ δ ])
 _[_]Ne   : Ne Γ A t → Thin Δ Γ δ → Ne Δ (A [ δ ]T) (t [ δ ])
@@ -113,10 +126,29 @@ neif uᴺᵉ tᴺᵉ [ δᵀʰ ]Nf = neif (uᴺᵉ [ δᵀʰ ]Ne) (tᴺᵉ [ δ�
 TT           [ δᵀʰ ]Nf = TT
 FF           [ δᵀʰ ]Nf = FF
 
+lookupᵀʰ : ∀ (i : Var Γ A) → Thin Δ Γ δ → Var Δ (A [ δ ]T)
+lookupᵀʰ i      (δᵀʰ ⁺ᵀʰ A) = vs {B = _ [ _ ]T} (lookupᵀʰ i δᵀʰ)
+lookupᵀʰ vz     (δᵀʰ ^ᵀʰ A) = vz
+lookupᵀʰ (vs i) (δᵀʰ ^ᵀʰ A) = vs {B = _ [ _ ]T} (lookupᵀʰ i δᵀʰ)
+lookupᵀʰ (coe~ Γ~ Δ~ i) δᵀʰ 
+  = {!   !}
+lookupᵀʰ i (coe~ Δ~ Γ~ δ~ δᵀʰ) 
+  = {!   !}
+
+lookupᵀʰ~ : ∀ (i : Var Γ A) (δᵀʰ : Thin Δ Γ δ)
+          → Tm~ rfl~ rfl~ (lookup i δ) (` lookupᵀʰ i δᵀʰ)
+lookupᵀʰ~ i      (δᵀʰ ⁺ᵀʰ A) = lookupᵀʰ~ i δᵀʰ [ wk~ rfl~ ]~
+lookupᵀʰ~ vz     (δᵀʰ ^ᵀʰ A) = rfl~
+lookupᵀʰ~ (vs i) (δᵀʰ ^ᵀʰ A) = lookupᵀʰ~ i δᵀʰ [ wk~ rfl~ ]~
+lookupᵀʰ~ (coe~ Γ~ Δ~ i) δᵀʰ 
+  = {!   !}
+lookupᵀʰ~ i (coe~ Δ~ Γ~ δ~ δᵀʰ) 
+  = {!   !}
+
 coe~ Γ~ A~ t~ tᴺᵉ [ δᵀʰ ]Ne 
   = coe~ rfl~ (A~ [ sym~ coh ]T~) (t~ [ sym~ coh ]~) 
         (tᴺᵉ [ coe~ rfl~ (sym~ Γ~) coh δᵀʰ ]Ne)
-(` i) [ δᵀʰ ]Ne = {!   !}
+(` i) [ δᵀʰ ]Ne = coe~ rfl~ rfl~ (sym~ (lookupᵀʰ~ i δᵀʰ)) (` lookupᵀʰ i δᵀʰ)
 _[_]Ne {δ = δ} (_·_ {B = B} tᴺᵉ uᴺᶠ) δᵀʰ
   = _·_ {B = B [ δ ^ _ ]T} (tᴺᵉ [ δᵀʰ ]Ne) (uᴺᶠ [ δᵀʰ ]Nf)
 if A {u = u} {v = v} tᴺᵉ uᴺᶠ vᴺᶠ [ δᵀʰ ]Ne 
@@ -127,114 +159,118 @@ TT t~     [ δᵀʰ ]𝔹Val = TT {Γ~ = rfl~} (t~ [ coh ]~)
 FF t~     [ δᵀʰ ]𝔹Val = FF {Γ~ = rfl~} (t~ [ coh ]~)
 ne A~ tᴺᵉ [ δᵀʰ ]𝔹Val = ne {Γ~ = rfl~} (A~ [ coh ]T~) (tᴺᵉ [ δᵀʰ ]Ne)
 
-data Mut𝔹Val : 𝔹Val Γ t → 𝔹Val Γ t → Set where
-  TT : Mut𝔹Val (TT t~₁) (TT t~₂)
-  FF : Mut𝔹Val (FF t~₁) (FF t~₂)
-  ne : Mut𝔹Val (ne A~₁ tᴺᵉ₁) (ne A~₂ tᴺᵉ₂)
-
-mut𝔹Val : ∀ (tⱽ₁ tⱽ₂ : 𝔹Val Γ t) → Mut𝔹Val tⱽ₁ tⱽ₂
-mut𝔹Val (TT t~₁)      (TT t~₂)      = TT
-mut𝔹Val (FF t~₁)      (FF t~₂)      = FF
-mut𝔹Val (ne A~₁ tᴺᵉ₁) (ne A~₂ tᴺᵉ₂) = ne
-mut𝔹Val (TT t~₁)      (FF t~₂)      
-  =  ⊥-elim (TTFF-disj (sym~ t~₁ ∙~ t~₂))
-mut𝔹Val (FF t~₁)      (TT t~₂)      
-  = ⊥-elim (TTFF-disj (sym~ t~₂ ∙~ t~₁))
-mut𝔹Val (TT {Γ~ = Γ~₁} t~₁) (ne {Γ~ = Γ~₂} A~₂ tᴺᵉ₂) 
-  = ⊥-elim (TTne-disj (coe~ _ _ (t~₁ ∙~ TT (sym~ Γ~₁ ∙~ Γ~₂)) tᴺᵉ₂))
-mut𝔹Val (ne {Γ~ = Γ~₁} A~₁ tᴺᵉ₁) (TT {Γ~ = Γ~₂}  t~₂)      
-  = ⊥-elim (TTne-disj (coe~ _ _ (t~₂ ∙~ TT (sym~ Γ~₂ ∙~ Γ~₁)) tᴺᵉ₁))
-mut𝔹Val (FF {Γ~ = Γ~₁} t~₁) (ne {Γ~ = Γ~₂} A~₂ tᴺᵉ₂) 
-  = ⊥-elim (FFne-disj (coe~ _ _ (t~₁ ∙~ FF (sym~ Γ~₁ ∙~ Γ~₂)) tᴺᵉ₂))
-mut𝔹Val (ne {Γ~ = Γ~₁} A~₁ tᴺᵉ₁) (FF {Γ~ = Γ~₂} t~₂)      
-  = ⊥-elim (FFne-disj (coe~ _ _ (t~₂ ∙~ FF (sym~ Γ~₂ ∙~ Γ~₁)) tᴺᵉ₁))
-
-data Env : ∀ Δ Γ → Tms Δ Γ → Set
-Val      : ∀ Γ (A : Ty Γ) Δ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]T) → Env Δ Γ δ → Set
-eval     : ∀ (t : Tm Γ A) (ρ : Env Δ Γ δ) → Val Γ A Δ δ (t [ δ ]) ρ
+Env      : ∀ Δ Γ → Tms Δ Γ → Set
+Val      : ∀ Γ A Δ δ → Env Δ Γ δ → Tm Δ (A [ δ ]T) → Set
+eval     : ∀ (t : Tm Γ A) (ρ : Env Δ Γ δ) → Val Γ A Δ δ ρ (t [ δ ])
 eval*    : ∀ δ (ρ : Env Θ Δ σ) → Env Θ Γ (δ ⨾ σ)
 
-if-Val : ∀ Γ (A B : Ty Γ) Δ (δ : Tms Δ Γ) {u[]} 
+-- Motives
+PCtx : Ctx → Set₁
+PCtx Γ = ∀ Δ → Tms Δ Γ → Set
+
+PTy : PCtx Γ → Ty Γ → Set₁
+PTy Γᴾ A = ∀ Δ δ → Γᴾ Δ δ → Tm Δ (A [ δ ]T) → Set
+
+PTm : ∀ (Γᴾ : PCtx Γ) → PTy Γᴾ A → Tm Γ A → Set
+PTm Γᴾ Aᴾ t = ∀ Δ δ (ρ : Γᴾ Δ δ) → Aᴾ Δ δ ρ (t [ δ ]) 
+
+PTms : ∀ (Δᴾ : PCtx Δ) (Γᴾ : PCtx Γ) → Tms Δ Γ → Set
+PTms Δᴾ Γᴾ δ = ∀ Θ σ (ρ : Δᴾ Θ σ) → Γᴾ Θ (δ ⨾ σ)
+
+pCtx : ∀ Γ → PCtx Γ
+pCtx Γ Δ δ = Env Δ Γ δ
+
+pTy : ∀ A → PTy (pCtx Γ) A
+pTy A Δ δ ρ t = Val _ A Δ δ ρ t 
+
+pTm : ∀ t → PTm (pCtx Γ) (pTy A) t
+pTm t Δ δ ρ = eval t ρ
+
+pTms : ∀ δ → PTms (pCtx Δ) (pCtx Γ) δ
+pTms δ Θ σ ρ = eval* δ ρ
+
+variable
+  Γᴾ Δᴾ : PCtx Γ
+  Aᴾ Bᴾ : PTy Γᴾ A
+
+if-Val : ∀ Γ A B Δ δ (ρ : Env Δ Γ δ) {u[]} 
        → Tm Δ (if u[] (A [ δ ]T) (B [ δ ]T)) 
-       → ∀ (ρ : Env Δ Γ δ) → Val Γ 𝔹 Δ δ u[] ρ → Set
+       → Val Γ 𝔹 Δ δ ρ u[] → Set
 
 variable
   ρ ρ₁ ρ₂  : Env Δ Γ δ
-  tⱽ uⱽ vⱽ uⱽ₁ uⱽ₂  : Val Γ A Δ δ t ρ
+  tⱽ uⱽ vⱽ uⱽ₁ uⱽ₂  : Val Γ A Δ δ ρ t
 
-data Env where
-  coe~ : ∀ Δ~ Γ~ (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) → Env Δ₁ Γ₁ δ₁ → Env Δ₂ Γ₂ δ₂
-
-  ε   : Env Δ ε ε
-  _,_ : ∀ (ρ : Env Δ Γ δ) → Val Γ A Δ δ t ρ → Env Δ (Γ , A) (δ , t)
+Env Δ ε       δ = ⊤
+Env Δ (Γ , A) δ = Σ (Env Δ Γ (wk ⨾ δ))
+                  λ ρ → Val Γ A Δ (wk ⨾ δ) ρ (lookup vz δ)
 
 idℰ : Env Γ Γ id
 
-uval : ∀ A {t} → Ne Δ (A [ δ ]T) t → Val Γ A Δ δ t ρ
-qval : ∀ A {t} → Val Γ A Δ δ t ρ → Nf Δ (A [ δ ]T) t
+uval : ∀ A {t} → Ne Δ (A [ δ ]T) t → Val Γ A Δ δ ρ t
+qval : ∀ A {t} → Val Γ A Δ δ ρ t → Nf Δ (A [ δ ]T) t
 
-uval-if : ∀ A B {u[] t} (uⱽ : Val Γ 𝔹 Δ δ u[] ρ)
+uval-if : ∀ A B {u[] t} (uⱽ : Val Γ 𝔹 Δ δ ρ u[])
         → Ne Δ (if u[] (A [ δ ]T) (B [ δ ]T)) t
-        → if-Val Γ A B Δ δ t ρ uⱽ
-qval-if : ∀ A B {u[] t} (uⱽ : Val Γ 𝔹 Δ δ u[] ρ)
-        → if-Val Γ A B Δ δ t ρ uⱽ
+        → if-Val Γ A B Δ δ ρ t uⱽ
+qval-if : ∀ A B {u[] t} (uⱽ : Val Γ 𝔹 Δ δ ρ u[])
+        → if-Val Γ A B Δ δ ρ t uⱽ
         → Nf Δ (if u[] (A [ δ ]T) (B [ δ ]T)) t
 
-{-# TERMINATING #-}
 _[_]ℰ : Env Δ Γ δ → Thin Θ Δ σ → Env Θ Γ (δ ⨾ σ)
-_∋_[_]𝒱 : ∀ A {t} → Val Γ A Δ δ t ρ → ∀ (σᵀʰ : Thin Θ Δ σ) 
-        → Val Γ A Θ (δ ⨾ σ) (t [ σ ]) (ρ [ σᵀʰ ]ℰ)
+_∋_[_]𝒱 : ∀ A {t} → Val Γ A Δ δ ρ t → ∀ (σᵀʰ : Thin Θ Δ σ) 
+        → Val Γ A Θ (δ ⨾ σ) (ρ [ σᵀʰ ]ℰ) (t [ σ ])
 
-coe~ Δ~ Γ~ δ~ ρ [ δᵀʰ ]ℰ 
-  = coe~ rfl~ Γ~ (δ~ ⨾~ sym~ coh) 
-         (ρ [ coe~ rfl~ (sym~ Δ~) coh δᵀʰ ]ℰ)
-ε               [ δᵀʰ ]ℰ = ε
-(ρ , tⱽ)        [ δᵀʰ ]ℰ = (ρ [ δᵀʰ ]ℰ) , (_ ∋ tⱽ [ δᵀʰ ]𝒱)
+_[_]ℰ {Γ = ε}     tt        σᵀʰ = tt
+_[_]ℰ {Γ = Γ , A} (ρ Σ, tⱽ) σᵀʰ 
+  = ρ [ σᵀʰ ]ℰ Σ, (A ∋ tⱽ [ σᵀʰ ]𝒱)
 
-idℰ {Γ = ε}     = ε
-idℰ {Γ = Γ , A} = (_[_]ℰ {σ = wk} idℰ wkᵀʰ) , uval A (` vz)
+idℰ {Γ = ε}     = tt
+idℰ {Γ = Γ , A} = (_[_]ℰ {δ = id} {σ = wk} idℰ wkᵀʰ) Σ, uval A (` vz)
 
 -- TODO: Prove these lemmas and stop using the mutual hack
-postulate [id]ℰ : ρ [ idᵀʰ ]ℰ ≡ ρ
+postulate [id]ℰ : ∀ {ρ : Env Δ Γ δ} → ρ [ idᵀʰ ]ℰ ≡ ρ
 {-# REWRITE [id]ℰ #-}
-postulate [][]ℰ : ρ [ δᵀʰ ]ℰ [ σᵀʰ ]ℰ ≡ ρ [ δᵀʰ ⨾ᵀʰ σᵀʰ ]ℰ
+postulate [][]ℰ : ∀ {ρ : Env Δ Γ δ} {σᵀʰ : Thin Θ Δ σ} {γᵀʰ : Thin Ξ Θ γ}
+                → ρ [ σᵀʰ ]ℰ [ γᵀʰ ]ℰ ≡ ρ [ σᵀʰ ⨾ᵀʰ γᵀʰ ]ℰ
 {-# REWRITE [][]ℰ #-}
 
-Val Γ (coe~ Γ~ A) Δ δ t ρ 
-  = Val _ A Δ (coe~ rfl~ (sym~ Γ~) δ) (coe~ rfl~ (sym~ coh [ coh ]T~) t) 
-              (coe~ rfl~ (sym~ Γ~) coh ρ)
-Val Γ 𝔹           Δ δ t ρ = 𝔹Val Δ t
-Val Γ (Π A B)     Δ δ t ρ 
-  = ∀ {Θ γ} (γᵀʰ : Thin Θ Δ γ) {u}
-      (uⱽ : Val Γ A Θ (δ ⨾ γ) u (ρ [ γᵀʰ ]ℰ))
-  → Val (Γ , A) B Θ ((δ ⨾ γ) , u) ((t [ γ ]) · u) ((ρ [ γᵀʰ ]ℰ) , uⱽ)
-Val Γ (if b A B)  Δ δ t ρ = if-Val Γ A B Δ δ t ρ (eval b ρ)
-
--- In a the QII(R)T presentation, this would merely be a transport.
--- Of course, this transport would only be justified as long as we proved that
--- |Val| preserves conversion.
+-- In a QII(R)T encoding, these coercions would merely be transports.
+-- Of course, transporting would only be justified as long as we proved that
+-- |Env|/|Val| preserves path constructors.
 --
--- In our setting, proving |Val| preserves conversion would require constructing
--- an IR universe (which |Val| produces codes for) containing e.g. |𝔹Val Γ t|s,
--- pi-types, thinnings etc...
+-- In our setoid-based setting, to prove preservation of the equivalence
+-- relation our raw syntax, we need to explicitly define equivalence of
+-- environments and values, which I am not super excited to do...
 --
--- Another potential strategy here could be to induct on |A₁| and |A₂|, but
--- that would rely on injectivity/disjointness of type constructors that is
--- non-trivial to prove in our setting (with large elimination).
---
--- Therefore, I just postulate this principle. At least the lack of equation
--- between environments can be justified by |env-irr|.
+-- Therefore, I just postulate the coercions. We also don't ask for an equation
+-- between environments because that would of course also require defining
+-- an equivalence relation. Given values are unique up-to-coherence anyway,
+-- I don't think this is such a big deal.
 postulate
+  coeℰ : ∀ Δ~ Γ~ (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) → Env Δ₁ Γ₁ δ₁ → Env Δ₂ Γ₂ δ₂
+
   coe𝒱 : ∀ (A~ : Ty~ Γ~ A₁ A₂) (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂)  
         → Tm~ Δ~ (A~ [ δ~ ]T~) t₁ t₂
-        → Val Γ₁ A₁ Δ₁ δ₁ t₁ ρ₁ → Val Γ₂ A₂ Δ₂ δ₂ t₂ ρ₂
+        → Val Γ₁ A₁ Δ₁ δ₁ ρ₁ t₁ → Val Γ₂ A₂ Δ₂ δ₂ ρ₂ t₂
 
-_∋_[_]𝒱 {δ = δ} {ρ = ρ} {σ = σ} (coe~ Γ~ A) {t = t} tⱽ σᵀʰ 
-  = coe𝒱 {t₁ = (coe~ rfl~ (sym~ coh [ coh ]T~) t [ σ ])}
-         {t₂ = (coe~ rfl~ (sym~ coh [ coh ]T~) (t [ σ ]))}
-         {ρ₁ = coe~ rfl~ (sym~ Γ~) (coh ⨾~ sym~ coh)
-                    (ρ [ coe~ rfl~ (sym~ rfl~) coh σᵀʰ ]ℰ)}
-         {ρ₂ = coe~ rfl~ (sym~ Γ~) coh (ρ [ σᵀʰ ]ℰ)}
+Val Γ (coe~ Γ~ A) Δ δ ρ t 
+  = Val _ A Δ (coe~ rfl~ (sym~ Γ~) δ) (coeℰ rfl~ (sym~ Γ~) coh ρ)
+        (coe~ rfl~ (sym~ coh [ coh ]T~) t)     
+Val Γ 𝔹           Δ δ ρ t = 𝔹Val Δ t
+Val Γ (Π A B)     Δ δ ρ t 
+  = ∀ {Θ γ} (γᵀʰ : Thin Θ Δ γ) {u}
+      (uⱽ : Val Γ A Θ (δ ⨾ γ) (ρ [ γᵀʰ ]ℰ) u)
+  → Val (Γ , A) B Θ ((δ ⨾ γ) , u) ((ρ [ γᵀʰ ]ℰ) Σ, uⱽ) ((t [ γ ]) · u)
+Val Γ (if b A B)  Δ δ ρ t = if-Val Γ A B Δ δ ρ t (eval b ρ)
+
+_∋_[_]𝒱 {δ = δ} {ρ = ρ} {σ = σ} (coe~ Γ~ A) {t = t} tⱽ σᵀʰ
+  = coe𝒱 {t₁ = coe~ rfl~ (sym~ coh [ coh ]T~) t [ σ ]}
+         {t₂ = coe~ rfl~ (sym~ coh [ coh ]T~) (t [ σ ])}
+         --  coe~ rfl~ (sym~ Γ~) (coh ⨾~ sym~ coh)
+         -- (ρ [ coe~ rfl~ (sym~ rfl~) coh σᵀʰ ]ℰ)
+        --  {ρ₁ = coe~ rfl~ (sym~ Γ~) coh ρ [ σᵀʰ ]ℰ}
+        --  {ρ₂ = coe~ rfl~ (sym~ Γ~) coh (ρ [ σᵀʰ ]ℰ)}
          rfl~ 
          (sym~ coh ⨾~ rfl~ ∙~ coh) 
          (sym~ (coh  {A~ = (sym~ coh [ coh ]T~)}) [ rfl~ ]~ ∙~ coh) 
@@ -243,72 +279,61 @@ _∋_[_]𝒱 {δ = δ} {ρ = ρ} {σ = σ} (coe~ Γ~ A) {t = t} tⱽ σᵀʰ
 Π A B     ∋ tⱽ [ σᵀʰ ]𝒱 = λ γᵀʰ uⱽ → tⱽ (σᵀʰ ⨾ᵀʰ γᵀʰ) uⱽ
 if b A B  ∋ tⱽ [ σᵀʰ ]𝒱 = {!   !}
 
--- Special case of |coe𝒱| (justifies ignoring environments)
-env-irr    : ∀ A {t} → Val Γ A Δ δ t ρ₁ → Val Γ A Δ δ t ρ₂
-env-irr-if : ∀ A B {t} {uⱽ₁ : Val Γ 𝔹 Δ δ u ρ₁} {uⱽ₂ : Val Γ 𝔹 Δ δ u ρ₂}
-           → Mut𝔹Val uⱽ₁ uⱽ₂
-           → if-Val Γ A B Δ δ t ρ₁ uⱽ₁
-           → if-Val Γ A B Δ δ t ρ₂ uⱽ₂
-
-if-Val Γ A B Δ δ {u[]} t ρ (TT u~)  
-  = Val Γ A Δ δ (coe~ rfl~ (if u~ coh coh ∙~ ifTT ∙~ sym~ coh) t) ρ
-if-Val Γ A B Δ δ {u[]} t ρ (FF u~)  
-  = Val Γ B Δ δ (coe~ rfl~ (if u~ coh coh ∙~ ifFF ∙~ sym~ coh) t) ρ
-if-Val Γ A B Δ δ {u[]} t ρ (ne _ _) 
+if-Val Γ A B Δ δ ρ {u[]} t (TT u~)  
+  = Val Γ A Δ δ ρ (coe~ rfl~ (if u~ coh coh ∙~ ifTT ∙~ sym~ coh) t)
+if-Val Γ A B Δ δ ρ {u[]} t (FF u~)  
+  = Val Γ B Δ δ ρ (coe~ rfl~ (if u~ coh coh ∙~ ifFF ∙~ sym~ coh) t)
+if-Val Γ A B Δ δ ρ {u[]} t (ne _ _) 
   = Ne Δ (if u[] (A [ δ ]T) (B [ δ ]T)) t
 
-env-irr (coe~ Γ~ A) tⱽ = env-irr A tⱽ  
-env-irr 𝔹           tⱽ = tⱽ
-env-irr (Π A B)     tⱽ γᵀʰ uⱽ = env-irr B (tⱽ γᵀʰ (env-irr A uⱽ))
-env-irr (if b A B)  tⱽ = env-irr-if A B (mut𝔹Val bⱽ₁ bⱽ₂) tⱽ
-  where bⱽ₁ = eval b _
-        bⱽ₂ = eval b _
+_,ᴾ_ : ∀ Γᴾ → PTy Γᴾ A → PCtx (Γ , A)
+Γᴾ ,ᴾ Aᴾ = λ Δ δ → Σ (Γᴾ Δ (wk ⨾ δ)) λ ρ → Aᴾ Δ (wk ⨾ δ) ρ ((` vz) [ δ ])
 
-env-irr-if A B TT tⱽ = env-irr A tⱽ
-env-irr-if A B FF tⱽ = env-irr B tⱽ
-env-irr-if A B ne tⱽ = tⱽ
+wkᴾ : ∀ {Aᴾ : PTy Γᴾ A} → PTms (Γᴾ ,ᴾ Aᴾ) Γᴾ (wk {A = A})
+wkᴾ = λ θ σ ρ → ρ .fst
 
-shift𝒱₁ : ∀ A (δ : Tms Δ Γ) (σ : Tms Θ Δ) {ρ₁ ρ₂ t} 
-        → Val Γ A Θ (δ ⨾ σ) t ρ₁ → Val Δ (A [ δ ]T) Θ σ t ρ₂
-shift𝒱₂ : ∀ A (δ : Tms Δ Γ) (σ : Tms Θ Δ) {ρ₁ ρ₂ t} 
-        → Val Δ (A [ δ ]T) Θ σ t ρ₁ → Val Γ A Θ (δ ⨾ σ) t ρ₂
+idᴾ : PTms Γᴾ Γᴾ id
+idᴾ = λ θ σ ρ → ρ
 
-shift𝒱₁ (coe~ Γ~ A) δ σ {ρ₁ = ρ₁} {ρ₂ = ρ₂} tⱽ
-  = stⱽ′
-  where tⱽ′ = coe𝒱 {ρ₂ = (coe~ rfl~ (sym~ Γ~) (coh ⨾~ rfl~) ρ₁)} 
-                    (rfl~ {A = A}) 
-                    (sym~ coh ∙~ coh ⨾~ rfl~) coh tⱽ
-        stⱽ = shift𝒱₁ A (coe~ rfl~ (sym~ Γ~) δ) σ 
-                      {ρ₂ = ρ₂}
-                      tⱽ′
-        stⱽ′ = coe𝒱 {A₁ = (A [ coe~ rfl~ (sym~ Γ~) δ ]T)} 
-                     (coh [ sym~ coh ]T~)
-                     rfl~ (sym~ coh ∙~ sym~ coh)
-                     stⱽ
-shift𝒱₁ 𝔹           δ σ tⱽ = tⱽ
-shift𝒱₁ (Π A B)     δ σ tⱽ {_} {γ} γᵀʰ {u} uⱽ 
-  = shift𝒱₁ B (δ ^ A) ((σ ⨾ γ) , u) 
-            (tⱽ γᵀʰ (shift𝒱₂ A δ (σ ⨾ γ) uⱽ))
-shift𝒱₁ (if b A B)  δ σ tⱽ = {!   !}
+_[_]ᴾ : PTy Γᴾ A → PTms Δᴾ Γᴾ δ → PTy Δᴾ (A [ δ ]T)
+Aᴾ [ δᴾ ]ᴾ = λ Θ σ ρ t → Aᴾ Θ _ (δᴾ Θ σ ρ) t
 
-shift𝒱₂ (coe~ Γ~ A) δ σ tⱽ = {!   !}
-shift𝒱₂ 𝔹           δ σ tⱽ = tⱽ
-shift𝒱₂ (Π A B)     δ σ tⱽ {_} {γ} γᵀʰ {u} uⱽ 
-  = shift𝒱₂ B (δ ^ A) ((σ ⨾ γ) , u) (tⱽ γᵀʰ (shift𝒱₁ A δ (σ ⨾ γ) uⱽ))
-shift𝒱₂ (if b A B)  δ σ tⱽ = {!   !}
+-- We need that |Val| preserves substitution, and |eval*| preserves |id|
+-- and |wk|. The nice way to solve this would be to define an eliminator for
+-- the inductive-recursive syntax that allows specifying how non-canonical
+-- elements should be interpreted, plus laws to ensure their computational
+-- behaviour is preserved.
+postulate
+  -- These non-"rw" versions are just to illustrate what rewrites are doing.
+  -- These are exactly the "methods" for |id|, |wk| and |_[_]T| that we would 
+  -- give if we used an explicit eliminator. 
+  id-pres  : pTms (id {Γ = Γ}) ≡ idᴾ
+  wk-pres  : pTms (wk {A = A}) ≡ wkᴾ {Aᴾ = pTy A}
+  []T-pres : ∀ {δ : Tms Δ Γ} → pTy (A [ δ ]T) ≡ pTy A [ pTms δ ]ᴾ
 
-lookupℰ : ∀ (i : Var Γ A) (ρ : Env Δ Γ δ) → Val Γ A Δ δ (lookup i δ) ρ
-lookupℰ (coe~ Γ~ A~ i)  ρ                 = {!   !}
-lookupℰ i               (coe~ Δ~ Γ~ δ~ ρ) = {!   !}
-lookupℰ (vz {A = A})    (_,_ {δ = δ} {t = u} ρ uⱽ) 
-  = shift𝒱₁ A wk (δ , u) uⱽ
-lookupℰ (vs {B = B} i)  (_,_ {δ = δ} {t = u} ρ uⱽ)  
-  = shift𝒱₁ B wk (δ , u) (lookupℰ i ρ)
+  id-pres-rw   : ∀ {ρ : Env Δ Γ δ} → eval* id ρ ≡ ρ
+  wk-pres-rw   : ∀ {ρ : Env Δ (Γ , A) δ} → eval* wk ρ ≡ ρ .fst
+  []T-pres-rw  : Val Δ (A [ δ ]T) Θ σ ρ t ≡ Val Γ A Θ (δ ⨾ σ) (eval* δ ρ) t
+{-# REWRITE id-pres-rw #-}
+{-# REWRITE wk-pres-rw #-}
+{-# REWRITE []T-pres-rw #-}
 
-eval-if : ∀ A {t u v} (tⱽ : Val Γ 𝔹 Δ δ t ρ)
-        → Val (Γ , 𝔹) A Δ (δ , TT) u (ρ , TT rfl~)
-        → Val (Γ , 𝔹) A Δ (δ , FF) v (ρ , FF rfl~)
-        → Val (Γ , 𝔹) A Δ (δ , t) (if (A [ δ ^ 𝔹 ]T) t u v) (ρ , tⱽ)
+lookupℰ : ∀ (i : Var Γ A) (ρ : Env Δ Γ δ) → Val Γ A Δ δ ρ (lookup i δ)
+lookupℰ (coe~ Γ~ A~ i)  ρ         
+  = coe𝒱 A~ (sym~ coh) (lookup~ coh (sym~ coh)) 
+         (lookupℰ i (coeℰ rfl~ (sym~ Γ~) coh ρ))
+lookupℰ (vz {A = A})    (ρ Σ, uⱽ) = uⱽ
+lookupℰ (vs {B = B} i)  (ρ Σ, uⱽ) = lookupℰ i ρ
+
+eval* (coe~ Δ~ Γ~ δ) ρ 
+  = coeℰ rfl~ Γ~ (coh ⨾~ sym~ coh) (eval* δ (coeℰ rfl~ (sym~ Δ~) coh ρ))
+eval* ε               ρ = tt
+eval* {σ = σ} (δ , t) ρ = eval* δ ρ Σ, eval t ρ
+
+eval-if : ∀ A {t u v} (tⱽ : Val Γ 𝔹 Δ δ ρ t)
+        → Val (Γ , 𝔹) A Δ (δ , TT) (ρ Σ, TT rfl~) u
+        → Val (Γ , 𝔹) A Δ (δ , FF) (ρ Σ, FF rfl~) v
+        → Val (Γ , 𝔹) A Δ (δ , t) (ρ Σ, tⱽ) (if (A [ δ ^ 𝔹 ]T) t u v)
 eval-if {δ = δ} A (TT {Γ~ = Γ~} t~)     uⱽ vⱽ 
   = coe𝒱 (rfl~ {A = A}) 
          (_,_ {A~ = 𝔹} (rfl~ {δ = δ}) (TT Γ~ ∙~ sym~ t~)) 
@@ -324,30 +349,19 @@ eval-if {δ = δ} A (FF {Γ~ = Γ~} t~) uⱽ vⱽ
 eval-if {δ = δ} A (ne A~ tᴺᵉ) uⱽ vⱽ 
   = uval A (if (A [ δ ^ 𝔹 ]T) tᴺᵉ (qval A uⱽ) (qval A vⱽ))
 
-eval (coe~ Γ~ A~ t) ρ = coe𝒱 A~ (sym~ coh) (coh [ sym~ coh ]~) tⱽ′
-  where tⱽ′ = eval t (coe~ rfl~ (sym~ Γ~) coh ρ)
+eval (coe~ Γ~ A~ t) ρ 
+  = coe𝒱 A~ (sym~ coh) (coh [ sym~ coh ]~)
+         (eval t (coeℰ rfl~ (sym~ Γ~) coh ρ))
 eval (` i)          ρ = lookupℰ i ρ
-eval {A = Π A B} (ƛ t) ρ γᵀʰ {u} uⱽ
-  = coe𝒱 rfl~ rfl~ (sym~ (β {t = t [ (_ ⨾ _) ^ _ ]} {u = u})) tuⱽ
-  where tuⱽ = eval t ((ρ [ γᵀʰ ]ℰ) , uⱽ)
-eval {δ = δ} (_·_ {B = B} t u) ρ 
-  = shift𝒱₁ B < u > δ (eval t ρ idᵀʰ (eval u ρ))
+eval (ƛ t) ρ {γ = γ} γᵀʰ {u = u} uⱽ 
+  = coe𝒱 rfl~ rfl~ (sym~ (β {t = t [ (_ ⨾ _) ^ _ ]} {u = u}))
+         (eval {δ = (_ ⨾ _) , _} t ((ρ [ γᵀʰ ]ℰ) Σ, uⱽ))
+eval (t · u)    ρ = eval t ρ idᵀʰ (eval u ρ)
 eval TT         ρ = TT rfl~
 eval FF         ρ = FF rfl~
-eval {δ = δ} (if A t u v) ρ 
-  = shift𝒱₁ A < t > δ (eval-if {ρ = ρ} A (eval t ρ) uⱽ′′ vⱽ′′)
-  where tⱽ′   = eval t ρ
-        uⱽ′   = eval u ρ
-        uⱽ′′  = shift𝒱₂ A < TT > δ uⱽ′
-        vⱽ′   = eval v ρ
-        vⱽ′′  = shift𝒱₂ A < FF > δ vⱽ′
-
-eval* (coe~ Δ~ Γ~ δ) ρ 
-  = coe~ rfl~ Γ~ (coh ⨾~ sym~ coh) (eval* δ (coe~ rfl~ (sym~ Δ~) coh ρ))
-eval* ε               ρ = ε
-eval* {σ = σ} (δ , t) ρ 
-  = eval* δ ρ , shift𝒱₂ _ δ σ {t = t [ σ ]} (eval t ρ)
-
+eval {δ = δ} (if A t u v) ρ with eval t ρ | eval u ρ | eval v ρ
+... | tⱽ | uⱽ | vⱽ = eval-if A tⱽ uⱽ vⱽ
+    
 uval (coe~ Γ~ A) tᴺᵉ 
   = uval A (coe~ rfl~ (sym~ coh [ coh ]T~) coh tᴺᵉ)
 uval 𝔹           tᴺᵉ            = ne rfl~ tᴺᵉ
@@ -363,11 +377,11 @@ uval-if A B (ne A~ uᴺᵉ) tᴺᵉ = tᴺᵉ
 qval (coe~ Γ~ A)     tⱽ = coe~ rfl~ (coh [ sym~ coh ]T~) (sym~ coh) tᴺᶠ
   where tᴺᶠ = qval A tⱽ
 qval 𝔹               tⱽ = q𝔹Val tⱽ
-qval {δ = δ }(Π A B) tⱽ = coe~ rfl~ rfl~ (sym~ η) tᴺᶠ 
-  where vzⱽ = uval {δ = δ ⁺ (A [ δ ]T)} A (` vz)
+qval (Π A B)         tⱽ = coe~ rfl~ rfl~ (sym~ η) tᴺᶠ 
+  where vzⱽ = uval {δ = _ ⨾ wk {A = (A [ _ ]T)}} A (` vz)
         tvz = tⱽ wkᵀʰ vzⱽ
-        tᴺᶠ = Nf.ƛ qval B tvz
-qval {ρ = ρ} (if b A B) tⱽ = qval-if A B (eval b _) tⱽ
+        tᴺᶠ = ƛ qval B tvz
+qval (if b A B)      tⱽ = qval-if A B (eval b _) tⱽ
 
 qval-if A B (TT {Γ~ = Γ~} u~) tⱽ 
   = coe~ rfl~ 

@@ -267,4 +267,11 @@ csubst⁻¹-sym-csubst⁻¹ : {P : A → Set ℓ} (x≡y : x ≡ y) {p : P y}
                       → csubst⁻¹ P (sym x≡y) (csubst⁻¹ P x≡y p) ≡ p
 csubst⁻¹-sym-csubst⁻¹ refl = refl
 
+⊥-elimᴾ : ∀ {P : Prop ℓ} → ⊥ → P
+⊥-elimᴾ ()
 
+pattern f0 = fz
+pattern f1 = fs f0
+pattern f2 = fs f1
+pattern f3 = fs f2
+pattern f4 = fs f3

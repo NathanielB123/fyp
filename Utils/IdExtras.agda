@@ -17,7 +17,7 @@ private variable
 data _≡ᴾ_ {A : Set ℓ} (x : A) : A → Prop ℓ where
   refl : x ≡ᴾ x
 
-variable
+private variable
   p  q  : x ≡ y
   pᴾ qᴾ : x ≡ᴾ y
 
@@ -86,3 +86,15 @@ Bool-splitᴾ false t f = f refl
 
 postulate
   funextᴾ : ∀ {B : A → Set ℓ} {f g : ∀ x → B x} → (∀ x → f x ≡ᴾ g x) → f ≡ᴾ g
+
+record ⊤ᴾ : Prop where
+  constructor tt
+
+data ⊥ᴾ : Prop where
+
+record Σᴾ (A : Prop ℓ₁) (B : A → Prop ℓ₂) : Prop (ℓ₁ ⊔ℓ ℓ₂) where
+  constructor _Σ,_
+  field
+    fst : A
+    snd : B fst
+open Σᴾ

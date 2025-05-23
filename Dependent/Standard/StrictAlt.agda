@@ -18,7 +18,7 @@ open import Utils.IdExtras
 --
 -- I have commented out the cases for recursive operations applied to |coe|
 -- because in practice these are usually unhelpful (one |coe| becomes two).
-module Dependent.Standard.Strict where
+module Dependent.Standard.StrictAlt where
 
 infixr 4 _∙~_
 
@@ -77,10 +77,13 @@ data Tms where
 
   ε     : Tms Δ ε
   _,_   : ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]T) → Tms Δ (Γ , A) 
-
-wk  : Tms (Γ , A) Γ
+  
 id  : Tms Γ Γ
 _⨾_ : Tms Δ Γ → Tms Θ Δ → Tms Θ Γ
+_⁺_ : Tms Δ Γ → ∀ A → Tms (Δ , A) Γ
+
+wk : Tms (Γ , A) Γ
+wk = id ⁺ _
 
 data Var where
   coe~ : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Var Γ₁ A₁ → Var Γ₂ A₂
@@ -104,6 +107,7 @@ data Tm where
 
 lookup : Var Γ A → ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]T)
 _[_]   : Tm Γ A → ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]T)
+suc    : ∀ A → Tm Γ B → Tm (Γ , A) (B [ wk ]T)
 
 _^_ : ∀ (δ : Tms Δ Γ) A → Tms (Δ , (A [ δ ]T)) (Γ , A)
 
@@ -132,7 +136,6 @@ postulate
          → Ty~ Δ~ (A₁ [ δ₁ ]T) (A₂ [ δ₂ ]T)
 
 -- Strictified computation
-{-# NON_COVERING #-}
 {-# TERMINATING #-}
 -- coe~ Γ~ A [ δ ]T = A [ coe~ rfl~ (sym~ Γ~) δ ]T
 𝔹         [ δ ]T = 𝔹
@@ -142,10 +145,17 @@ if t A B  [ δ ]T = if (t [ δ ]) (A [ δ ]T) (B [ δ ]T)
 postulate [id]T : A [ id ]T ≡ A
 {-# REWRITE [id]T #-}
 
+-- |id| is not convertible with its unfolding
+postulate [id^]T : A [ (id ⁺ B) , (` vz) ]T ≡ A
+{-# REWRITE [id^]T #-}
+
 postulate [][]T : A [ δ ]T [ σ ]T ≡ A [ δ ⨾ σ ]T
 {-# REWRITE [][]T #-}
 
 < t > = id , t
+
+id {Γ = ε}     = ε
+id {Γ = Γ , A} = id ^ A
 
 -- Strictified computation
 postulate id⨾ : id ⨾ δ ≡ δ
@@ -160,18 +170,15 @@ postulate ⨾⨾ : (δ ⨾ σ) ⨾ γ ≡ δ ⨾ (σ ⨾ γ)
 ε            ⨾ σ = ε
 (δ , t)      ⨾ σ = (δ ⨾ σ) , (t [ σ ])
 
-postulate wk⨾ : wk ⨾ (δ , t) ≡ δ
-{-# REWRITE wk⨾ #-}
+postulate ⨾⁺ : δ ⨾ (σ ⁺ A) ≡ (δ ⨾ σ) ⁺ A
+{-# REWRITE ⨾⁺ #-}
 
--- We make η-contraction a rewrite
-postulate ,η : ∀ {δ : Tms Δ (Γ , A)} → ((wk ⨾ δ) , lookup vz δ) ≡ δ 
-{-# REWRITE ,η #-}
+-- coe~ Δ~ Γ~ δ ⁺ B = coe~ (Δ~ , sym~ coh) Γ~ (δ ⁺ coe~ (sym~ Δ~) B)
+ε            ⁺ B = ε
+(δ , t)      ⁺ B = (δ ⁺ B) , (suc B t)
 
-wk {Γ = ε} = ε
-id {Γ = ε} = ε
-
-postulate idη : wk , (` vz) ≡ id {Γ = Γ , A}
-{-# REWRITE idη #-}
+postulate ⁺, : (δ ⁺ A) ⨾ (σ , t) ≡ δ ⨾ σ
+{-# REWRITE ⁺, #-}
 
 data Tms~ where
   -- Equivalence
@@ -194,9 +201,12 @@ data Tms~ where
 postulate
   id~   : Tms~ Γ~ Γ~ id id
   _⨾~_  : Tms~ Δ~ Γ~ δ₁ δ₂ → Tms~ Θ~ Δ~ σ₁ σ₂ → Tms~ Θ~ Γ~ (δ₁ ⨾ σ₁) (δ₂ ⨾ σ₂)
-  wk~  : ∀ (A~ : Ty~ Γ~ A₁ A₂) → Tms~ (Γ~ , A~) Γ~ wk wk
+  _⁺~_  : Tms~ Δ~ Γ~ δ₁ δ₂ → ∀ (A~ : Ty~ Δ~ A₁ A₂) 
+        → Tms~ (Δ~ , A~) Γ~ (δ₁ ⁺ A₁) (δ₂ ⁺ A₂)
 
-δ ^ A = (δ ⨾ wk) , (` vz)
+δ ^ A = (δ ⁺ _) , (` vz)
+
+wk~  : ∀ (A~ : Ty~ Γ~ A₁ A₂) → Tms~ (Γ~ , A~) Γ~ wk wk
 
 data Var~ where
   -- Equivalence
@@ -213,13 +223,19 @@ data Var~ where
   vs : Var~ Γ~ B~ i₁ i₂ → Var~ (Γ~ , A~) (B~ [ wk~ A~ ]T~) (vs i₁) (vs i₂)
 
 -- Strict computation
+-- TODO: Make this covering...
+{-# NON_COVERING #-}
 lookup vz     (δ , t)        = t
 lookup (vs i) (δ , t)        = lookup i δ
 
-postulate lookup-wk⨾ : lookup i (wk ⨾ δ) ≡ lookup (vs i) δ
-{-# REWRITE lookup-wk⨾ #-}
-postulate lookup-wk : lookup i (wk {A = A}) ≡ ` vs i
-{-# REWRITE lookup-wk #-}
+-- suc A (coe~ Γ~ A~ t) 
+--   = coe~ (Γ~ , sym~ coh) (A~ [ id~ ⁺~ sym~ coh ]T~) (suc (coe~ (sym~ Γ~) A) t)
+suc A (` i)          = ` vs i
+suc A TT             = TT
+suc A FF             = FF
+suc A (ƛ t)          = (ƛ t) [ wk ]
+suc A (t · u)        = (t · u) [ wk ]
+
 postulate lookup-id : lookup i id ≡ (` i)
 {-# REWRITE lookup-id #-}
 postulate lookup-⨾ : lookup i δ [ σ ] ≡ lookup i (δ ⨾ σ)
@@ -279,5 +295,15 @@ postulate
           → Tm~ Δ~ (A~ [ δ~ ]T~) (lookup i₁ δ₁) (lookup i₂ δ₂)
   _[_]~ : Tm~ Γ~ A~ t₁ t₂ → ∀ (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) 
         → Tm~ Δ~ (A~ [ δ~ ]T~) (t₁ [ δ₁ ]) (t₂ [ δ₂ ]) 
+  suc~  : Tm~ Γ~ B~ t₁ t₂ → ∀ (A~ : Ty~ Γ~ A₁ A₂)
+        → Tm~ (Γ~ , A~) (B~ [ wk~ A~ ]T~) (suc A₁ t₁) (suc A₂ t₂)
 
 <_>~ {A~ = A~} t~ = _,_ {A~ = A~} id~ t~
+wk~ A~ = id~ ⁺~ A~
+
+-- Can we prove these (or at least the |Tm~| versions)?
+postulate lookup-wk : lookup i (wk {A = A}) ≡ ` vs i
+{-# REWRITE lookup-wk #-}
+
+postulate lookup-wk⨾ : lookup i (wk ⨾ δ) ≡ lookup (vs i) δ
+{-# REWRITE lookup-wk⨾ #-}
