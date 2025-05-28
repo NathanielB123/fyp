@@ -5,7 +5,7 @@
 open import Utils hiding (ε; _∘_)
 open import Utils.IdExtras
 
-module Report.Final.c13-3_background where
+module Report.Final.c3-3_background where
 
 \end{code}
 %endif
@@ -122,6 +122,34 @@ The category of substitutions features a terminal object (the empty context).
 The unique morphism |ε| applied to terms will correspond to weakening
 from the empty context.
 
+\sidedef{Terminal Object}{An object |𝟙 : Ob| 
+in a category |C| with a family of morphisms |Hom| is
+terminal if there is a unique morphism 
+from every other object in the category, |x : Ob|, to |𝟙|, |! : Hom x 𝟙|.
+\nocodeindent
+%if False
+
+\begin{code}
+module _ {Ob : Set} (Hom : Ob → Ob → Set) (𝟙 : Ob) where
+  private variable 
+    x y z : Ob
+    f g h : Hom x y
+\end{code}
+%endif
+\begin{code}
+  record Terminal : Set where field
+    !     : Hom x 𝟙
+    uniq  : f ≡ !
+\end{code}
+\resetcodeindent
+}
+
+%if False
+\begin{code}
+postulate
+\end{code}
+%endif
+
 \begin{code}
   •    : Ctx
   ε    : Tms Δ •
@@ -132,7 +160,9 @@ Terms are a presheaf on substitutions. That is, there is a
 (contravariantly) functorial action
 that applies substitutions to terms.
 
-\sidedef{Presheaf}{We call family of types |F : A → Set| a presheaf 
+\sidedef{Presheaf}{
+\labdef{presheaf}
+We call family of types |F : A → Set| a presheaf 
 on a category |C| (with\\|Ob = A| and a family of morphisms |Hom|)
 if it is a contravariant functor on |C|.
 More concretely, there should exist a functorial action which ``lift''s 

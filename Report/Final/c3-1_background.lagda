@@ -3,7 +3,7 @@
 {-# OPTIONS --prop --rewriting --termination-depth=10 #-}
 
 open import Utils
-module Report.Final.c13-1_background where
+module Report.Final.c3-1_background where
 
 \end{code}
 %endif

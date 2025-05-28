@@ -3,7 +3,7 @@
 {-# OPTIONS --prop --rewriting --termination-depth=10 #-}
 
 open import Utils hiding (Bool; true; false)
-module Report.Final.c13-2_background where
+module Report.Final.c3-2_background where
 
 \end{code}
 %endif
@@ -16,6 +16,7 @@ simply-typed lambda calculus (STLC), and then will later cover the extension
 necessary to support dependent types.
 
 \subsection{Syntax}
+\labsec{stlcrec}
 
 \epigraph{There is no such thing as a free variable. There are only variables
 bound in the context.}{\textit{Conor McBride \cite{mcbride2025free}}}
@@ -205,9 +206,8 @@ context extension as dual to the category of weakenings
 |_⁺_ : Wk Δ Γ → ∀ A → Wk (Δ ▷ A) Γ|.}): 
 
 \begin{code}
-tm⊑ : q ⊑ r → Tm[ q ] Γ A → Tm[ r ] Γ A
-
-_^_ : Tms[ q ] Δ Γ → ∀ A → Tms[ q ] (Δ ▷ A) (Γ ▷ A)
+tm⊑  : q ⊑ r → Tm[ q ] Γ A → Tm[ r ] Γ A
+_^_  : Tms[ q ] Δ Γ → ∀ A → Tms[ q ] (Δ ▷ A) (Γ ▷ A)
 
 vz          [ δ , t ]  = t
 vs i        [ δ , t ]  = i [ δ ]
@@ -239,11 +239,33 @@ composition |_⨾_ : Tms[ q ] Δ Γ → Tms[ r ] Θ Δ → Tms[ q ⊔ r ] Θ Γ|
 Ren = Tms[ V ]
 Sub = Tms[ T ]  
 -- ...
-<_> : Tm[ q ] Γ A → Tms[ q ] Γ (Γ ▷ A)
-id : Tms[ q ] Γ Γ
-wk : Tms[ V ] (Γ ▷ A) Γ
-_⨾_ : Tms[ q ] Δ Γ → Tms[ r ] Θ Δ → Tms[ q ⊔ r ] Θ Γ
+id     : Tms[ q ] Γ Γ
+_⁺_    : Tms[ q ] Δ Γ → ∀ A → Tms[ q ] (Δ ▷ A) Γ
+suc[_] : ∀ q → Tm[ q ] Γ B → Tm[ q ] (Γ ▷ A) B
 
+id {Γ = •} = ε
+id {Γ = Γ ▷ A} = id ^ _
+
+suc[ V ] = vs
+suc[ T ] = _[ id {q = V} ⁺ _ ]
+ 
+ε       ⁺ A = ε
+(δ , t) ⁺ A = (δ ⁺ A) , suc[ _ ] t
+
+δ ^ A = (δ ⁺ A) , tm⊑ V⊑ vz
+
+tm⊑ {q = V} {r = T} _ i = ` i
+tm⊑ {q = V} {r = V} _ i = i
+tm⊑ {q = T} {r = T} _ t = t
+
+_⨾_ : Tms[ q ] Δ Γ → Tms[ r ] Θ Δ → Tms[ q ⊔ r ] Θ Γ
+ε       ⨾ σ = ε
+(δ , t) ⨾ σ = (δ ⨾ σ) , (t [ σ ])
+
+wk : Ren (Γ ▷ A) Γ
+wk = id ⁺ _
+
+<_> : Tm[ q ] Γ A → Tms[ q ] Γ (Γ ▷ A)
 < t > = id , t
 
 variable
@@ -456,8 +478,14 @@ composition.
 
 Soundness of |_[_]| w.r.t. the standard model can now be stated as:
 
+%if False
 \begin{code}
-[]-sound : ⟦ t [ δ ] ⟧ᵗᵐ ≡ ⟦[]⟧ ⟦ t ⟧ᵗᵐ ⟦ δ ⟧ˢᵘᵇ
+postulate
+\end{code}
+%endif
+
+\begin{code}
+  []-sound : ⟦ t [ δ ] ⟧ᵗᵐ ≡ ⟦[]⟧ ⟦ t ⟧ᵗᵐ ⟦ δ ⟧ˢᵘᵇ
 \end{code}
 
 The case for e.g. |t = ⟨⟩| is trivial |[]-sound {t = ⟨⟩} = refl|, but
@@ -475,12 +503,16 @@ and also preservation of |<_>|, |<>-sound|.
 
 ⟦<>⟧ : ⟦Tm⟧ ⟦Γ⟧ ⟦A⟧ → ⟦Sub⟧ ⟦Γ⟧ (⟦▷⟧ ⟦Γ⟧ ⟦A⟧)
 ⟦<>⟧ ⟦t⟧ ρ = ρ Σ, ⟦t⟧ ρ
+
+postulate
 \end{code}
 %endif
 
 \begin{code}
-<>-sound : ⟦ < t > ⟧ˢᵘᵇ ≡ ⟦<>⟧ ⟦ t ⟧ᵗᵐ
+  <>-sound : ⟦ < t > ⟧ˢᵘᵇ ≡ ⟦<>⟧ ⟦ t ⟧ᵗᵐ
+\end{code}
 
+\begin{code}
 ⟦β⟧ {t = t} {u = u} = 
   ⟦ (ƛ t) · u ⟧ᵗᵐ
   ≡⟨ refl ⟩≡
@@ -501,12 +533,12 @@ We can also give ``operational'' and
 ``equational'' semantics to STLC using inductive relations named 
 ``reduction'' and ``conversion'' respectively.
 
-We arrive at (strong) one-step reduction by taking the smallest monotonic relation
-on terms which includes our computation rules:
+We arrive at (strong) one-step β-reduction by taking the smallest monotonic 
+relation on terms which includes our computation rules:
 
 %if False
 \begin{code}
-infix 4 _>_ _~_
+infix 4 _>β_ _>β*_ _~_
 
 variable
   t₁ t₂ t₃ u₁ u₂ u₃ v₁ v₂ v₃ : Tm Γ A
@@ -514,32 +546,32 @@ variable
 %endif
 
 \begin{code}
-data _>_ : Tm Γ A → Tm Γ A → Set where
+data _>β_ : Tm Γ A → Tm Γ A → Set where
   -- Computation
-  ⇒β   : (ƛ t) · u           > t [ < u > ]
-  +β₁  : case (in₁ B t) u v  > u [ < t > ]
-  +β₂  : case (in₂ A t) u v  > v [ < t > ]
-  *β₁  : π₁ (t , u)          > t
-  *β₂  : π₂ (t , u)          > u
+  ⇒β   : (ƛ t) · u           >β t [ < u > ]
+  +β₁  : case (in₁ B t) u v  >β u [ < t > ]
+  +β₂  : case (in₂ A t) u v  >β v [ < t > ]
+  *β₁  : π₁ (t , u)          >β t
+  *β₂  : π₂ (t , u)          >β u
 
   -- Monotonicity
-  ƛ_     : t₁  > t₂  → ƛ t₁         > ƛ t₂ 
-  l·     : t₁  > t₂  → t₁ · u       > t₂ · u
-  ·r     : u₁  > u₂  → t · u₁       > t · u₂
-  in₁    : t₁  > t₂  → in₁ B t₁     > in₁ B t₂
-  in₂    : t₁  > t₂  → in₂ A t₁     > in₂ A t₂
-  case₁  : t₁  > t₂  → case t₁ u v  > case t₂ u v
-  case₂  : u₁  > u₂  → case t u₁ v  > case t u₂ v
-  case₃  : v₁  > v₂  → case t u v₁  > case t u v₂
-  ,₁     : t₁  > t₂  → t₁ , u       > t₂ , u
-  ,₂     : u₁  > u₂  → t , u₁       > t , u₂
-  π₁     : t₁  > t₂  → π₁ t₁        > π₁ t₂
-  π₂     : t₁  > t₂  → π₂ t₁        > π₂ t₂
+  ƛ_     : t₁  >β t₂  → ƛ t₁         >β ƛ t₂ 
+  l·     : t₁  >β t₂  → t₁ · u       >β t₂ · u
+  ·r     : u₁  >β u₂  → t · u₁       >β t · u₂
+  in₁    : t₁  >β t₂  → in₁ B t₁     >β in₁ B t₂
+  in₂    : t₁  >β t₂  → in₂ A t₁     >β in₂ A t₂
+  case₁  : t₁  >β t₂  → case t₁ u v  >β case t₂ u v
+  case₂  : u₁  >β u₂  → case t u₁ v  >β case t u₂ v
+  case₃  : v₁  >β v₂  → case t u v₁  >β case t u v₂
+  ,₁     : t₁  >β t₂  → t₁ , u       >β t₂ , u
+  ,₂     : u₁  >β u₂  → t , u₁       >β t , u₂
+  π₁     : t₁  >β t₂  → π₁ t₁        >β π₁ t₂
+  π₂     : t₁  >β t₂  → π₂ t₁        >β π₂ t₂
 \end{code}
 
-We say a term |t₁| reduces to |t₂| if |t₁ >* t₂|, where 
-|_>*_ : Tm Γ A → Tm Γ A → Set| is the reflexive-transitive closure of
-|_>_|.
+We say a term |t₁| reduces to |t₂| if |t₁ >β* t₂|, where 
+|_>β*_ : Tm Γ A → Tm Γ A → Set| is the reflexive-transitive closure of
+|_>β_|.
 Using this relation, we define ``algorithmically convertible'' terms as those
 which have a common reduct.
 
@@ -570,6 +602,8 @@ the property |⌜ norm x ⌝ ≡ x|: if we assume |norm x ≡ norm y|, then
 by congruence |⌜ norm x ⌝ ≡ ⌜ norm y ⌝|, which simplifies to |x ≡ y|.}
 
 \begin{definition}[Normalisation] \phantom{a}
+\labdef{norm}
+
 In this report, we define normalisation algorithms as sound and complete 
 mappings from some type |A|
 to a type of ``normal forms'' with decidable equality. 
@@ -597,8 +631,8 @@ implies the starting objects are equivalent.
 
 %if False
 \begin{code}
-_>*_ : Tm Γ A → Tm Γ A → Set
-_>*_ = _[ _>_ ]*_
+_>β*_ : Tm Γ A → Tm Γ A → Set
+_>β*_ = _[ _>β_ ]*_
 \end{code}
 %endif
 
@@ -606,8 +640,8 @@ _>*_ = _[ _>_ ]*_
 record _<~>_ (t₁ t₂ : Tm Γ A) : Set where
   field
     {common}  : Tm Γ A
-    reduces₁  : t₁ >* common
-    reduces₂  : t₂ >* common
+    reduces₁  : t₁ >β* common
+    reduces₂  : t₂ >β* common
 \end{code}
  
 If we instead take the smallest congruent equivalence relation which includes 
@@ -675,17 +709,25 @@ We note that while our definitions of declarative and algorithmic conversion
 above are equivalent and equality in the standard model preserves 
 convertability, standard model equality is not conservative. 
 The model also validates
-various |η| equalities, including e.g.
+various |η| equalities, including
 
 \begin{code}
 ⟦𝟙η⟧ : ∀ {t : Tm Γ 𝟙} → ⟦ t ⟧ᵗᵐ ≡ ⟦ ⟨⟩ ⟧ᵗᵐ
 ⟦𝟙η⟧ = refl
-
-⟦⇒η⟧  : ∀ {t : Tm Γ (A ⇒ B)} 
-      → ⟦ t ⟧ᵗᵐ ≡ ⟦ ƛ ((t [ wk ]) · (` vz)) ⟧ᵗᵐ
-⟦⇒η⟧ = {!!} -- This one requires an inductive proof
 \end{code}
+and
+%if False
+\begin{code}
+postulate
+\end{code}
+%endif
+\begin{code}
+  ⟦⇒η⟧  : ∀ {t : Tm Γ (A ⇒ B)} 
+        → ⟦ t ⟧ᵗᵐ ≡ ⟦ ƛ ((t [ wk ]) · (` vz)) ⟧ᵗᵐ
+\end{code}
+(though the latter requires an inductive proof).
 
+%TODO what happened here???
 Updating declarative conversion with such η-equalities is pretty easy, but
 
 Generally, declarative conversion is a nice choice for such a ``default'' 
