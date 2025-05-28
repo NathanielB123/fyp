@@ -106,6 +106,8 @@ module Report.Interim.c0_main where
 %include c3-2_background.lagda
 %include c3-3_background.lagda
 %include c3-4_background.lagda
+%include c3-5_background.lagda
+%include c3-6_background.lagda
 
 %% bibliography
 % \bibliographystyle{apa}

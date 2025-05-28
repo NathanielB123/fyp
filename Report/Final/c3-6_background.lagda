@@ -5,6 +5,8 @@
 open import Utils hiding (ε)
 open import Utils.IdExtras
 
+open import Report.Final.c3-4_background
+
 module Report.Final.c3-6_background where
 
 \end{code}

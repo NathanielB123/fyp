@@ -202,10 +202,11 @@ _[_]≡ {Γ≡ = refl} {Δ≡ = refl} {A≡ = refl} refl refl = refl
 -- times
 -- Easier would be to switch to heterogeneous equality and absorb all
 -- the transports
-coh-vz<> :  subst (Tm Δ) [][]Ty 
-                  (subst (Tm (Δ ▷ (A [ δ ]Ty))) [][]Ty vz [ < t [ δ ] > ])
-        ≡[ Tm≡ refl (refl [ ⨾⨾ ∙ cong (δ ⨾_) wk⨾ ∙ ⨾id ∙ sym id⨾ ]Ty≡) 
-        ]≡ subst (Tm Δ) [][]Ty (subst (Tm Γ) (sym [id]Ty) t [ δ ])
+postulate
+  coh-vz<> :  subst (Tm Δ) [][]Ty 
+                    (subst (Tm (Δ ▷ (A [ δ ]Ty))) [][]Ty vz [ < t [ δ ] > ])
+          ≡[ Tm≡ refl (refl [ ⨾⨾ ∙ cong (δ ⨾_) wk⨾ ∙ ⨾id ∙ sym id⨾ ]Ty≡) 
+          ]≡ subst (Tm Δ) [][]Ty (subst (Tm Γ) (sym [id]Ty) t [ δ ])
 
 wk⨾Ty : A [ wk ]Ty [ δ , t ]Ty ≡ A [ δ ]Ty
 wk⨾Ty = [][]Ty ∙ cong (_ [_]Ty) wk⨾
@@ -242,7 +243,8 @@ wk-commTm {A = A} {t = t} {δ = δ} =
   ≡⟨ sym[] [][] ⟩≡
   t [ δ ] [ wk ] ∎
 
-vz<> : vz [ < t > ] ≡[ Tm≡ refl wk<>Ty ]≡ t
+postulate
+  vz<> : vz [ < t > ] ≡[ Tm≡ refl wk<>Ty ]≡ t
 
 <>-comm 
   = ,⨾ ∙ (⨾⨾ ∙ cong (_ ⨾_) wk⨾ ∙ ⨾id ∙ sym id⨾) ,≡ coh-vz<> ∙ sym ,⨾
@@ -441,18 +443,20 @@ postulate
 
 %if False
 \begin{code}
-vz^ : vz [ δ ^ A ] ≡[ Tm≡ refl wk-commTy ]≡ vz
+postulate
+  vz^ : vz [ δ ^ A ] ≡[ Tm≡ refl wk-commTy ]≡ vz
 
 wk-commId : (Id (A [ wk ]Ty) (t [ wk ]) vz [ δ ^ A ]Ty) 
           ≡ Id ((A [ δ ]Ty) [ wk ]Ty) (t [ δ ] [ wk ]) vz
 wk-commId {t = t} {δ = δ} = Id[] ∙ Id≡ {Γ≡ = refl} wk-commTy wk-commTm vz^
 
-<>,-comm : B [ < t₂ > , subst (Tm Γ) wkvz<>Id p ]Ty [ δ ]Ty
-         ≡ B [ subst (λ □ → Tms (Δ ▷ (A [ δ ]Ty) ▷ □)
-                     (Γ ▷ A ▷ Id (A [ wk ]Ty) (t₁ [ wk ]) vz))
-                     wk-commId ((δ ^ A) ^ Id (A [ wk ]Ty) (t₁ [ wk ]) vz) ]Ty 
-             [ < t₂ [ δ ] > 
-             , subst (Tm Δ) wkvz<>Id (subst (Tm Δ) Id[] (p [ δ ])) ]Ty
+postulate
+  <>,-comm : B [ < t₂ > , subst (Tm Γ) wkvz<>Id p ]Ty [ δ ]Ty
+          ≡ B [ subst (λ □ → Tms (Δ ▷ (A [ δ ]Ty) ▷ □)
+                      (Γ ▷ A ▷ Id (A [ wk ]Ty) (t₁ [ wk ]) vz))
+                      wk-commId ((δ ^ A) ^ Id (A [ wk ]Ty) (t₁ [ wk ]) vz) ]Ty 
+              [ < t₂ [ δ ] > 
+              , subst (Tm Δ) wkvz<>Id (subst (Tm Δ) Id[] (p [ δ ])) ]Ty
 -- <>,-comm {B = B} {t₁ = t₁} {p = p} {δ = δ} = 
 --   B [ < t₁ > , subst (Tm _) wkvz<>Id p ]Ty [ δ ]Ty
 --   ≡⟨ [][]Ty ⟩≡
@@ -466,12 +470,13 @@ wk-commId {t = t} {δ = δ} = Id[] ∙ Id≡ {Γ≡ = refl} wk-commTy wk-commTm 
 --   ≡⟨ {!!} ⟩≡ -- TODO, more transport hell
 --   {!!} ∎
 
-<>,-comm′ : B [ < t > , subst (Tm Γ) wkvz<>Id rfl ]Ty [ δ ]Ty
-         ≡ B [ subst (λ □ → Tms (Δ ▷ (A [ δ ]Ty) ▷ □)
-                     (Γ ▷ A ▷ Id (A [ wk ]Ty) (t [ wk ]) vz))
-                     wk-commId ((δ ^ A) ^ Id (A [ wk ]Ty) (t [ wk ]) vz) ]Ty 
-             [ < t [ δ ] > 
-             , subst (Tm Δ) wkvz<>Id rfl ]Ty
+postulate
+  <>,-comm′ : B [ < t > , subst (Tm Γ) wkvz<>Id rfl ]Ty [ δ ]Ty
+          ≡ B [ subst (λ □ → Tms (Δ ▷ (A [ δ ]Ty) ▷ □)
+                      (Γ ▷ A ▷ Id (A [ wk ]Ty) (t [ wk ]) vz))
+                      wk-commId ((δ ^ A) ^ Id (A [ wk ]Ty) (t [ wk ]) vz) ]Ty 
+              [ < t [ δ ] > 
+              , subst (Tm Δ) wkvz<>Id rfl ]Ty
 -- <>,-comm′ {t = t} {B = B} {δ = δ} = 
 --   B [ < t > , subst (Tm _) wkvz<>Id rfl ]Ty [ δ ]Ty
 --   ≡⟨ <>,-comm ⟩≡
@@ -693,11 +698,19 @@ The main differences are:
 
 ⟦Tms⟧ : ⟦Ctx⟧ → ⟦Ctx⟧ → Set
 ⟦Tms⟧ Δ Γ = Δ → Γ
+\end{code}
 
-⟦_⟧Ctx  : Ctx → ⟦Ctx⟧
-⟦_⟧Ty   : Ty Γ → ⟦Ty⟧ ⟦ Γ ⟧Ctx
-⟦_⟧Tm   : Tm Γ A → ⟦Tm⟧ ⟦ Γ ⟧Ctx ⟦ A ⟧Ty
-⟦_⟧Tms  : Tms Δ Γ → ⟦Tms⟧ ⟦ Δ ⟧Ctx ⟦ Γ ⟧Ctx
+%if False
+\begin{code}
+postulate
+\end{code}
+%endif
+
+\begin{code}
+  ⟦_⟧Ctx  : Ctx → ⟦Ctx⟧
+  ⟦_⟧Ty   : Ty Γ → ⟦Ty⟧ ⟦ Γ ⟧Ctx
+  ⟦_⟧Tm   : Tm Γ A → ⟦Tm⟧ ⟦ Γ ⟧Ctx ⟦ A ⟧Ty
+  ⟦_⟧Tms  : Tms Δ Γ → ⟦Tms⟧ ⟦ Δ ⟧Ctx ⟦ Γ ⟧Ctx
 \end{code}
 
 Note that for type-level (large) |IF|, we can use |Bool|'s recursor, while
