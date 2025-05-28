@@ -10,6 +10,7 @@ module Report.Final.c3-4_background where
 \end{code}
 %endif
 
+\pagebreak
 \section{Dependently Typed Lambda Calculus}
 
 We will define an intensional type theory. See \refsec{equality} for discussion

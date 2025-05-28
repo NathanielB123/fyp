@@ -12,10 +12,11 @@ module Report.Final.c3-5_background where
 \end{code}
 %endif
 
+\pagebreak
 \section{Normalisation by Evaluation}
 
 Normalisation by Evaluation (NbE) 
-\sidecite[*25]{berger1991inverse, altenkirch1995categorical}
+\sidecite{berger1991inverse, altenkirch1995categorical}
 is a normalisation algorithm for lambda
 calculus terms, which operates by first evaluating terms into a semantic domain 
 (specifically, the ``presheaf model''), and then inverting
@@ -31,21 +32,23 @@ from multiple directions:
       point, unlike term-rewriting-based approaches to normalisation, NbE does
       not rely on distinguishing βη-convertible terms (the algorithm can be
       structured in such a way as to simply map families of convertible terms
-      to values \sidecite[*14.25]{altenkirch2017normalisation}). This enables 
-      working with more ``semantic'' \sidecite[*16]{kaposi2025type} definitions 
-      of type theory (e.g. Categories with Families, or CwFs) where terms are 
-      quotiented by conversion, 
-      providing 
-      soundness ``for free''.\sideremark[*-3]{Quotienting by conversion is 
-      especially 
-      attractive in the setting of dependent types, where intrinsically-typed
-      syntax must otherwise be defined mutually with conversion to account for
-      definitional equality \sidecite[*12]{danielsson2006formalisation, 
-      kovacs2023setoid}.}
+      to values \sidecite{altenkirch2017normalisation}). 
+      % This enables 
+      % working with more ``semantic'' \sidecite{kaposi2025type} definitions 
+      % of type theory (e.g. Categories with Families, or CwFs) where terms are 
+      % quotiented by conversion, 
+      % providing 
+      % soundness ``for free''.
+      % \sideremark{Quotienting by conversion is 
+      % especially 
+      % attractive in the setting of dependent types, where intrinsically-typed
+      % syntax must otherwise be defined mutually with conversion to account for
+      % definitional equality \sidecite[*4]{danielsson2006formalisation, 
+      % kovacs2023setoid}.}
 \item \textbf{Efficiency:} NbE avoids repeated expensive
       single-substitutions (which need to traverse the whole syntax tree
       each time to possibly replace variables with the substitutee) 
-      \sidecite[*15.5]{kovacs2023smalltt}. 
+      \sidecite{kovacs2023smalltt}. 
       Instead, the 
       mappings between variables
       and semantic values are tracked in a persistent map (the ``environment''), 
@@ -154,7 +157,7 @@ with the representation of neutral spines (among other things), pushing in
 this direction can lead to another structurally recursive normalisation
 algorithm known as ``hereditary substitution''
 \sidecite[*17]{keller2010hereditary}. Unfortunately, it is currently 
-unclear whether it is possible to scale this technique to dependent types.}
+unclear whether this technique scales to dependent types.}
 
 In a partial language, when applied to normalising terms, this definition
 is works! The single substitutions are less efficient on terms with
@@ -167,7 +170,7 @@ In a total setting, unfortunately, naive normalisation is clearly not
 well-founded by structural recursion. 
 |⌜ norm t ⌝Nf [ < ⌜ norm u ⌝Nf > ]| is not structurally smaller than |t · u|.
 
-%endif
+%if False
 \begin{code}
 infix 4 _>s_
 infix 4 _>βs_
@@ -202,8 +205,6 @@ diagram:
 We therefore skip ahead to defining a single |_>_| relation on terms 
 encompassing both structural and reduction orderings, and assume we have a proof
 that this combined order is well-founded.
-
-\pagebreak
 
 \begin{code}
 data _>s_ : Tm Γ A → Tm Δ B → Set where

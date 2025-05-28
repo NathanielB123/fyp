@@ -344,8 +344,11 @@
 %format true  = "\Keyword{tt}"
 %format false = "\Keyword{ff}"
 
-%format ℰ   = "^{\Varid{Env}}"
-%format idℰ = id ℰ
+%format ℰ     = "^{\Varid{Env}}"
+%format idℰ   = id ℰ
+%format ]ℰ    = ] ℰ
+%format _[_]ℰ = _[_] ℰ
+
 %format 𝒱   = "^{\Varid{Val}}"
 
 %format Nfᴬ = Nf "^{\Varid{A}}"
@@ -354,6 +357,23 @@
 
 %format ᵀʰ  = "^{\Varid{Th}}"
 %format δᵀʰ = δ ᵀʰ
+%format σᵀʰ = σ ᵀʰ 
+%format γᵀʰ = γ ᵀʰ
+
+%format ^ᵀʰ = ^ ᵀʰ
+%format ⁺ᵀʰ = ⁺ ᵀʰ
+%format ⨾ᵀʰ = ⨾ ᵀʰ
+
+%format _^ᵀʰ_ = _ ^ᵀʰ _ 
+%format _⁺ᵀʰ_ = _ ⁺ᵀʰ _
+%format _⨾ᵀʰ_ = _ ⨾ᵀʰ _
+
+%format idᵀʰ  = id ᵀʰ   
+%format id⨾ᵀʰ = id⨾ ᵀʰ
+%format ⨾idᵀʰ = ⨾id ᵀʰ
+%format ⨾⨾ᵀʰ  = ⨾⨾ ᵀʰ 
+%format wkᵀʰ  = wk ᵀʰ 
+%format wkᵀʰ  = wk ᵀʰ 
 
 %format ⱽ = "^{\Varid{V}}"
 %format tⱽ = t ⱽ 

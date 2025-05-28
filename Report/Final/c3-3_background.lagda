@@ -12,7 +12,6 @@ module Report.Final.c3-3_background where
 
 \subsection{Explicit Substitutions}
 
-
 For STLC, we were able to get away with first defining terms inductively, and 
 then substitutions later as a recursive operation (and conversion after that,
 \sideremark{If one takes untyped terms as primitive and
@@ -32,7 +31,7 @@ unfortunately it is currently unclear how to make this work in practice
 
 We therefore give an explicit substitution syntax for STLC, based on
 categories with families 
-(CwFs)\sidecite[*2]{dybjer1995internal, castellan2019cwf}, 
+(CwFs)\sidecite[*3]{dybjer1995internal, castellan2019cwf}, 
 which can be more easily adapted to the setting
 of dependent types.
 
@@ -66,16 +65,6 @@ variable
 \end{code}
 %endif
 
-We start with some properties of substitutions. Substitutions should form a 
-category with contexts as objects (i.e.
-there is an identity substitution, and they can be composed).
-We quotient by substitution laws here, but of course
-we could work up to some equivalence relation instead. By quotienting by
-the substitution laws but not |β|/|η|, we can obtain a syntax that is
-isomorphic to the recursive substitution approach (the details of how
-to prove this isomorphism are explored in 
-\sidecite[*-2]{altenkirch2025copypaste}).
-
 \sidedef{Category}{A type of objects |Ob| and family of morphisms
 |Hom : Ob → Ob → Set| forms a category if |Hom| includes identity and
 composition.
@@ -103,6 +92,16 @@ which is convenient for substitutions as it aligns with their action
 on terms being denoted postfix.
 }
 
+We start with some properties of substitutions. Substitutions should form a 
+category with contexts as objects (i.e.
+there is an identity substitution, and they can be composed).
+We quotient by substitution laws here, but of course
+we could work up to some equivalence relation instead. By quotienting by
+the substitution laws but not |β|/|η|, we can obtain a syntax that is
+isomorphic to the recursive substitution approach (the details of how
+to prove this isomorphism are explored in 
+\sidecite[*-9]{altenkirch2025copypaste}).
+
 %if False
 \begin{code}
 postulate
@@ -118,9 +117,7 @@ postulate
   ⨾⨾   : (δ ⨾ σ) ⨾ γ ≡ δ ⨾ (σ ⨾ γ)
 \end{code}
 
-The category of substitutions features a terminal object (the empty context).
-The unique morphism |ε| applied to terms will correspond to weakening
-from the empty context.
+\pagebreak
 
 \sidedef{Terminal Object}{An object |𝟙 : Ob| 
 in a category |C| with a family of morphisms |Hom| is
@@ -128,7 +125,6 @@ terminal if there is a unique morphism
 from every other object in the category, |x : Ob|, to |𝟙|, |! : Hom x 𝟙|.
 \nocodeindent
 %if False
-
 \begin{code}
 module _ {Ob : Set} (Hom : Ob → Ob → Set) (𝟙 : Ob) where
   private variable 
@@ -143,6 +139,10 @@ module _ {Ob : Set} (Hom : Ob → Ob → Set) (𝟙 : Ob) where
 \end{code}
 \resetcodeindent
 }
+The category of substitutions features a terminal object (the empty context).
+The unique morphism |ε| applied to terms will correspond to weakening
+from the empty context.
+
 
 %if False
 \begin{code}

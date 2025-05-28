@@ -397,8 +397,7 @@ after interpreting, computationaly-equivalent closed terms become
 definitionally equal.
 
 \begin{code}
-β-example : _≡_ {A = ⟦Tm⟧ ⟦ • ⟧ᶜᵗˣ ⟦ 𝟙 ⟧ᵗʸ} 
-          ⟦ (ƛ ` vz) · ⟨⟩ ⟧ᵗᵐ ⟦ ⟨⟩ ⟧ᵗᵐ
+β-example : ⟦ (ƛ ` vz) · ⟨⟩ ⟧ᵗᵐ ≡ ⟦ ⟨⟩ {Γ = •} ⟧ᵗᵐ
 β-example = refl 
 \end{code}
 
@@ -596,8 +595,8 @@ are equal syntactically).
 
 \sideremark{Note that we do not enforce that normal forms are subset of
 the original type, which is sometimes
-useful flexibility - see e.g. \sidecite[*9]{altenkirch2001normalization}.\\\\
-If have an embedding |⌜_⌝ : Nfᴬ → A|, then completeness is equivalent to
+useful flexibility - see e.g. \sidecite[*9.5]{altenkirch2001normalization}.\\\\
+If we have an embedding |⌜_⌝ : Nfᴬ → A|, then completeness is equivalent to
 the property |⌜ norm x ⌝ ≡ x|: if we assume |norm x ≡ norm y|, then
 by congruence |⌜ norm x ⌝ ≡ ⌜ norm y ⌝|, which simplifies to |x ≡ y|.}
 
