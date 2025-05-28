@@ -8,6 +8,10 @@
 *.bbl
 *.ptb
 *.run.xml
+*.fdb_latexmk
+*.fls
+*.pdf
+
 main.tex
 
 _build/

@@ -1,10 +1,14 @@
+% TODO: This should probably turn into an SCDef chapter...
+% (Specifically, given SCDisj in the sense I originally intended here doesn't 
+% appear to be a sound idea)
+
 %if False
 \begin{code}
 {-# OPTIONS --prop #-}
 
 open import Utils
 
-module Report.Interim.c10_scdisj where
+module Report.Final.c10_scdisj where
 \end{code}
 %endif
 
@@ -22,13 +26,13 @@ closed booleans. We name this theory $\textsf{SC}^{\mathbb{B}}_{\textsf{disj}}$.
 When we attempt to add an equation to the context, there are three key 
 possibilities:
 \begin{itemize}
-  \item[-] \textbf{Admissible:} The equation is already definitionally true. 
+  \item \textbf{Admissible:} The equation is already definitionally true. 
   In the case of equations targetting closed booleans, this occurs when the LHS
   and RHS reduce to the same closed boolean value.
-  \item[-] \textbf{Inconsistent:} The LHS and RHS of the equation definitionally
+  \item \textbf{Inconsistent:} The LHS and RHS of the equation definitionally
   anti-unify. In the case of boolean equations, this occurs when the LHS and
   RHS reduce to opposite boolean values.
-  \item[-] \textbf{Consistent:} The equation is neither admissible nor 
+  \item \textbf{Consistent:} The equation is neither admissible nor 
   inconsistent.
 \end{itemize}
 

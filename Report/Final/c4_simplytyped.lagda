@@ -1,3 +1,5 @@
+% OLD (unfinished from interim)
+
 %if False
 \begin{code}
 {-# OPTIONS --prop #-}
@@ -5,7 +7,7 @@
 open import Utils
 open import Common.Sort
 
-module Report.Interim.c3_simplytyped where
+module Report.Final.c3_simplytyped where
 
 infixr 5 _⇒_
 infixl 4  _,_

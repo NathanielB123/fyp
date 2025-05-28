@@ -1,10 +1,12 @@
+% Not a real chapter. Need to sprinkle these around as appropriate.
+
 %if False
 \begin{code}
 {-# OPTIONS --prop #-}
 
 open import Utils
 
-module Report.Interim.c7_examples where
+module Report.Final.c7_examples where
 \end{code}
 %endif
 

@@ -1157,14 +1157,28 @@
 		\RequirePackage{morewrites} % Fix some errors related to floats (not necessary with LuaLaTeX
 	\fi%
 }
+% FONT IS CONFIGURED HERE
+% FONT FONT FONT FONT FONT
 \newcommand{\kao@fontmethodTex}{%
 	\RequirePackage[utf8]{inputenc} % utf8 encoding in the input (.tex) file
 	\RequirePackage[T1]{fontenc} % utf8 encoding in the output (.pdf) file
 
+	\RequirePackage{amsmath}
 	\RequirePackage{amssymb} % Math symbols, including \blacktriangleright, used for bullets
-	\RequirePackage[scaled=.97,helvratio=.93,p,theoremfont]{newpxtext} % Serif palatino font
-	\RequirePackage[vvarbb,smallerops,bigdelims]{newpxmath} % Math palatino font
-	\RequirePackage[scaled=.85]{beramono} % Monospace font
+	\RequirePackage{amsthm}
+	\RequirePackage{latexsym}
+
+	% Cringe font
+%	\RequirePackage[scaled=.97,helvratio=.93,p,theoremfont]{newpxtext} % Serif palatino font
+%	\RequirePackage[vvarbb,smallerops,bigdelims]{newpxmath} % Math palatino font
+% Better font
+% \RequirePackage[scaled=.97,helvratio=.93,p,theoremfont]{newtxtext}
+% \RequirePackage[vvarbb,smallerops,bigdelims,libertinus]{newtxmath}
+	\RequirePackage[theoremfont,libertinus,smallerops,vvarbb]{newtx}
+% \RequirePackage{libertinus}
+%	\RequirePackage[libertine]{newtxmath}
+%	\RequirePackage{amsmath}
+  \RequirePackage[scaled=.85]{beramono} % Monospace font
 	\RequirePackage[scr=rsfso,cal=boondoxo]{mathalfa} % Mathcal from STIX, unslanted a bit
 	\RequirePackage{morewrites} % Fix some errors related to floats
 }

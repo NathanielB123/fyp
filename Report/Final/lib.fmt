@@ -29,6 +29,7 @@
 
 %subst comment a = "{\text{\rmfamily-{}-} \textit{" a "}}"
 
+\newunicodechar{α}{$\alpha$}
 \newunicodechar{β}{$\beta$}
 \newunicodechar{δ}{$\delta$}
 \newunicodechar{σ}{$\sigma$}
@@ -37,6 +38,7 @@
 \newunicodechar{λ}{$\lambda$}
 \newunicodechar{ρ}{$\rho$}
 \newunicodechar{π}{$\pi$}
+\newunicodechar{γ}{$\gamma$}
 \newunicodechar{ƛ}{$\lambdabar$}
 \newunicodechar{η}{$\eta$}
 \newunicodechar{ε}{$\varepsilon$}
@@ -66,6 +68,8 @@
 \newunicodechar{⌝}{$\urcorner$}
 \newunicodechar{⟪}{$\langle\!\langle$}
 \newunicodechar{⟫}{$\rangle\!\rangle$}
+\newunicodechar{▷}{$\rhd$}
+\newunicodechar{□}{$\square$}
 
 \newunicodechar{𝔹}{$\mathbb{B}$}
 \newunicodechar{ℕ}{$\mathbb{N}$}
@@ -74,6 +78,7 @@
 \newunicodechar{𝟘}{$\mathbb{0}$}
 
 \newunicodechar{⊔}{$\sqcup$}
+\newunicodechar{∧}{$\land$}
 \newunicodechar{↦}{$\mapsto$}
 \newunicodechar{⟶}{$\longrightarrow$}
 
@@ -86,7 +91,7 @@
 \newunicodechar{ᵢ}{$_{i}$}
 \newunicodechar{ₙ}{$_{n}$}
 
-% \newunicodechar{¹}{$^{1}$}
+\newunicodechar{¹}{$^{1}$}
 \newunicodechar{ᵉ}{$^{e}$}
 \newunicodechar{⁻}{$^{-}$}
 \newunicodechar{⁺}{$^{+}$}
@@ -97,7 +102,15 @@
 \newunicodechar{ᴾ}{$^{P}$}
 \newunicodechar{ˢ}{$^{s}$}
 \newunicodechar{ʰ}{$^{h}$}
+\newunicodechar{ᴬ}{$^{A}$}
+\newunicodechar{ᴮ}{$^{B}$}
 \newunicodechar{ᴺ}{$^{N}$}
+\newunicodechar{ⱽ}{$^{V}$}
+\newunicodechar{∶}{$:$}
+
+% This is slightly cheating...
+\newunicodechar{≅}{$\simeq$}
+\newunicodechar{≃}{$\approx$}
 
 \newunicodechar{̂}{$\hat{\ }$}
 
@@ -111,18 +124,29 @@
 %format undefined = "\Varid{ undefined }"
 %format .         = "\Varid{ . }"
 
-%format *    = "\hat{" × "}"
-%format ⇒    = "\hat{" → "}"
-%format 𝟙    = "\hat{\mathbb{1}}"
-%format 𝟘    = "\hat{\mathbb{0}}"
-%format ƛ    = "\hat{" λ "}"
-%format ∣     = "|"
+%format *    = "\times"
+%format ⇒    = "\rightarrow"
+%format Π    = "\Pi"
+%format ƛ    = "\lambda"
+%format ∣    = "|"
+%format TT   = "\Varid{tt}"
+%format FF   = "\Varid{ff}"
+%format rfl  = "\Varid{refl}"
+
+
+%format rfl[] = refl []
+%format TT[]  = TT []
+%format FF[]  = FF []
+%format IF-TT = IF- TT
+%format IF-FF = IF- FF
 
 %format ƛ⁻¹  = ƛ ⁻¹
 
-%format ƛ_   = ƛ _
-%format ƛ⁻¹_ = ƛ⁻¹ _
-%format ƛ>   = ƛ >
+%format ƛ_    =  ƛ _
+%format ƛ⁻¹_  =  ƛ⁻¹ _
+%format ƛ[]   =  ƛ []
+%format ƛ⁻¹[] = ƛ⁻¹ []
+%format ƛ>    = ƛ >
 
 %format _*_ = _ * _
 %format _*  = _ *
@@ -131,27 +155,72 @@
 %format _⇒  = _ ⇒
 %format  ⇒_ =   ⇒ _
 
+%format ,   = "$,$"
+%format _,_ = _ , _
+%format _,  = _ ,
+%format ,_  = , _
+%format ,⨾  = , ⨾
+%format π₁, = π₁ ,
+%format π₂, = π₂ ,
+
+%format Σ⟨ = ( "\!"
+%format ⟩× = "\!" ) "\," ×
+
+%format _[_] = _ [ _ ]
+%format _[   = _ [
+%format [_]  = [ _ ]
+
+
 %format `_ = "\texttt{\textasciigrave}" _
 %format ` = "\texttt{\textasciigrave}"
 
+%format : = "\bm{:}"
+
 %format Type = "\Keyword{Type}"
 %format Set  = Type
+%format Set₁ = Type ₁
 
 % Some Haskell keywords
 %format type   = "\Keyword{type}"
 %format family = "\Keyword{family}"
 
-%format ≡   = "="
-%format _≡_ = _ "\!" "=" "\!" _
-%format ≡⟨  = "=" "\textit{by}" "\;" "\langle"
-%format ≡⟨⟩ = "=" "\textit{by}" "\;"
+%format refl = "\Keyword{refl}"
+
+%format ¬   = "\bm{\neg}"
+%format λ   = "\bm{\lambda}"
+%format ≡   = "\bm{=}"
+%format ≡'  = "="
+%format _≡_ = _ "\!" ≡ "\!" _
+
+%format ≡⟨  = ≡ "\textit{by $"
+%format ⟩≡  = "$}"
+%format ≅⟨ = ≡ "\textit{by $"
+%format ⟩≅ = "$}"
+
+%format ≡⟨⟩′ = "\Varid{=⟨⟩}"
+%format ≡⟨′  = "\Varid{=⟨}"
+%format ⟩′   = "\Varid{⟩}"
+
+%format ≡⟨⟩ = "="
+
 %format =   = "\colonequiv"
 %format ←   = "\equiv"
 %format ==  = "\equiv"
 %format _=_ = _ "\!" == "\!" _
-%format ∀   = "\Pi"
-%format ⊎   = "+"
-%format _⊎_ = _ "\!" "+" "\!" _
+%format ∀   = "\bm{\Pi}"
+%format →   = "\bm{\rightarrow}"
+
+%format +   = "+"
+%format _+_ = _ + _
+
+%format Σ   = "\bm{\Sigma}"
+%format ×   = "\bm{\times}"
+%format ⊎   = "\bm{+}"
+
+%format _×_ = _ "\!" "\bm{\times}" "\!" _
+%format _⊎_ = _ "\!" "\bm{+}" "\!" _
+
+%format ≡-elim    = ≡ -elim
 
 %format tm≡       = tm     "_="
 %format A≡        = A      "_="
@@ -170,7 +239,10 @@
 %format lam≡      = lam    "_="
 %format lamsem≡   = lamsem "_="
 %format _[_]≡     = _[_]   "_="
-%format ]≡        = ]      "_="
+
+%format ≡[        = ≡ "^{\textit{$"
+%format ]≡        = "$}}"
+
 %format _[_]tm≡   = _[_]tm "_="
 %format ]tm≡      = ]tm    "_="
 %format []tm≡     = []tm   "_="
@@ -181,17 +253,21 @@
 %format to-coe≡   = to-coe "_="
 %format to-coe≡⁻¹ = to-coe≡ "^-1"
 
+%format 𝛽→≡       = 𝛽 → ≡
+%format ⟧≡⟦       = ⟧ ≡ ⟦
 
-%format Bool        = "\mathbb{B}"
-%format Bool-η      = "\mathbb{B}" -η
-%format Bool-η-prop = "\mathbb{B}" -η-prop
-%format ⊤           = "\mathbb{1}"
-%format tt          = "\langle" "\rangle"
-%format ⊥           = "\mathbb{0}"
-%format ⊥-elim      = "\mathbb{0}" "\Varid{-elim }"
-%format ⊤'          = ⊤
-%format 𝔹'          = 𝔹
-%format ℕ'          = ℕ
+%format subst     = "\Keyword{transp}"
+
+%format Bool        = "\mathds{B}"
+%format Bool-η      = Bool -η
+%format Bool-η-prop = Bool -η-prop
+%format Bool-elim   = Bool -elim
+%format Bool-rec    = Bool -rec
+%format Bool-split  = Bool -split
+%format ⊤           = "\mathds{1}"
+%format tt          = "\bm{\langle}" "\bm{\rangle}"
+%format ⊥           = "\mathds{O}"
+%format ⊥-elim      = ⊥ "\Varid{-elim }"
 
 %format >>*   = >> "^*"
 %format _>>_  = _ "\!" >> "\!" _
@@ -212,17 +288,25 @@
 %format --local-confluence = "\text{\rmfamily-{}-}" local-confluence
 
 % Is this a good idea??
-%format ⊏ = <
+%format ⊏   = "<"
+%format ⊑   = "\le"
+
+%format _⊑_ = _ ⊑ _
+%format tm⊑ = tm "\!" ⊑
+%format ⊑T  = ⊑ "\!" T
 
 %format ᵗʸ     = "^{\Varid{Ty}}"
 %format ᶜᵗˣ    = "^{\Varid{Ctx}}"
 %format ᵗᵐ     = "^{\Varid{Tm}}"
+%format ˢᵘᵇ    = "^{\Varid{Sub}}"
 %format ⟧ᵗʸ    = ⟧ ᵗʸ
 %format ⟧ᶜᵗˣ   = ⟧ ᶜᵗˣ
 %format ⟧ᵗᵐ    = ⟧ ᵗᵐ 
+%format ⟧ˢᵘᵇ   = ⟧ ˢᵘᵇ
 %format ⟦_⟧ᵗʸ  = ⟦_⟧ ᵗʸ
 %format ⟦_⟧ᶜᵗˣ = ⟦_⟧ ᶜᵗˣ
 %format ⟦_⟧ᵗᵐ  = ⟦_⟧ ᵗᵐ
+%format ⟦_⟧ˢᵘᵇ = ⟦_⟧ ˢᵘᵇ
 
 %format ᴾˢʰ      = "^{\Varid{Psh}}"
 %format ⟧ᴾˢʰ     = ⟧ ᴾˢʰ
@@ -238,9 +322,40 @@
 %format u>uᴺᶠ   = u>u ᴺᶠ
 %format tu>tuᴺᶠ = tu>tu ᴺᶠ
 
-%format Σ, = ,
-%format _Σ, = _,
-%format Σ,_ = ,_
-%format _Σ,_ = _,_
+%format Σ, = "\bm{,}"
+%format _Σ, = _ Σ,
+%format Σ,_ = Σ, _
+%format _Σ,_ = _ Σ, _
+
+%format .fst = . "\!\bm{\pi}_1"
+%format .snd = . "\!\bm{\pi}_2"
+
+%format inl  = "\Keyword{in}_1"
+%format inr  = "\Keyword{in}_2"
 
 %format AccTm = Acc
+
+%format ^ = "\,\hat{}\,"
+%format _^_ = "\Varid{\_}" ^ "\Varid{\_}"
+%format _^_>rw_ = "\Varid{\_}" ^ _>rw_
+
+%format ≅∎ = ∎
+
+%format true  = "\Keyword{tt}"
+%format false = "\Keyword{ff}"
+
+%format ℰ   = "^{\Varid{Env}}"
+%format idℰ = id ℰ
+%format 𝒱   = "^{\Varid{Val}}"
+
+%format Nfᴬ = Nf "^{\Varid{A}}"
+
+%format idh = id
+
+%format ᵀʰ  = "^{\Varid{Th}}"
+%format δᵀʰ = δ ᵀʰ
+
+%format ⱽ = "^{\Varid{V}}"
+%format tⱽ = t ⱽ 
+%format uⱽ = u ⱽ
+%format vⱽ = v ⱽ

@@ -1,3 +1,5 @@
+% OLD (unfinished from interim)
+
 \setchapterpreamble[u]{\margintoc}
 
 \chapter{Type Theory with Equational Assumptions}

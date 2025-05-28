@@ -25,19 +25,21 @@
 	%frametitlebackgroundcolor=LightBlue,
 }
 
-\definecolor{remarkcolor}{rgb}{0.2,0.4,0.8}
-\definecolor{remarkcolor2}{rgb}{0.2,0.8,0.4}
+\definecolor{figmablue}{rgb}{0.91, 0.95, 0.98} 
+\definecolor{figmagreen}{rgb}{0.95, 0.98, 0.91}
+% TODO: I don't think this colour is quite right...
+\definecolor{figmaorange}{rgb}{1.0, 0.96, 0.91}
 
 \newmdenv[
 	style=kaoboxstyle,
-	backgroundcolor=remarkcolor!25!White,
-	frametitlebackgroundcolor=remarkcolor!25!White,
+	backgroundcolor=figmagreen,
+	frametitlebackgroundcolor=figmagreen,
 ]{remarkbox}
 
 \newmdenv[
 	style=kaoboxstyle,
-	backgroundcolor=remarkcolor2!25!White,
-	frametitlebackgroundcolor=remarkcolor2!25!White,
+	backgroundcolor=figmaorange,
+	frametitlebackgroundcolor=figmaorange,
 ]{remarkbox2}
 
 \NewDocumentCommand\sideremark{ o m }{%
@@ -49,6 +51,22 @@
 		\refstepcounter{sidenote}% This command has been moved here
 	}{%
 	}%
-	\sidenotemark[#1]%
+	\sidenotemark[#1]{\kern-3pt}%
 	\marginnote[#2]{\begin{remarkbox2}\thesidenote: #3\end{remarkbox2}}
 }
+
+\NewDocumentCommand\sidedef{ o m m }{%
+  \marginnote[#1]{
+		\begin{definition}[#2] \phantom{a}\\
+			#3
+		\end{definition}
+	}
+}
+		
+    % \begin{kaobox}[
+    %   frametitle=Definition: #2,
+    %   backgroundcolor=figmablue,
+    %   frametitlebackgroundcolor=figmablue
+    % ]
+    %  #3
+    % \end{kaobox}

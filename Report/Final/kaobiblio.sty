@@ -24,7 +24,7 @@
 % Choose the default options, which will be overwritten by the options 
 % passed to this package.
 \PassOptionsToPackage{
-	%style=numeric-comp,
+	style=numeric-comp,
 	%citestyle=authortitle-icomp,
 	citestyle=numeric-comp,
 	%bibstyle=authoryear,
@@ -42,6 +42,7 @@
 	ibidtracker=context,
 	autopunct=true,
 	autocite=plain,
+	maxbibnames=9,
 }{biblatex}
 
 % Pass the unknown options to biblatex, overwriting the previous settings. Avoid passing the kao-specific options.
@@ -66,8 +67,13 @@
 	\clearfield{arxivId}
 	\clearfield{pmid}
 	\clearfield{eprint}
-	\ifentrytype{online}{}{\ifentrytype{misc}{}{\clearfield{url}}}
-	\ifentrytype{book}{\clearfield{doi}}{}
+	% I want URLs!
+	% \ifentrytype{online}{}{\ifentrytype{misc}{}{\clearfield{url}}}
+	% But not if there is a doi!
+	\iffieldundef{doi}{}{\clearfield{url}}
+	% I also want dois!
+	% \ifentrytype{book}{\clearfield{doi}}{}
+
 }
 
 % Convert months to integers

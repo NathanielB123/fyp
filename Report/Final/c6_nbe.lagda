@@ -1,9 +1,12 @@
+% TODO: I think I want to try and move this all into background
+% Except for the typechecking stuff at the end, which can go into SCBool
+
 %if False
 \begin{code}
 {-# OPTIONS --prop #-}
 open import Utils
 
-module Report.Interim.c6_nbe where
+module Report.Final.c6_nbe where
 \end{code}
 %endif
 
@@ -71,187 +74,7 @@ to NbE necessary to support \textbf{smart case}.
 
 \pagebreak
 
-\section{Syntax}
-
-\epigraph{There is no such thing as a free variable. There are only variables
-bound in the context.}{\textit{Conor McBride \cite{mcbride2025free}}}
-
-To implement a normalisation algorithm, we need a syntax of terms to normalise.
-We will start with an \textit{intrinsically-typed} syntax of STLC. That is,
-instead of first defining a grammar of terms and then separate
-typing relations, we will define our syntax as an indexed family such that only
-well-typed terms can be constructed.
-
-Under the intrinsically-typed paradigm, simple types and contexts are still 
-\sideremark{We use hats ``|̂ |'' to distinguish object-level STLC types 
-from the analagous meta-level |Set|s.}
-defined as usual. We include functions |A ⇒ B|, pairs |A * B|, unit |𝟙| and the
-empty type |𝟘|, and define contexts as backwards lists of types.
-
-\begin{code}
-data Ty : Set where
-  _⇒_  : Ty → Ty → Ty
-  _*_  : Ty → Ty → Ty
-  𝟙    : Ty
-  𝟘    : Ty
-
-data Ctx : Set where
-  ε    : Ctx
-  _,_  : Ctx → Ty → Ctx
-\end{code}
-
-%if False
-\begin{code}
-variable
-  A B C : Ty
-  Γ Δ Θ : Ctx
-\end{code}
-%endif
-
-Variables are then merely proofs that a particular type occurs in the context.
-After erasing the indexing, we are effectively left with de Bruijn variables
-\sidecite{de1972lambda}, natural numbers counting the number of binders between 
-the use of a variable and the location it was bound.
-
-\begin{spec}
-data Var : Ctx → Ty → Set where 
-  vz  : Var (Γ , A) A
-  vs  : Var Γ B → Var (Γ , A) B
-\end{spec}
-
-Terms embed variables, and then also include the standard introduction and
-elimination rules for |_⇒_|, |_*_|, |𝟙|.
-
-\sideremark{To distinguish applications and abstractions of the meta-theory 
-with those of the object language, we annotate |λ|s with a hat and 
-use the binary operator |_·_| instead of plain juxtaposition.}
-
-\begin{spec}
-data Tm : Ctx → Ty → Set where
-  `_   : Var Γ A → Tm Γ A
-  ƛ_   : Tm (Γ , A) B → Tm Γ (A ⇒ B)
-  _·_  : Tm Γ (A ⇒ B) → Tm Γ A → Tm Γ B
-  _,_  : Tm Γ A → Tm Γ B → Tm Γ (A * B)
-  π₁   : Tm Γ (A * B) → Tm Γ A
-  π₂   : Tm Γ (A * B) → Tm Γ B
-  ⟨⟩   : Tm Γ 𝟙
-\end{spec}
-
-Note that while our syntax is instrinsically-typed and to some extent
-CwF-inspired, we have not gone so far as to actually quotient by conversion
-(we won't even define a conversion relation explicitly). This is merely for
-practical convenience - i.e. to avoid getting bogged down in the details, we 
-will implement NbE, and in-doing-so prove termination and type-preservation, but
-for constraints of time, leave the full proof that NbE decides conversion to
-cited work (e.g. \sidecite{kovacs2017machine}).
-
-\subsection{Substitution and Renaming}
-
-While NbE itself does not require substitutions, our explorations on the path 
-towards NbE will. NbE also does need at the very least some way to weaken terms
-(that is, embed terms into extended contexts), so the subset of parallel 
-substitutions where variables may only be substituted for other variables, 
-known as \textit{renamings}, will be directly useful.
-
-We define parallel renaming and 
-substitution operations by recursion on our syntax. 
-Following \sidecite{altenkirch2025copypaste}, we avoid duplication between
-renaming and substitution by factoring via a boolean algebra of |Sort|s, 
-valued either |V| or |T| with |V ⊏ T|. We will skip over most of the details of
-how to encode this in Agda but explicitly define |Sort|-parameterised
-terms:
-
-\begin{spec}
-Tm[_] : Sort → Ctx → Ty → Set
-Tm[ V ] = Var
-Tm[ T ] = Tm
-\end{spec}
-
-%if False
-\begin{code}
-data Sort : Set where
-  V   : Sort
-  T>V : ∀ v → v ≡ V → Sort
-
-pattern T = T>V V refl
-
-_⊔_ : Sort → Sort → Sort
-V ⊔ r = r
-T ⊔ _ = T
-\end{code}
-%endif
-
-%if False
-\begin{code}
-variable
-  q r s : Sort
-\end{code}
-%endif
-
-%if False
-\begin{code}
-data Tm[_] : Sort → Ctx → Ty → Set
-Var = Tm[ V ]
-Tm  = Tm[ T ]
-
-data Tm[_] where
-  vz  : Var (Γ , A) A
-  vs  : Var Γ B → Var (Γ , A) B
-
-  `_   : Var Γ A → Tm Γ A
-  ƛ_   : Tm (Γ , A) B → Tm Γ (A ⇒ B)
-  _·_  : Tm Γ (A ⇒ B) → Tm Γ A → Tm Γ B
-  _,_  : Tm Γ A → Tm Γ B → Tm Γ (A * B)
-  π₁   : Tm Γ (A * B) → Tm Γ A
-  π₂   : Tm Γ (A * B) → Tm Γ B
-  ⟨⟩   : Tm Γ 𝟙
-\end{code}
-%endif
-
-and lists of terms (parameterised by the sort of the terms, the context they
-exist in, and the list of types of each of the terms themselves).
-
-\begin{code}
-data Tms[_] : Sort → Ctx → Ctx → Set where
-  ε    : Tms[ q ] Δ ε
-  _,_  : Tms[ q ] Δ Γ → Tm[ q ] Δ A → Tms[ q ] Δ (Γ , A)
-\end{code}
-
-We can simultaneously interpret lists of variables as renamings, 
-|Ren = Tms[ V ]| and lists of terms as full substitutions |Sub = Tms[ T ]|, 
-with the following recursively defined substitution operation:
-
-
-% TODO: Actually fill in the definitions of these substitution operations...
-\begin{code}
-_[_] : Tm[ q ] Γ A → Tms[ r ] Δ Γ → Tm[ q ⊔ r ] Δ A
-\end{code}
-
-\sideremark{We refer to \cite{altenkirch2025copypaste} for the details 
-of how to define these operations.}
-
-We also define a number of recursively-defined operations to build and 
-manipulate renamings/substitutions, including |id : Ren Γ Γ| to build
-identity renamings (a backwards list of increasing variables), 
-single weakenings |wk : Ren (Γ , A) Γ|, single
-substitutions |<_> : Tm[ q ] Γ A → Tms[ q ] Γ (Γ , A)|, and
-composition |_⨾_ : Tms[ q ] Δ Γ → Tms[ r ] Θ Δ → Tms[ q ⊔ r ] Θ Γ|.
-
-%if False
-\begin{code}
-Ren = Tms[ V ]
-Sub = Tms[ T ]  
--- ...
-<_> : Tm[ q ] Γ A → Tms[ q ] Γ (Γ , A)
-id : Tms[ V ] Γ Γ
-wk : Tms[ V ] (Γ , A) Γ
-_⨾_ : Tms[ q ] Δ Γ → Tms[ r ] Θ Δ → Tms[ q ⊔ r ] Θ Γ
-
-variable
-  δ σ : Tms[ q ] Δ Γ
-
-\end{code}
-%endif
+SYNTAX SECTION MOVED TO BACKGROUND!!!
 
 \section{Naive Normalisation}
 

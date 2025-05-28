@@ -1,10 +1,12 @@
+% Not a full chapter. Maybe can go in related work.
+
 %if False
 \begin{code}
 {-# OPTIONS --prop #-}
 
 open import Utils
 
-module Report.Interim.c8_extension_types where
+module Report.Final.c8_extension_types where
 \end{code}
 %endif
 

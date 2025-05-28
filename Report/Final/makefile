@@ -22,7 +22,7 @@ default: main.pdf
 main.pdf : main.tex main.bib
 	latexmk -pdf $<
 
-main.tex : c0_main.lagda c1_introduction.lagda c2_background.lagda c3_simplytyped.lagda c4_dependentlytyped.lagda c5_plan.lagda c6_nbe.lagda lib.fmt
+main.tex : c0_main.lagda lib.fmt
 ifeq (LUALATEX, "True")
 	echo "%let lua = True" > config.lagda
 else
@@ -53,4 +53,6 @@ clean:
 	rm -f *.mw
 	rm -f *.run.xml
 	rm -f *.bcf
+	rm -f *.fdb_latexmk
+	rm -f *.fls
 	rm -f main.tex

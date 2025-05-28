@@ -7,14 +7,14 @@ import Relation.Binary.PropositionalEquality as EQ
 open EQ.≡-Reasoning using (begin_; step-≡; _≡⟨⟩_; _∎)
 open import Common.Sort
 
-module Report.Interim.c2_background where
+module Report.Final.c2_background where
 \end{code}
 %endif
 
 \setchapterpreamble[u]{\margintoc}
 
-\chapter{Background and Related Work}
-\labch{background}
+\chapter{Related Work}
+\labch{related}
 
 We begin this section looking at related type-system features and end with
 a discussion on different approaches for proving decidability of conversion.
@@ -393,10 +393,10 @@ Theory).
 η-equations on type introduction/elimination forms express 
 uniqueness principles and can be seen as
 "dual" to β-laws (the connection can be made concrete with category theory). 
-For example, η for the unit type |⊤| can be written
-as |∀ (t : Tm Γ ⊤') → t ~ tt|; that is, any |⊤|-typed term is
-convertible to |tt|. η for non-dependent functions is written
-|∀ (t : Tm Γ (A ⇒' B)) → t ~ ƛ (t [ wk ]) · (` vz)|\remarknote[][*2]{Note that
+For example, η for the unit type |𝟙| can be written
+as |∀ (t : Tm Γ 𝟙) → t ~ ⟨⟩|; that is, any |⊤|-typed term is
+convertible to |⟨⟩|. η for non-dependent functions is written
+|∀ (t : Tm Γ (A ⇒ B)) → t ~ ƛ (t [ wk ]) · (` vz)|\remarknote[][*2]{Note that
 like
 \refdef{terms}, we represent variables here as indices into the context. 
 This convention is known
@@ -425,7 +425,7 @@ In fact, presentations of coproduct
 analagous constructions to Smart Case constraint sets.
 
 Focussing on the case of booleans, with the simply-typed recursor
-|if_then_else_ : Tm Γ 𝔹' → Tm Γ A → Tm Γ A → Tm Γ A|,
+|if : Tm Γ 𝔹 → Tm Γ A → Tm Γ A → Tm Γ A|,
 such an η-rule can be expressed as follows:
 
 \begin{definition}[η For Booleans] \phantom{a}
@@ -442,14 +442,14 @@ module BoolEta where
 %endif
 
 \begin{spec}
-  Bool-η  : ∀ (t : Tm Γ 𝔹') (u : Tm (Γ , 𝔹') A)
-          → u [ < t > ] ~ if t then u [ < true > ] else v [ < false > ]
+  Bool-η  : ∀ (t : Tm Γ 𝔹) (u : Tm (Γ , 𝔹) A)
+          → u [ < t > ] ~ if t (u [ < TT > ]) (v [ < FF > ])
 \end{spec}
 In words: every term containing a boolean-typed sub-expression can be expanded
 into
-an |if_then_else_| expression, with the sub-expression replaced by 
-|true| in the
-|true| branch and |false| in the |false| branch.
+an |if| expression, with the sub-expression replaced by 
+|TT| in the
+|TT| branch and |FF| in the |FF| branch.
 
 We can, of course, prove such a law internally (even if our theory, like Agda,
 does not implement η for such types definitionally) by induction on booleans
@@ -495,9 +495,9 @@ Commuting conversions express the principle that case-splits on positive
 types can be lifted upwards as long as the variables occuring in the scrutinee
 remain in scope. i.e.
 \begin{spec}
-  comm  : ∀ (f : Tm (Γ , A) B) (t : Tm Γ 𝔹') (u v : Tm Γ A)
-        → f [ < if t then u else v > ] 
-        ~ if t then f [ < u > ] else f [ < v > ]
+  comm  : ∀ (f : Tm (Γ , A) B) (t : Tm Γ 𝔹) (u v : Tm Γ A)
+        → f [ < if t u v > ] 
+        ~ if t (f [ < u > ]) (f [ < v > ])
 \end{spec}
 We can show an analagous rule follows internally from η as follows.
 \begin{code}

@@ -88,14 +88,24 @@ module Report.Interim.c0_main where
 \tikzcdset{scaleedge cd/.style={every label/.append style={scale=#1}}}
 \tikzcdset{scalecell cd/.style={cells={nodes={scale=#1}}}}
 
-%%include c1_introduction.lagda
-%%include c2_background.lagda
-%%%include c3_simplytyped.lagda
-%%%include c4_dependentlytyped.lagda
-%%include c5_plan.lagda
+% Curry-Howard - Proof
+\newcommand{\curry}[1]{\textcolor{Purple}{#1}}
+% Curry-Howard - Programming Language
+\newcommand{\howard}[1]{\textcolor{Blue}{#1}}
 
-%include c6_nbe.lagda
-%%include c10_scdisj.lagda
+\newcommand{\smart}{\textsf{\textbf{smart}}\xspace}
+\newcommand{\SC}{\textsf{\textbf{smart case}}\xspace}
+
+\newcommand{\nocodeindent}{\setlength\mathindent{0em}}
+\newcommand{\resetcodeindent}{\setlength\mathindent{1em}}
+
+
+\resetcodeindent
+
+%include c3-1_background.lagda
+%include c3-2_background.lagda
+%include c3-3_background.lagda
+%include c3-4_background.lagda
 
 %% bibliography
 % \bibliographystyle{apa}

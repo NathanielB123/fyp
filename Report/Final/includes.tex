@@ -18,13 +18,24 @@
 %	PACKAGES AND OTHER DOCUMENT CONFIGURATIONS
 %----------------------------------------------------------------------------------------
 
+
+% Uhhh
+% \usepackage{mathptmx}
+% \newcommand\hmmax{0}
+% \newcommand\bmmax{0}
+
 \usepackage[english]{babel}
 \usepackage{csquotes} % Wanted by babel/polglossia from biblatex
 
 \usepackage{kaobiblio}
 \let\openbox\relax
 \let\thmname\relax
-\usepackage[framed=true]{kaotheorems}
+
+\definecolor{figmablue}{rgb}{0.91, 0.95, 0.98} 
+\usepackage[framed=true
+           , definitionbackground=figmablue
+           , remarkbackground=figmablue
+           ]{kaotheorems}
 \usepackage{kaorefs}
 
 \usepackage{textpos}
@@ -37,27 +48,34 @@
 \usepackage{abstract}
 
 \usepackage{url} % URLs
-\usepackage{amsmath}
-\usepackage{amssymb}
 \usepackage[only,llbracket,rrbracket]{stmaryrd}
 \usepackage{graphicx}
-\usepackage{dsfont}
 \usepackage{hyperref}
 \usepackage{tikz-cd}
+
 \let\refeq\relax
 \usepackage{mathtools}
+
+\usepackage{dsfont}
+\newcommand\hmmax{0}
+\newcommand\bmmax{0}
+\usepackage{bm}
+
+
 
 % Not supported by pdflatex
 % \usepackage{fontspec}  
 
 \usepackage{epstopdf} % automatically replace .eps with .pdf in graphics
 \usepackage{array}
-\usepackage{latexsym}
 
 \usepackage{tikz}
 \usepackage[framemethod=TikZ]{mdframed} % framing around side-notes
 
+\usepackage{tabto}
 \usepackage{epigraph}
+\usepackage{xspace}
+
 % \usepackage{breakurl}
 
 \addbibresource{main.bib} % Bibliography file

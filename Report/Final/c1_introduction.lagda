@@ -8,11 +8,37 @@ open EQ.≡-Reasoning using (begin_; step-≡; _≡⟨⟩_; _∎)
 
 import Agda.Builtin.Equality.Rewrite
 
-module Report.Interim.c1_introduction where
+module Report.Final.c1_introduction where
 \end{code}
 %endif
 
 \setchapterpreamble[u]{\margintoc}
+
+% Acknowledgements?
+
+% Every author in the bibliography.
+
+% Simon Peyton-Jones, and Richard Eisenberg whose talks and papers on Haskell
+% got me into PL.
+
+
+% Steffen, for agreeing to supervise, and trying to keep me on track with
+% writing.
+
+% Raphaël Bocquet, for answering my questions on Mastodon about stabilised 
+% neutrals.
+
+% Guillaume Allais, for teaching me the "don't mash the potato" principle.
+
+% All my friends who put up with my constant ramblings about dependent types, 
+% including Daniel, Iurii, Jacob, Mila, Sophia, Robin. I want to especially
+% thank Alona - our late-night conversations about PL design during 2nd and 3rd 
+% year are a huge part of why I fell in love with the field.
+
+% Reed Mullanix, for suggesting to look into extension types.
+% Thorsten Altenkirch & Philip Wadler, for giving me a massive confidence boost
+% by inviting to collaborate on "Substitution Without Copy and Paste"
+
 
 \chapter{Introduction and Motivation}
 \labch{introduction}
@@ -97,7 +123,7 @@ and avoiding the more readable, but also more verbose equational reasoning
 syntax provided 
 by the Agda standard library \sidecite[*5]{2024eqreasoning}, but for example,
 the third case reduces down to |p ∙ sym (cong f (cong f p ∙ q) ∙ q)| - still
-pretty complicated! }
+pretty complicated!}
 \begin{example}[|f b ≡ f (f (f b))|, Manually] \phantom{a}
 \begin{code}
 bool-lemma′  : ∀ (f : Bool → Bool) b
@@ -106,25 +132,25 @@ bool-lemma′  : ∀ (f : Bool → Bool) b
              → f b ≡ f (f (f b))
 bool-lemma′ f true   (inl p)  q        = 
   f true
-  ≡⟨ sym (cong f p) ⟩
+  ≡⟨ sym (cong f p) ⟩≡
   f (f true)
-  ≡⟨ sym (cong (f ∘ f) p) ⟩
+  ≡⟨ sym (cong (f ∘ f) p) ⟩≡
   f (f (f true)) ∎
 bool-lemma′ f true   (inr p)  (inl q)  =
   f true
-  ≡⟨ sym (cong f q) ⟩
+  ≡⟨ sym (cong f q) ⟩≡
   f (f false)
-  ≡⟨ sym (cong (f ∘ f) p) ⟩
+  ≡⟨ sym (cong (f ∘ f) p) ⟩≡
   f (f (f true)) ∎
 bool-lemma′ f true   (inr p)  (inr q)  =
    f true
-   ≡⟨ p ⟩
+   ≡⟨ p ⟩≡
    false
-   ≡⟨ sym q ⟩
+   ≡⟨ sym q ⟩≡
    f false
-   ≡⟨ sym (cong f q) ⟩
+   ≡⟨ sym (cong f q) ⟩≡
    f (f false)
-   ≡⟨ sym (cong (f ∘ f) p) ⟩
+   ≡⟨ sym (cong (f ∘ f) p) ⟩≡
    f (f (f true)) ∎
 -- etc... (the 'false' cases are very similar)
 \end{code}
@@ -489,7 +515,7 @@ substitutions is nice for two reasons:\newline
 of single substitutions.\newline
 2. Higher-order encodings of substitutions (i.e. as functions) do not scale to 
 dependently-typed syntax (without "very-dependent types" 
-\sidecite[*2]{hickey1996formal, altenkirch2023munchhausen})}
+\sidecite[*2]{hickey1996formal, altenkirch2022munchhausen})}
 
 
 % ---------------------------------------------------------------------------- %
@@ -759,9 +785,9 @@ fails).
   unify (` i) u with occurs? i u 
   ... | no   p       = just (success (id [ i ↦ u ]) (
     lookup i (id [ i ↦ u ])
-    ≡⟨ i[i↦] {i = i} ⟩
+    ≡⟨ i[i↦] {i = i} ⟩≡
     u
-    ≡⟨ sym (t[i↦] p) ⟩
+    ≡⟨ sym (t[i↦] p) ⟩≡
     u [ id [ i ↦ u ] ] ∎)) 
   ... | yes  eq      = just (success id refl)
   ... | yes  (l· _)  = nothing
@@ -808,11 +834,11 @@ directly do exist \sidecite[*2]{mcbride2003first}.}
   ... | nothing             = nothing
   ... | just (success σ q)  = just (success (δ ⨾ σ) (
     (t₁ [ δ ⨾ σ ]) · (t₂ [ δ ⨾ σ ]) 
-    ≡⟨ sym (cong₂ (_·_) ([][] {t = t₁}) ([][] {t = t₂})) ⟩
+    ≡⟨ sym (cong₂ (_·_) ([][] {t = t₁}) ([][] {t = t₂})) ⟩≡
     (t₁ [ δ ] [ σ ]) · (t₂ [ δ ] [ σ ]) 
-    ≡⟨ cong₂ _·_ (cong _[ σ ] p) q ⟩
+    ≡⟨ cong₂ _·_ (cong _[ σ ] p) q ⟩≡
     (u₁ [ δ ] [ σ ]) · (u₂ [ δ ] [ σ ])
-    ≡⟨ cong₂ (_·_) ([][] {t = u₁}) ([][] {t = u₂}) ⟩
+    ≡⟨ cong₂ (_·_) ([][] {t = u₁}) ([][] {t = u₂}) ⟩≡
     (u₁ [ δ ⨾ σ ]) · (u₂ [ δ ⨾ σ ]) ∎))
 \end{code}
 
@@ -907,60 +933,68 @@ thing to note is that the terms here are indexed by context and type
 transporting along equations (necessary to make the type of the substituted
 term match up with the goal).}
 
+% \begin{spec}
+% _[_]tm : Tm Γ A → ∀ (δ : Objs s Δ Γ) → Tm Δ (A ∘ ⟦ δ ⟧os)
+% var x                  [ δ ]tm = obj→tm _ (x [ δ ]v)
+% app {B = B} M N        [ δ ]tm 
+%   = subst  (λ N[] → Tm _ (B ∘ (⟦ δ ⟧os ,sub N[]))) (N [ δ ]tm≡) 
+%            (app (M [ δ ]tm) (N [ δ ]tm))
+% lam {A = A} {B = B} M  [ δ ]tm 
+%   = subst (Tm _)  (dcong₂⁻¹ Πsem A≡ (cong (B ∘_) 
+%                   (to-coe≡⁻¹ _ (δ ↑os≡ A) 
+%   ∙ ↑[]-helper _ A≡ ∙ cong (_ ,sub_) (sym (semvz-helper A≡)))
+%   ∙ []-helper B ⟦ δ ⟧os A≡)) (lam (M [ δ ↑os _ ]tm))
+%   where A≡ = A [ δ ]≡
+% \end{spec}
+
 \begin{spec}
-_[_]tm : Tm Γ A → ∀ (δ : Objs s Δ Γ) → Tm Δ (A ∘ ⟦ δ ⟧os)
-var x                  [ δ ]tm = obj→tm _ (x [ δ ]v)
-app {B = B} M N        [ δ ]tm 
-  = subst  (λ N[] → Tm _ (B ∘ (⟦ δ ⟧os ,sub N[]))) (N [ δ ]tm≡) 
-           (app (M [ δ ]tm) (N [ δ ]tm))
-lam {A = A} {B = B} M  [ δ ]tm 
-  = subst (Tm _)  (dcong₂⁻¹ Πsem A≡ (cong (B ∘_) 
-                  (to-coe≡⁻¹ _ (δ ↑os≡ A) 
-  ∙ ↑[]-helper _ A≡ ∙ cong (_ ,sub_) (sym (semvz-helper A≡)))
-  ∙ []-helper B ⟦ δ ⟧os A≡)) (lam (M [ δ ↑os _ ]tm))
-  where A≡ = A [ δ ]≡
+<COMMENTED OUT FOR NOW>
 \end{spec}
 
 When attempting to prove the composition law, things get completely
 out-of-hand:
 
+% \begin{spec}
+% []tm-comp  : ∀ (M : Tm Γ A) (δ : Objs s Δ Γ) (σ : Objs t θ Δ) 
+%            → M [ δ ]tm [ σ ]tm ≡ M [ δ ∘os σ ]tm
+% []tm-comp {s = s} {t = t} (var x) δ σ 
+%   = cong (obj→tm (max s t)) ([]v-comp x δ σ)
+% []tm-comp (app M N) δ σ = app≡ refl refl refl M≡ N≡
+%   where  M≡ = []tm-comp M δ σ
+%          N≡ = []tm-comp N δ σ
+% []tm-comp {s = s} {t = t} (lam {A = A} {B = B} M) δ σ 
+%   = sym rm-subst ∙ coes-cancel2 ∙ sym coes-cancel 
+%   ∙ cong  (subst (Tm _) prf) 
+%           (to-coe≡ _ (lam≡ refl A[]≡ B[]≡ (_∙P_ {p = refl} M[]≡ ↑[]≡)))
+%   where  M[]≡   =  []tm-comp M (δ ↑os _) (σ ↑os _)
+%          A[]≡   =  []-comp A δ σ
+%          B[]≡   =  cong (B ∘_) (cong ((⟦ δ ⟧os ∘ ⟦ σ ⟧os ∘ semwk _) ,sub_)  
+%                    (cong₂  (λ v₁ v₂ → v₁ ∘ ((⟦ σ ⟧os ∘ semwk _) ,sub v₂)) 
+%                            (vzo≡ {A = A [ δ ]} s) (vzo≡ {A = A [ δ ] [ σ ]} t)
+%                 ∙  sym (vzo≡ {A = A [ δ ∘os σ ]} (max s t))  ))
+%          ↑[]≡   =  []tm≡ refl (refl ,≡ A[]≡) refl (erefl M) (↑∘os≡ A δ σ)
+%          A≡     =  A [ δ ∘os σ ]≡
+%          M≡     =  M [ (δ ∘os σ) ↑os _ ]tm≡
+%          lamM≡  =  lamsem≡ refl refl refl M≡
+%          prf    =  dcong₂⁻¹ Πsem A≡ (cong (B ∘_) (((δ ∘os σ) ↑os≡ A) 
+%                 ∙  ↑[]-helper _ A≡ ∙ cong (_ ,sub_) (sym (semvz-helper A≡)))
+%                 ∙  []-helper B ⟦ δ ∘os σ ⟧os A≡)
+%          Aδ≡    =  A [ δ ]≡
+%          prfδ   =  dcong₂⁻¹ Πsem Aδ≡ (cong (B ∘_) ((δ ↑os≡ A) 
+%                 ∙  ↑[]-helper _ Aδ≡ 
+%                 ∙  cong (_ ,sub_) (sym (semvz-helper Aδ≡)))
+%                 ∙  []-helper B ⟦ δ ⟧os Aδ≡)
+%          
+%          coes-cancel   =  coe-coe _ (cong (Tm _) prf) 
+%                           (cong (Tm _) (Πsem≡ refl (⟦⟧T≡ refl A[]≡) B[]≡))
+%          coes-cancel2  =  coe-coe (lam (M  [ wkos (A [ δ ]) δ , vzo s ]tm 
+%                                            [ wkos (A [ δ ] [ σ ]) σ , vzo t ]tm)) 
+%                           (cong (Tm _ ∘ (_∘ ⟦ σ ⟧os)) prfδ) _
+%          rm-subst      =  subst-application′ (Tm _) (λ _ → _[ σ ]tm) prfδ
+% \end{spec}
+
 \begin{spec}
-[]tm-comp  : ∀ (M : Tm Γ A) (δ : Objs s Δ Γ) (σ : Objs t θ Δ) 
-           → M [ δ ]tm [ σ ]tm ≡ M [ δ ∘os σ ]tm
-[]tm-comp {s = s} {t = t} (var x) δ σ 
-  = cong (obj→tm (max s t)) ([]v-comp x δ σ)
-[]tm-comp (app M N) δ σ = app≡ refl refl refl M≡ N≡
-  where  M≡ = []tm-comp M δ σ
-         N≡ = []tm-comp N δ σ
-[]tm-comp {s = s} {t = t} (lam {A = A} {B = B} M) δ σ 
-  = sym rm-subst ∙ coes-cancel2 ∙ sym coes-cancel 
-  ∙ cong  (subst (Tm _) prf) 
-          (to-coe≡ _ (lam≡ refl A[]≡ B[]≡ (_∙P_ {p = refl} M[]≡ ↑[]≡)))
-  where  M[]≡   =  []tm-comp M (δ ↑os _) (σ ↑os _)
-         A[]≡   =  []-comp A δ σ
-         B[]≡   =  cong (B ∘_) (cong ((⟦ δ ⟧os ∘ ⟦ σ ⟧os ∘ semwk _) ,sub_)  
-                   (cong₂  (λ v₁ v₂ → v₁ ∘ ((⟦ σ ⟧os ∘ semwk _) ,sub v₂)) 
-                           (vzo≡ {A = A [ δ ]} s) (vzo≡ {A = A [ δ ] [ σ ]} t)
-                ∙  sym (vzo≡ {A = A [ δ ∘os σ ]} (max s t))  ))
-         ↑[]≡   =  []tm≡ refl (refl ,≡ A[]≡) refl (erefl M) (↑∘os≡ A δ σ)
-         A≡     =  A [ δ ∘os σ ]≡
-         M≡     =  M [ (δ ∘os σ) ↑os _ ]tm≡
-         lamM≡  =  lamsem≡ refl refl refl M≡
-         prf    =  dcong₂⁻¹ Πsem A≡ (cong (B ∘_) (((δ ∘os σ) ↑os≡ A) 
-                ∙  ↑[]-helper _ A≡ ∙ cong (_ ,sub_) (sym (semvz-helper A≡)))
-                ∙  []-helper B ⟦ δ ∘os σ ⟧os A≡)
-         Aδ≡    =  A [ δ ]≡
-         prfδ   =  dcong₂⁻¹ Πsem Aδ≡ (cong (B ∘_) ((δ ↑os≡ A) 
-                ∙  ↑[]-helper _ Aδ≡ 
-                ∙  cong (_ ,sub_) (sym (semvz-helper Aδ≡)))
-                ∙  []-helper B ⟦ δ ⟧os Aδ≡)
-         
-         coes-cancel   =  coe-coe _ (cong (Tm _) prf) 
-                          (cong (Tm _) (Πsem≡ refl (⟦⟧T≡ refl A[]≡) B[]≡))
-         coes-cancel2  =  coe-coe (lam (M  [ wkos (A [ δ ]) δ , vzo s ]tm 
-                                           [ wkos (A [ δ ] [ σ ]) σ , vzo t ]tm)) 
-                          (cong (Tm _ ∘ (_∘ ⟦ σ ⟧os)) prfδ) _
-         rm-subst      =  subst-application′ (Tm _) (λ _ → _[ σ ]tm) prfδ
+<COMMENTED OUT FOR NOW>
 \end{spec}
 
 Along with the huge amount of congruence reasoning, a few of the steps here
