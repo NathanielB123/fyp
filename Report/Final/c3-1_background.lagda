@@ -438,7 +438,8 @@ Note that traditional eliminators can be defined in terms of pattern-matching.
 𝔹-elim P Ptt Pff FF  = Pff 
 \end{code}
 
-\subsubsection{Equivalence Relations and Quotients}
+\subsubsection{Equivalence Relations, Quotients and Setoids}
+\labsec{equivquot}
 
 Often in type theory, we will work with structures where there is some notion
 of equivalence which is not merely syntactic. For example we might

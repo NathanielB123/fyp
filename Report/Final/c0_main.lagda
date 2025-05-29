@@ -102,12 +102,16 @@ module Report.Interim.c0_main where
 
 \resetcodeindent
 
+%%include c0-1_test.lagda
+
+
 %include c3-1_background.lagda
 %include c3-2_background.lagda
 %include c3-3_background.lagda
 %include c3-4_background.lagda
 %include c3-5_background.lagda
 %include c3-6_background.lagda
+%include c3-7_background.lagda
 
 %% bibliography
 % \bibliographystyle{apa}

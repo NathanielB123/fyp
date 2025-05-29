@@ -180,9 +180,8 @@ module _ {Ob : Set} (F : Ob → Set) {Hom : Ob → Ob → Set}
 \end{code}
 %endif
 \begin{code}
-  record Presheaf : Set
-    where field
-    fmap     :  Hom y x → F x → F y
+  record Presheaf : Set where field
+    fmap :  Hom y x → F x → F y
     fmap-id  :  fmap idh xs ≡ xs
     fmap-∘   :  fmap (f ∘ g) xs 
              ≡  fmap f (fmap g xs)
@@ -203,7 +202,8 @@ postulate
 \end{code}
 
 To support binding, we must support a context extension 
-operation |_▷_ : Ctx → Ty → Ctx|.
+operation |_▷_ : Ctx → Ty → Ctx|, and an associated way to
+extend substitutions a fresh term to replace the new variable with.
 
 \begin{code}
   _▷_  : Ctx → Ty → Ctx
@@ -212,12 +212,24 @@ operation |_▷_ : Ctx → Ty → Ctx|.
   ,⨾   : (δ , t) ⨾ σ ≡ (δ ⨾ σ) , (t [ σ ])
 \end{code}
 
+We call laws like |,⨾|, which cover how the various constructs of type theory
+interact with 
+the functor operations, ``naturality'' laws. We can express these laws as
+commutative diagrams, e.g.
+
+\begin{tikzcd}[scaleedge cd=1.25, sep=huge]
+|δ| \arrow[r, "|_⨾ σ|"] \arrow[d, swap, "|_, t|"]
+&  |δ ⨾ σ| \arrow[d, "|_,  (t [ σ ])|"] 
+\\ |δ , t| \arrow[r, swap, "|_⨾ σ|"]
+&  |(δ , t) ⨾ σ ≡' (δ ⨾ σ) , (t [ σ ])|
+\end{tikzcd}
+
 Given our intuition of parallel substitutions as lists of terms, we 
 should expect an isomorphism:
 \begin{spec}
 Tms Δ (Γ ▷ A) ≃ Tms Δ Γ × Tm Δ A
 \end{spec}
-We can witness this either directly with projection operations, or we
+This can be witnessed either directly with projection operations, or we
 can take single-weakening and the zero de Bruijn variable as primitive
 (|wk ≡' π₁ id|, |vz ≡' π₂ id|) \sidecite[*-2]{castellan2019cwf}.
 

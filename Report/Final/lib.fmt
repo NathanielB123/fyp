@@ -119,6 +119,9 @@
 
 \newunicodechar{′}{$'$}
 
+% Override "\anonymous" (it looks ugly IMO)
+%format _ = "\Varid{\char95}"
+
 % Override formatting of "not" as "¬"
 %format not       = "\Varid{ not }"
 %format undefined = "\Varid{ undefined }"
@@ -155,7 +158,7 @@
 %format _⇒  = _ ⇒
 %format  ⇒_ =   ⇒ _
 
-%format ,   = "$,$"
+%format ,   = ","
 %format _,_ = _ , _
 %format _,  = _ ,
 %format ,_  = , _

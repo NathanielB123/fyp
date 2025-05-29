@@ -588,7 +588,6 @@ equality. For example:
 \end{itemize}
 etc...
 
-      
 % TODO - mention Cubical TT/proof relevant equality?
 
 
@@ -798,46 +797,3 @@ true/false-disj ()
 
 sound t = true/false-disj (⟦ t ⟧Tm tt)
 \end{code}
-
-\subsection{From Quotients to Setoids}
-\labsec{quotsetfibre}
-
-% Note it is currently looking like we might not get on to any proofs
-% that rely on this finer granularity though... Still, we do want to talk about
-% SN in at least our SCBool discussion, so I think this is still reasonable
-% to mention.
-Two reasons: ease of mechanisation in current proof assistants, and the
-ability to work with terms at a finer granularity that up-to-conversion.
-
-We follow the translation outlined in \sidecite{kovacs2022staged}
-(also \sidecite{altenkirch1999extensional, altenkirch2019setoid, 
-pujet2022observational}).
-Contexts become a setoid, types become a setoid fibration on contexts,
-substitutions become a setoid fibration on pairs of contexts and terms
-become a setoid fibration on types paired with their contexts.
- 
-\subsection{Strictification}
-\labsec{strict}
-
-\sidecite{kaposi2023towards} illustrates a strategy for starting with a QIIT
-presentation of a syntax and then ``strictifying'' the constructors
-corresponding to the ``morally-recursive'' operations after-the-fact.
-This is already a big improvement, but unfortunately cannot justify 
-strictifying equations relating how the recursive operations interact
-(e.g. the identity or composition laws).
-
-\sidecite{kaposi2025type} presents a much more involved construction, in which
-all laws corresponding to substitutions are eventually strictified.
-
-% Something something justify my horrible Agda code...
-
-Of course, it is not immediately apparent that these results translate from
-QIITs to setoids, but with work like \sidecite{altenkirch2019setoid}
-showing translation from OTT to pure type theory while preserving definitional 
-equality, it is not too much of a stretch to assume such a construction is
-possible.
-
-
-% Also, unlike from pattern-matching, QIIRT eliminators require still
-% writing out the cases for non-canonical elements (the advantage only comes
-% from the equations being much easier to prove.
