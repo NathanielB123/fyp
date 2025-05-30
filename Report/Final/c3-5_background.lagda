@@ -51,10 +51,11 @@ in a universe of strict propositions |Prop|
 for convenience.
 
 \begin{code}
-data Ctx~ : Ctx → Ctx → Prop
-data Ty~  : Ctx~ Γ₁ Γ₂ → Ty Γ₁ → Ty Γ₂ → Prop
-data Tm~  : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Tm Γ₁ A₁ → Tm Γ₂ A₂ → Prop
-data Tms~ : Ctx~ Δ₁ Δ₂ → Ctx~ Γ₁ Γ₂ → Tms Δ₁ Γ₁ → Tms Δ₂ Γ₂ → Prop
+data Ctx~  : Ctx → Ctx → Prop
+data Ty~   : Ctx~ Γ₁ Γ₂ → Ty Γ₁ → Ty Γ₂ → Prop
+data Tm~   : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Tm Γ₁ A₁ → Tm Γ₂ A₂ → Prop
+data Tms~  : Ctx~ Δ₁ Δ₂ → Ctx~ Γ₁ Γ₂ → Tms Δ₁ Γ₁ → Tms Δ₂ Γ₂ 
+           → Prop
 \end{code}
 
 %if False

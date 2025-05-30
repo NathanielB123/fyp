@@ -294,9 +294,10 @@
 %format ⊏   = "<"
 %format ⊑   = "\le"
 
-%format _⊑_ = _ ⊑ _
+%format _⊑_ = _ "\!" ⊑ "\!" _
 %format tm⊑ = tm "\!" ⊑
 %format ⊑T  = ⊑ "\!" T
+%format V⊑  = V "\!" ⊑
 
 %format ᵗʸ     = "^{\Varid{Ty}}"
 %format ᶜᵗˣ    = "^{\Varid{Ctx}}"

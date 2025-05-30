@@ -85,6 +85,7 @@ We derive NbE for the recursive-substitution STLC syntax given in
 \refsec{stlcrec}.
 
 \subsubsection{Naive Normalisation}
+\labsec{naive}
 
 As a warm-up to NbE, we will start by implementing ``naive'' normalisation,
 i.e. recursing on a term, contracting β-redexes where possible by applying 

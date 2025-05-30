@@ -568,11 +568,13 @@ quotient types as a special cases of higher-inductive type (HIT)s
 when using the |cubical| extension, which is incompatible with 
 UIP and lacks some
 useful pattern-matching automation.\\\\
-Furthermore, sometimes it is actually useful to be able to reason about the
-syntactic structure of objects which generally should be treated up to
-equivalence. For example, which working with ``reduction'', \refsec{redconv}.
+Furthermore, sometimes it is actually useful to be able to temporarily 
+reason about the
+syntactic structure of objects, even if all operations we might define should
+ultimately respect the equivalence. 
+For example, which working with ``reduction'', \refsec{redconv}.
 %
-}, in the actual Agda mechanisation, we do not 
+}, in the actual Agda mechanisation for this project, we do not 
 use quotients. We can simulate working with quotient types (at the cost of
 significant boilerplate) by working explicitly with inductively-defined
 equivalence relations. E.g. for |ℤ|
@@ -644,6 +646,6 @@ the work justifying Observational Type Theory (OTT), a type theory
 that natively supports quotient types and UIP 
 \sidecite{altenkirch1999extensional, altenkirch2019setoid, 
 pujet2022observational}. We will detail the small additional complications
-when translating types indexed by QITs into setoid ``fibrations'', applied to
-the concrete example of a syntax for dependent type theory in 
+when translating types indexed by QITs into setoid ``fibrations'' (applied to
+the concrete example of a syntax for dependent type theory) in 
 \refsec{quotsetfibre}.

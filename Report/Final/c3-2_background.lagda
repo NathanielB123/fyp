@@ -86,12 +86,15 @@ the use of a variable and the location it was bound.
 We avoid named representations of variables in order
 to dodge complications arising from variable capture and α-equivalence.
 For legibility and convienience, when writing
-example programs internal to a particular type theory, we will used named
-variables, assuming the existence of an algorithm which can translate to
+example programs internal to a particular type theory, we will 
+still use named
+variables, assuming the existence of a scope-checking/renaming algorithm
+which can translate to
 de Bruijn style.
 % TODO Citation
 
-Terms embed variables, and then also include the standard introduction and
+Terms embed variables, and are otherwised comprised of the 
+standard introduction and
 elimination rules for |_⇒_|, |_*_|, |_+_|, |𝟙|.
 
 \sideremark{To distinguish applications and abstractions of the meta-theory 
@@ -126,8 +129,9 @@ data Tm : Ctx → Ty → Set where
 We define parallel renaming and 
 substitution operations by recursion on our syntax. 
 Following \sidecite{altenkirch2025copypaste}, we avoid duplication between
-renaming and substitution by factoring via a boolean algebra of |Sort|s, 
-valued either |V : Sort| or |T : Sort| with |V ⊏ T|. 
+renaming (the subset of substitutions where variables can only be substituted
+for other variables) and substitutions by factoring via a boolean algebra of 
+|Sort|s, valued either |V : Sort| or |T : Sort| with |V ⊏ T|. 
 We will skip over most of the details of
 how to encode this in Agda but explicitly define |Sort|-parameterised
 terms:
@@ -168,7 +172,7 @@ data Tm[_] where
 %endif
 
 and lists of terms (parameterised by the sort of the terms, the context they
-exist in, and the list of types of each of the terms themselves).
+exist in, and the list of types of each of the terms themselves):
 
 \begin{code}
 data Tms[_] : Sort → Ctx → Ctx → Set where
@@ -176,9 +180,17 @@ data Tms[_] : Sort → Ctx → Ctx → Set where
   _,_  : Tms[ q ] Δ Γ → Tm[ q ] Δ A → Tms[ q ] Δ (Γ ▷ A)
 \end{code}
 
-We can simultaneously interpret lists of variables as renamings, 
-|Ren = Tms[ V ]| and lists of terms as full substitutions |Sub = Tms[ T ]|, 
-with the following recursively defined substitution operation:
+%if False
+\begin{code}
+Ren = Tms[ V ]
+Sub = Tms[ T ]  
+\end{code}
+%endif
+
+We regard lists of variables as renamings, 
+|Ren = Tms[ V ]| and lists of terms as full substitutions |Sub = Tms[ T ]|.
+The action of both is witnessed by the following recursively defined 
+substitution operation:
 
 
 % TODO: Actually fill in the definitions of these substitution operations...
@@ -186,24 +198,20 @@ with the following recursively defined substitution operation:
 _[_] : Tm[ q ] Γ A → Tms[ r ] Δ Γ → Tm[ q ⊔ r ] Δ A
 \end{code}
 
-Note that |ε : Sub Δ ε| gives us the substitution that weakens a term defined in 
+Note that |ε : Sub Δ •| gives us the substitution that weakens a term defined in 
 the empty context into |Δ|, and |_,_ : Sub Δ Γ → Tm Δ A → Tms Δ (Γ ▷ A)|
 expresses the principle that to map from a term in a context |Γ| extended with
 |A| into a context |Δ|, we need a term in |Δ| to substite the zero 
 de Bruijn variable for, |Tm Δ A|, and a substitution to recursively apply to all
 variables greater than zero, |Sub Δ Γ|.
 
-\sideremark{We refer to \cite{altenkirch2025copypaste} for the details 
-of how to define these operations.}
-
 To implement the compuational behaviour of substitution, we need to be able
-to coerce up the sort of terms (terms are functorial over sort ordering |_⊑_|) 
-and we need to be able
-to lift substitutions over context extensions (substitutions are functorial
+to coerce up the sort of terms (terms are functorial over sort ordering, |_⊑_|) 
+and lift substitutions over context extension (substitutions are functorial
 over context extension\remarknote{Concretely, we can take the category of
 context extension as dual to the category of weakenings
-|Wk : Ctx → Ctx → Set}| where |ε : Wk • •| and
-|_⁺_ : Wk Δ Γ → ∀ A → Wk (Δ ▷ A) Γ|.}): 
+\\|Wk : Ctx → Ctx → Set| where\\|ε : Wk • •| and
+\\|_⁺_ : Wk Δ Γ → ∀ A → Wk (Δ ▷ A) Γ|.}): 
 
 \begin{code}
 tm⊑  : q ⊑ r → Tm[ q ] Γ A → Tm[ r ] Γ A
@@ -224,49 +232,47 @@ case t u v  [ δ ]      = case (t [ δ ]) (u [ δ ^ _ ]) (v [ δ ^ _ ])
 \end{code}
 
 We also define a number of recursively-defined operations to build and 
-manipulate renamings/substitutions, including |id : Ren Γ Γ| to build
-identity renamings (a backwards list of increasing variables), 
-single weakenings |wk : Ren (Γ ▷ A) Γ|, single
-substitutions |<_> : Tm[ q ] Γ A → Tms[ q ] Γ (Γ ▷ A)|, and
-composition |_⨾_ : Tms[ q ] Δ Γ → Tms[ r ] Θ Δ → Tms[ q ⊔ r ] Θ Γ|.
+manipulate renamings/substitutions, including 
+identity substitutions |id| 
+(backwards lists of increasing variables), 
+composition |_⨾_|, single weakenings |wk| and single
+substitutions |<_>|.
+
+\sideremark{Single-weakening of terms via |suc[_]| and its fold over
+substitutions |_⁺_| can be regarded ultimately as implementation details
+in service of ensuring our definitions stay structurally well-founded.}
 
 \begin{code}
+id      : Tms[ q ] Γ Γ
+_⁺_     : Tms[ q ] Δ Γ → ∀ A → Tms[ q ] (Δ ▷ A) Γ
+suc[_]  : ∀ q → Tm[ q ] Γ B → Tm[ q ] (Γ ▷ A) B
+_⨾_     : Tms[ q ] Δ Γ → Tms[ r ] Θ Δ → Tms[ q ⊔ r ] Θ Γ
+wk      : Ren (Γ ▷ A) Γ
+<_>     : Tm[ q ] Γ A → Tms[ q ] Γ (Γ ▷ A)
 
+id {Γ = •}      = ε
+id {Γ = Γ ▷ A}  = id ^ A
+
+suc[ V  ] = vs
+suc[ T  ] = _[ id {q = V} ⁺ _ ]
+ 
+ε        ⁺ A = ε
+(δ , t)  ⁺ A = (δ ⁺ A) , suc[ _ ] t
+
+δ ^ A = (δ ⁺ A) , tm⊑ V⊑ vz
+
+ε        ⨾ σ = ε
+(δ , t)  ⨾ σ = (δ ⨾ σ) , (t [ σ ])
+
+wk     = id ⁺ _
+< t >  = id , t
 \end{code}
 
 %if False
 \begin{code}
-Ren = Tms[ V ]
-Sub = Tms[ T ]  
--- ...
-id     : Tms[ q ] Γ Γ
-_⁺_    : Tms[ q ] Δ Γ → ∀ A → Tms[ q ] (Δ ▷ A) Γ
-suc[_] : ∀ q → Tm[ q ] Γ B → Tm[ q ] (Γ ▷ A) B
-
-id {Γ = •} = ε
-id {Γ = Γ ▷ A} = id ^ _
-
-suc[ V ] = vs
-suc[ T ] = _[ id {q = V} ⁺ _ ]
- 
-ε       ⁺ A = ε
-(δ , t) ⁺ A = (δ ⁺ A) , suc[ _ ] t
-
-δ ^ A = (δ ⁺ A) , tm⊑ V⊑ vz
-
 tm⊑ {q = V} {r = T} _ i = ` i
 tm⊑ {q = V} {r = V} _ i = i
 tm⊑ {q = T} {r = T} _ t = t
-
-_⨾_ : Tms[ q ] Δ Γ → Tms[ r ] Θ Δ → Tms[ q ⊔ r ] Θ Γ
-ε       ⨾ σ = ε
-(δ , t) ⨾ σ = (δ ⨾ σ) , (t [ σ ])
-
-wk : Ren (Γ ▷ A) Γ
-wk = id ⁺ _
-
-<_> : Tm[ q ] Γ A → Tms[ q ] Γ (Γ ▷ A)
-< t > = id , t
 
 variable
   δ σ : Tms[ q ] Δ Γ
@@ -275,10 +281,8 @@ variable
 
 \subsection{Soundness}
 
-In this report, we will not only specify the syntax of type theories; we will
-also prove properties of them. A nice warm-up proof that we will attempt now
-is to show ``soundness''.
-
+To show how we can prove properties of type theories from our syntax,
+we will now embark on a proof of ``soundness'' for STLC.
 
 \sideremark{Soundness expresses that STLC as a \curry{logic} is 
 \curry{consistent}
@@ -414,14 +418,15 @@ Though, to prove |⟦β⟧|, we need to show that substitution is preserved
 appropriately by the standard model - i.e. substitution is sound
 w.r.t. our denotational semantics.
 
-\begin{definition}[Soundness of Operations] \phantom{a}
+\begin{definition}[Soundness with Respect to a Semantics] \phantom{a}
 \labdef{sound2}
 
 An operation |f : A → B| is sound w.r.t. some semantics on |A| and |B| if its 
 action respects those semantics. 
 
 The nature of this respect depends somewhat
-on the semantics in question: for a model, we show that it admits an 
+on the semantics in question: for soundness w.r.t. a model, we show that 
+the model admits an 
 analagous operation ⟦f⟧ such that the following diagram commutes
 
 \begin{tikzcd}[scaleedge cd=1.25, sep=huge]
@@ -438,8 +443,10 @@ analagous operation ⟦f⟧ such that the following diagram commutes
 % & |⟦ f x ⟧ᴮ ≡ ⟦f⟧ ⟦ x ⟧ᴬ|
 % \end{tikzcd}
 
-For an equational semantics (TODO reference later), we instead show that |f| 
-preserves equivalence.
+Given an equational semantics (\refsec{redconv}), we instead must show that |f| 
+preserves the equivalence,
+and in th case of operational semantics, reduction should
+be stable under |f|.
 
 % Soundness of \textit{operations} on syntax (e.g. type-checking 
 % algorithms) are instead defined as those which respect conversion. This is 
@@ -528,7 +535,7 @@ postulate
 \labsec{redconv}
 
 Constructing a model is not the only way to give a semantics to a type theory.
-We can also give ``operational'' and
+We can also give ``operational'' or
 ``equational'' semantics to STLC using inductive relations named 
 ``reduction'' and ``conversion'' respectively.
 
@@ -568,30 +575,47 @@ data _>β_ : Tm Γ A → Tm Γ A → Set where
   π₂     : t₁  >β t₂  → π₂ t₁        >β π₂ t₂
 \end{code}
 
-We say a term |t₁| reduces to |t₂| if |t₁ >β* t₂|, where 
+We say a term |t₁| reduces to its
+reduct, |t₂|, if |t₁ >β* t₂| (where 
 |_>β*_ : Tm Γ A → Tm Γ A → Set| is the reflexive-transitive closure of
-|_>β_|.
-Using this relation, we define ``algorithmically convertible'' terms as those
-which have a common reduct.
+|_>β_|).
+Using this relation, we define terms to be equivalent w.r.t. reduction
+(``algorithmic convertion'') if they have a common reduct.
+
+%if False
+\begin{code}
+_>β*_ : Tm Γ A → Tm Γ A → Set
+_>β*_ = _[ _>β_ ]*_
+\end{code}
+%endif
+
+\begin{code}
+record _<~>_ (t₁ t₂ : Tm Γ A) : Set where field
+  {common}  : Tm Γ A
+  reduces₁  : t₁ >β* common
+  reduces₂  : t₂ >β* common
+\end{code}
 
 Reduction as a concept becomes much more useful when the
-relation in question is well-founded. For a full one-step reduction relation 
+relation is well-founded. For a full one-step reduction relation 
 that 
 proceeds under λ-abstractions, we call this property ``strong normalisation'',
 because we can define an algorithm which takes a term |t| and
 by induction on the well-founded order, produces
 an equivalent (w.r.t. algorithmic conversion) but irreducible term |tᴺᶠ|,
-|t|'s ``normal form''\remarknote{Technically, if reduction is not 
-confluent, it might be possible to reduce a term |t| to multile distinct
+|t|'s ``normal form''\remarknote[][*-6]{Technically, if reduction is not 
+confluent, it might be possible to reduce a term |t| to multiple distinct
 normal forms. In principle, we can still explore all 
 possible reduction
 chains in parallel and compare sets of irreducible terms 
-to decide conversion. In this scenario, we can consider the sets 
+to decide algorithmic conversion. In this scenario, we can consider the sets 
 of irreducible terms themselves to be the normal forms (with
-equivalence defined as whether any pair of terms in the Cartesian product 
+equivalence defined by whether any pair of terms in the Cartesian product 
 are equal syntactically).
 %
-}.
+} (we show how to do this explicitly in \refsec{naive}).
+
+\pagebreak
 
 \sideremark{Note that we do not enforce that normal forms are subset of
 the original type, which is sometimes
@@ -604,12 +628,22 @@ by congruence |⌜ norm x ⌝ ≡ ⌜ norm y ⌝|, which simplifies to |x ≡ y|
 \labdef{norm}
 
 In this report, we define normalisation algorithms as sound and complete 
-mappings from some type |A|
-to a type of ``normal forms'' with decidable equality. 
+mappings from some type, |A|,
+to a type of ``normal forms'', |Nfᴬ|, with decidable equality. 
+
+Soundness here
+is defined as usual (i.e. the |norm| preserves equivalence), while we define
+completeness as the converse property: that that equal normal forms
+implies the objects we started with are equivalent.
+
+In the formal definition, we assume |A| is quotiented by equivalence, and
+so soundness is ensured by the definition of quotient types.
+Completeness still needs to ensured with a side-condition though.
 
 %if False
 \begin{code}
-module _ (A : Set) (Nfᴬ : Set) (dec : ∀ (xᴺᶠ yᴺᶠ : Nfᴬ) → Dec (xᴺᶠ ≡ yᴺᶠ)) where
+module _ (A : Set) (Nfᴬ : Set) 
+         (_≡ᴺᶠ?_ : ∀ (xᴺᶠ yᴺᶠ : Nfᴬ) → xᴺᶠ ≡ yᴺᶠ ⊎ ¬ xᴺᶠ ≡ yᴺᶠ) where
   variable x y : A
 \end{code}
 %endif
@@ -618,33 +652,25 @@ module _ (A : Set) (Nfᴬ : Set) (dec : ∀ (xᴺᶠ yᴺᶠ : Nfᴬ) → Dec (x
   record Norm : Set where
     field
       norm   : A → Nfᴬ
-      sound  : x ≡ y → norm x ≡ norm y
       compl  : norm x ≡ norm y → x ≡ y
 \end{code}
 
-Soundness here
-is defined as usual (i.e. the mapping preserves equivalence), while we define
-completeness as the converse property, that that equal normal forms
-implies the starting objects are equivalent.
+From normalisation and decidabile equality of normal forms |_≡ᴺᶠ?_|, 
+we can easily decide equality on |A|.
+
+\begin{spec}
+_≡ᴺᶠ?_ : ∀ (xᴺᶠ yᴺᶠ : Nfᴬ) → xᴺᶠ ≡ yᴺᶠ ⊎ ¬ xᴺᶠ ≡ yᴺᶠ
+\end{spec}
+\begin{code}
+    _≡?_ : ∀ (x y : A) → x ≡ y ⊎ ¬ x ≡ y
+    x ≡? y with norm x ≡ᴺᶠ? norm y
+    ... | inl p = inl (compl p)
+    ... | inr p = inr λ q → p (cong norm q)
+\end{code}
 \end{definition}
 
-%if False
-\begin{code}
-_>β*_ : Tm Γ A → Tm Γ A → Set
-_>β*_ = _[ _>β_ ]*_
-\end{code}
-%endif
-
-\begin{code}
-record _<~>_ (t₁ t₂ : Tm Γ A) : Set where
-  field
-    {common}  : Tm Γ A
-    reduces₁  : t₁ >β* common
-    reduces₂  : t₂ >β* common
-\end{code}
- 
 If we instead take the smallest congruent equivalence relation which includes 
-the computation rules, we arrive at ``declarative'' conversion.
+the computation rules, we arrive at ``declarative'' |β|-conversion.
 
 \begin{code}
 data _~_ : Tm Γ A → Tm Γ A → Set where
@@ -672,43 +698,22 @@ data _~_ : Tm Γ A → Tm Γ A → Set where
 \end{code}
 
 We now have three distinct semantics-derived equivalence relations on
-terms.
-To study the relations between these equivalences, we introduce
-some extra terminology.
+terms. 
 
-Given two equivalence relations on terms |r₁ r₂ : Tm Γ A → Tm Γ A → Set|:
+Algorithmic and declarative conversion are themselves
+equivalent notions.
+|t₁ ~ t₂ → t₁ <~> t₂| requires proving transitivity of |_<~>_|,
+which follows from confluence (which itself can be proved
+by via ``parallel reduction'' \sidecite{takahashi1995parallel}).
+The converse, |t₁ <~> t₂| follows from |_>β_|
+being contained inside |_~_| (|t₁ >β t₂ → t₁ ~ t₂|).
 
-% Sometimes in the literature, e.g. \sidecite{altenkirch2011case} 
-% this conservativity property is 
-% referred to as
-% ``soundness''. E.g. algorithmic conversion is sound if |t₁ <~> t₂ → t₁ ~ t₂|.
-% We avoid this terminology because of how it interacts counter-intuitively with
-% soundness of functions on syntax. Note that |⟦_⟧ᵗᵐ| being sound
-% w.r.t. |_~_|, |t₁ ~ t₂ → ⟦ t₁ ⟧ᵗᵐ ≡ ⟦ t₂ ⟧ᵗᵐ|, implies completeness of the 
-% interpretation-equivalence, but not conservativity.
-
-\sideremark{When applied to specific choices of semantics - for example,
-|r₁ = _~_| and |r₂ = _<~>_|, sometimes conservativity is referred to
-as soundness, and preservation as completeness, 
-e.g. \sidecite[*5]{altenkirch2011case}. We avoid this, because of how it
-conflicts with functions on syntax being defined as sound if they preserve
-equivalence.}
-
-\begin{itemize}
-  \item \textbf{Conservativity:} We say |r₂| is conservative 
-           over |r1| if |r₂ t₁ t₂ → r₁ t₁ t₂|.
-  \item \textbf{Preservation:} We say |r₂| preserves |r₁| 
-           if |r₁ t₁ t₂ → r₂ t₁ t₂|.
-  \item \textbf{Equivalence:} We say |r₁| and |r₂|
-           are equivalent if we have that |r₂| preserves and is conservative
-           over |r₁|.
-\end{itemize}
-
-We note that while our definitions of declarative and algorithmic conversion
-above are equivalent and equality in the standard model preserves 
-convertability, standard model equality is not conservative. 
+We can also prove that the standard model preserves |_~_|, but
+it turns equality in the standard model is not equivalent to 
+conversion as we 
+have defined it.
 The model also validates
-various |η| equalities, including
+various |η| equalities (inherited from the metatheory), including
 
 \begin{code}
 ⟦𝟙η⟧ : ∀ {t : Tm Γ 𝟙} → ⟦ t ⟧ᵗᵐ ≡ ⟦ ⟨⟩ ⟧ᵗᵐ
@@ -726,53 +731,44 @@ postulate
 \end{code}
 (though the latter requires an inductive proof).
 
-%TODO what happened here???
-Updating declarative conversion with such η-equalities is pretty easy, but
+Declaring a |βη|-conversion relation which validates such equations
+is easy (we can just add
+the relevant laws as cases), but doing the
+same for reduction (while retaining normalisation and confluence)
+can be tricky \sidecite{lindley2007extensional}.
 
-Generally, declarative conversion is a nice choice for such a ``default'' 
-semantics, 
-given it is purely inductively defined and does not invite dangers of inheriting
-unwanted properties of the model (as opposed to the denotational style) and is
-cleanly separated from implementation choices (for some type theories,
-e.g. with η laws, or a sort of strict propositions,
-a well-founded reduction order on terms might require
-some ingenuity to derive \sidecite{lindley2007extensional}, or may not 
-exist \sidecite{abel2020failure} at all). 
-Therefore, whenever
-we refer to ``conversion'' unqualified in this report, the intended meaning
-is the declarative variant.
-
-Propositional equality of interpreted terms is actually unsound w.r.t.
-conversion.
-
-
-soundness of the standard model w.r.t. conversion can be shown
-by checking interpreting preserves conversion |t₁ ~ t₂ → ⟦ t₁ ⟧ᵗᵐ ≡ ⟦ t₂ ⟧ᵗᵐ|,
-soundness of reduction w.r.t. conversion 
-
- we can show that interpreting terms into the standard model preserves the 
-conversion relation |t₁ ~ t₂ → ⟦ t₁ ⟧ᵗᵐ ≡ ⟦ t₂ ⟧ᵗᵐ|, we can show that |_>_|
-is conservative
+These interactions motivate taking declarative conversion 
+as the ``default'' specification of the semantics when defining type theories
+from now on.
+Of course, poorly-designed conversion relations might be undecidable
+or equate ``morally'' distinct terms (e.g. |true ~ false| is likely 
+undesirable). We therefore should aim to justify our choice of declarative 
+conversion by constructing models which preserve the equivalence and 
+proving normalisation. Given most operations on terms ought to respect
+conversion,
+it can be quite convenient to quotient (\refsec{equivquot}) terms by the
+relation (of course, up to conversion, reduction is a somewhat ill-defined
+concept).
 
 % Delay discussing quotienting - we can introduce at the end of explicit
 % substitutions instead!
-Conversion gives us a framework for defining sound operations
-on terms (i.e. exactly those which preserve conversion) and also yields
-a more flexible interpretation of normalisation: to find a conversion-preserving
-map from terms into some other type that has decidable 
-equality\remarknote{This type does not necessarily need to syntactically mirror
-terms, which is sometimes useful. E.g. a nice normal forms for integer 
-arithmetic expressions built out of |+|, |-| and |×| is a pair of an integer
-and a map from variables to their coefficients. 
-\sidecite[*6]{altenkirch2001normalization} and 
-\sidecite[*8]{sterling2021normalization} analagously define normal forms
-of their respective typed lambda calculi which don't embed cleanly back into
-ordinary term syntax.
-%
-}.
-
-We show that our equational semantics are compatible with denotational ones
-by showing that the standard model preserves conversion.
-
-
-It turns out that non-trivial laws hold definitionally!
+% Conversion gives us a framework for defining sound operations
+% on terms (i.e. exactly those which preserve conversion) and also yields
+% a more flexible interpretation of normalisation: to find a conversion-preserving
+% map from terms into some other type that has decidable 
+% equality\remarknote{This type does not necessarily need to syntactically mirror
+% terms, which is sometimes useful. E.g. a nice normal forms for integer 
+% arithmetic expressions built out of |+|, |-| and |×| is a pair of an integer
+% and a map from variables to their coefficients. 
+% \sidecite[*6]{altenkirch2001normalization} and 
+% \sidecite[*8]{sterling2021normalization} analagously define normal forms
+% of their respective typed lambda calculi which don't embed cleanly back into
+% ordinary term syntax.
+% %
+% }.
+% 
+% We show that our equational semantics are compatible with denotational ones
+% by showing that the standard model preserves conversion.
+% 
+% 
+% It turns out that non-trivial laws hold definitionally!

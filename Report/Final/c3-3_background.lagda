@@ -22,10 +22,10 @@ proofs that e.g. substitution preserves typing.}
 as an inductive relation). It is unclear how to do the same for dependent
 type theory
 (specifically, ITT) given types (with embedded terms) must be
-considered equal up to β-equality (and β-equality at |Π|-types
+considered equal up to at least β-conversion (and β-conversion at |Π|-types
 inevitably refers to substitution.) One might hope to find a way to
 define a dependently-typed syntax mutually with a recursive substitution
-operation as a (quotiented) ``inductive-recursive'' definition, but
+operation, but
 unfortunately it is currently unclear how to make this work in practice
 \sidecite[*3]{kaposi2025type}.
 
@@ -35,7 +35,7 @@ categories with families
 which can be more easily adapted to the setting
 of dependent types.
 
-Unlike our previous syntax, our explicit substitution syntax only contains
+Unlike our previous syntax, our explicit substitution calculus only contains
 four main sorts: contexts, types, terms and substitutions but no variables.
 Without variables, we no longer parameterise substitutions by whether
 they are renamings or ``full'' substitutions.
@@ -95,12 +95,14 @@ on terms being denoted postfix.
 We start with some properties of substitutions. Substitutions should form a 
 category with contexts as objects (i.e.
 there is an identity substitution, and they can be composed).
+
 We quotient by substitution laws here, but of course
-we could work up to some equivalence relation instead. By quotienting by
-the substitution laws but not |β|/|η|, we can obtain a syntax that is
-isomorphic to the recursive substitution approach (the details of how
-to prove this isomorphism are explored in 
-\sidecite[*-9]{altenkirch2025copypaste}).
+we could work up to some equivalence relation instead.
+By quotienting by
+the substitution laws, but not |β|/|η|, we can obtain a syntax that is
+isomorphic (w.r.t. propositional equality) to the recursive substitution 
+approach (the proof of this is given in detail in 
+\sidecite[*-12]{altenkirch2025copypaste}).
 
 %if False
 \begin{code}
@@ -116,8 +118,6 @@ postulate
   ⨾id  : δ   ⨾ id  ≡ δ
   ⨾⨾   : (δ ⨾ σ) ⨾ γ ≡ δ ⨾ (σ ⨾ γ)
 \end{code}
-
-\pagebreak
 
 \sidedef{Terminal Object}{An object |𝟙 : Ob| 
 in a category |C| with a family of morphisms |Hom| is
@@ -196,7 +196,7 @@ postulate
 %endif
 
 \begin{code}
-  _[_]  : Tm Γ A → ∀ (δ : Tms Δ Γ) → Tm Δ A
+  _[_]  : Tm Γ A → Tms Δ Γ → Tm Δ A
   [id]  : t [ id ] ≡ t
   [][]  : t [ δ ] [ σ ] ≡ t [ δ ⨾ σ ]
 \end{code}
@@ -303,6 +303,8 @@ t · u = (ƛ⁻¹ t) [ < u > ]
 %if False
 \begin{code}
 infix 4 _~_
+
+data _~_ : Tm Γ A → Tm Γ A → Set where
 \end{code}
 %endif
 
@@ -310,7 +312,6 @@ The advantages of |ƛ⁻¹_| should hopefully be evident from
 now super-concise statement of the |β|/|η| equations for |⇒|-types.
 
 \begin{code}
-data _~_ : Tm Γ A → Tm Γ A → Set where
   ⇒β  : ƛ⁻¹ ƛ t ~ t
   ⇒η  : t ~ ƛ ƛ⁻¹ t
 \end{code}
