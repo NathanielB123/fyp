@@ -93,8 +93,6 @@ _[_]′ : Tm Γ A → ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ])
 rflCtx′ : Ctx~ Γ Γ
 𝔹[]′ : Ty~ rflCtx′ (𝔹 [ δ ]) 𝔹
 
-id′ : Wk Ψ Ψ
-
 wkrw : Tms (Γ , t >rw b) Γ
 
 data Sig where
@@ -108,11 +106,6 @@ sig[_] : ∀ q → obj q → Sig
 sig[ SIG ] Ψ        = Ψ
 sig[ CTX ] (Ψ Σ, Γ) = Ψ
 
-adddef[_]_,_⇒_if_then_else_ : ∀ q Ψ (Γ : Ctx (sig[ q ] Ψ)) A → (t : Tm Γ 𝔹′) 
-                            → Tm (Γ , t >rw true) (A [ wkrw ]) 
-                            → Tm (Γ , t >rw false) (A [ wkrw ])
-                            → obj q
-
 data Wk where
   id  : Wk Ψ Ψ
   _⨾_ : Wk Φ Ψ → Wk Ξ Φ → Wk Ξ Ψ
@@ -120,11 +113,6 @@ data Wk where
 
 data Tms where
   coe~ : Ctx~ Δ₁ Δ₂ → Ctx~ Γ₁ Γ₂ → Tms Δ₁ Γ₁ → Tms Δ₂ Γ₂
-
-  -- If we want to carve out a subset of |Tms| that avoids needing to deal with
-  -- adding rewrites to the context, we can combine |ε| and |id| into:
-  -- > ε : ∀ 𝒯 → Tms (Γ ++ 𝒯) Γ
-  -- And remove |π₁rw|
 
   ε     : Tms {Φ = Ψ} {Ψ = Ψ} Δ ε
   _,_   : ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]) → Tms Δ (Γ , A) 
@@ -144,13 +132,6 @@ data Tms where
 
 pattern _,rw_ δ t~ = ,rwℱ δ refl t~ 
 
-id′ = id
-
-adddef[ SIG ] Ψ        , Δ ⇒ A if t then u else v 
-  = Ψ ,def Δ ⇒ A if t then u else v
-adddef[ CTX ] (Ψ Σ, Γ) , Δ ⇒ A if t then u else v 
-  = Ψ ,def Δ ⇒ A if t then u else v Σ, Γ [ wk𝒮 ]
-
 data Tm where
   coe~ : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Tm Γ₁ A₁ → Tm Γ₂ A₂
   
@@ -160,8 +141,7 @@ data Tm where
   TT : Tm Γ 𝔹
   FF : Tm Γ 𝔹
   
-  call : (δ : Tms {Ψ = Ψ ,def Δ ⇒ A if t then u else v} Γ (Δ [ wk𝒮 ])) 
-       → Tm {Ψ = Ψ ,def Δ ⇒ A if t then u else v} Γ (A [ wk𝒮 ⨾ δ ])
+  call : Tm {Ψ = Ψ ,def Γ ⇒ A if t then u else v} (Γ [ wk𝒮 ]) (A [ wk𝒮 ])
 
   π₂   : ∀ (δ : Tms Δ (Γ , A)) → Tm Δ (A [ π₁ δ ])
   _[_] : Tm Γ A → ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ])
@@ -200,14 +180,17 @@ data Ctx~ where
   _[] : Ctx~ Γ₁ Γ₂ → Ctx~ (Γ₁ [ δ₁ ]) (Γ₂ [ δ₂ ])  
 
   -- Computation
-  ε[]    : Ctx~ (ε [ δ ]) ε
-  ,[]    : Ctx~ ((Γ , A) [ δ ])
-                ((Γ [ δ ]) , (A [ ⌜ δ ⌝𝒮 ]))
+  ε[]     : Ctx~ (ε [ δ ]) ε
+  ,[]ℱ    : ∀ {⌜δ⌝ : Tms _ Γ} → ⌜ δ ⌝𝒮 ≡ ⌜δ⌝
+          → Ctx~ ((Γ , A) [ δ ])
+                 ((Γ [ δ ]) , (A [ ⌜ δ ⌝𝒮 ]))
   ,>rw[] : Ctx~ ((Γ , t >rw b) [ δ ]) 
                 ((Γ [ δ ]) , (coe~ rfl~ 𝔹[]′ (t [ ⌜ δ ⌝𝒮 ] )) >rw b) 
   
   [id] : Ctx~ (Γ [ id ]) Γ
   [][] : Ctx~ (Γ [ δ ] [ σ ]) (Γ [ δ ⨾ σ ])
+
+pattern ,[] = ,[]ℱ refl
 
 rflCtx′ = rfl~
 
@@ -300,7 +283,6 @@ data Tms~ where
   ⨾id : Tms~ rfl~ rfl~ (δ ⨾ id) δ
   ⨾⨾  : Tms~ rfl~ rfl~ ((δ ⨾ σ) ⨾ γ) (δ ⨾ (σ ⨾ γ))
 
-
   wk⨾π₁   : Tms~ rfl~ rfl~ (wk𝒮 ⨾ π₁ δ) (π₁ (wk𝒮 ⨾ coe~ rfl~ (sym~ ,[]) δ))
   wk⨾π₁rw : Tms~ rfl~ rfl~ (wk𝒮 ⨾ π₁rw δ) 
                            (π₁rw (wk𝒮 ⨾ coe~ rfl~ (sym~ ,>rw[]) δ))
@@ -349,9 +331,6 @@ data Tm~ where
 
   -- Computation
   ƛ[]    : Tm~ rfl~ Π[] ((ƛ t) [ δ ]) (ƛ (t [ δ ^ A ]))
-  call[] : Tm~ rfl~ ([][] ∙~ rfl~ [ ⨾⨾ ]) 
-               (call {t = t} {u = u} {v = v} δ [ σ ]) 
-               (call (δ ⨾ σ))
   TT[]   : Tm~ rfl~ 𝔹[] (TT [ δ ]) TT
   FF[]   : Tm~ rfl~ 𝔹[] (FF [ δ ]) FF
   
@@ -362,21 +341,19 @@ data Tm~ where
   -- Calls to definitions reduce exactly when the neutral they block on
   -- reduces to a closed Boolean
   callTT : ∀ (t~ : Tm~ rfl~ 𝔹[] (t [ wk𝒮 ⨾ δ ]) TT)
-         → Tm~ rfl~ 
-               (  rfl~ [  rfl~ ⨾ sym~ wk<>rw ∙~ sym~ ⨾⨾ 
-                       ∙~ sym~ wk-comm ⨾ coh ∙~ ⨾⨾ ] 
-               ∙~ sym~ [][])
-               (call {t = t} {u = u} δ) 
-               (u [ wk𝒮 ⨾ coe~ rfl~ (sym~ ,>rw[]) 
-                               (δ ,rw (sym~ coh [ rfl~ ] ∙~ [][] ∙~ t~)) ])
+         → Tm~ rfl~ ([][] ∙~ rfl~ [  rfl~ ⨾ sym~ wk<>rw ∙~ sym~ ⨾⨾ 
+                          ∙~ sym~ wk-comm ⨾ coh ∙~ ⨾⨾ ] 
+                          ∙~ sym~ [][])
+               (call {t = t} {u = u} [ δ ])
+               (u [ wk𝒮 ⨾ coe~ rfl~ (sym~ (,>rw[] {b = true})) 
+                                (δ ,rw (sym~ coh [ rfl~ ] ∙~ [][] ∙~ t~)) ])
   callFF : ∀ (t~ : Tm~ rfl~ 𝔹[] (t [ wk𝒮 ⨾ δ ]) FF)
-         → Tm~ rfl~ 
-               (  rfl~ [  rfl~ ⨾ sym~ wk<>rw ∙~ sym~ ⨾⨾ 
-                       ∙~ sym~ wk-comm ⨾ coh ∙~ ⨾⨾ ] 
-               ∙~ sym~ [][])
-               (call {t = t} {v = v} δ) 
+         → Tm~ rfl~ ([][] ∙~ rfl~ [  rfl~ ⨾ sym~ wk<>rw ∙~ sym~ ⨾⨾ 
+                          ∙~ sym~ wk-comm ⨾ coh ∙~ ⨾⨾ ] 
+                          ∙~ sym~ [][])
+               (call {t = t} {v = v} [ δ ])
                (v [ wk𝒮 ⨾ coe~ rfl~ (sym~ (,>rw[] {b = false})) 
-                               (δ ,rw (sym~ coh [ rfl~ ] ∙~ [][] ∙~ t~)) ])
+                                (δ ,rw (sym~ coh [ rfl~ ] ∙~ [][] ∙~ t~)) ])
 
   β : Tm~ rfl~ rfl~ (ƛ⁻¹ ƛ t) t
   η : Tm~ rfl~ rfl~ (ƛ ƛ⁻¹ t) t

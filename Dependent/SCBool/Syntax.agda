@@ -35,9 +35,9 @@ variable
   A~ B~ A₁₂~ A₂₃~ A₁~ A₂~ A₃~ A₄~ : Ty~ _ A₁ A₂
   t~ t₁~ t₂~ : Tm~ _ _ t₁ t₂
 
--- Forward reference can be avoided by defining |Ctx|/|Ty|/|Tm|/|Tms| mutually
--- in a single (telescopic) inductive definition or by using an 
--- inductive-inductive predicate
+-- Forward references can be avoided by defining |Ctx|/|Ty|/|Tm|/|Sub[_]| 
+-- mutually in a single (telescopic) inductive definition or by using 
+-- inductive-inductive predicates
 𝔹′ : Ty Γ
 
 data Ctx where

@@ -73,7 +73,7 @@ data Tm where
 
   TT : Tm Γ 𝔹
   FF : Tm Γ 𝔹
-  if : ∀ (t : Tm Γ 𝔹) 
+  if : ∀ A (t : Tm Γ 𝔹) 
      → Tm Γ (A [ < TT > ]) 
      → Tm Γ (A [ < FF > ])
      → Tm Γ (A [ < t > ])
@@ -180,11 +180,11 @@ data Tm~ where
   ƛ⁻¹_ : Tm~ Γ~ (Π A~ B~) t₁ t₂ → Tm~ (Γ~ , A~) B~ (ƛ⁻¹ t₁) (ƛ⁻¹ t₂)
   TT   : ∀ (Γ~ : Ctx~ Γ₁ Γ₂) → Tm~ Γ~ 𝔹 TT TT
   FF   : ∀ (Γ~ : Ctx~ Γ₁ Γ₂) → Tm~ Γ~ 𝔹 FF FF
-  if   : ∀ (t~ : Tm~ Γ~ 𝔹 t₁ t₂) 
+  if   : ∀ A~ (t~ : Tm~ Γ~ 𝔹 t₁ t₂) 
        → Tm~ Γ~ (A~ [ < TT Γ~ >~ ]) u₁ u₂
        → Tm~ Γ~ (A~ [ < FF Γ~ >~ ]) v₁ v₂
        → Tm~ Γ~ (A~ [ < t~ >~ ]) 
-                (if t₁ u₁ v₁) (if t₂ u₂ v₂)
+                (if A₁ t₁ u₁ v₁) (if A₂ t₂ u₂ v₂)
     
   _[_] : Tm~ Γ~ A~ t₁ t₂ → ∀ (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) 
        → Tm~ Δ~ (A~ [ δ~ ]) (t₁ [ δ₁ ]) (t₂ [ δ₂ ]) 
@@ -196,8 +196,9 @@ data Tm~ where
   TT[]  : Tm~ rfl~ 𝔹[] (TT [ δ ]) TT
   FF[]  : Tm~ rfl~ 𝔹[] (FF [ δ ]) FF
   if[]  : Tm~ rfl~ (sym~ if[]-lemma)
-              (if t u v [ δ ]) 
-              (if (coe~ rfl~ 𝔹[] (t [ δ ])) 
+              (if A t u v [ δ ]) 
+              (if (A [ coe~ (rfl~ , 𝔹[]) rfl~ (δ ^ 𝔹) ]) 
+                  (coe~ rfl~ 𝔹[] (t [ δ ])) 
                   (coe~ rfl~ (sym~ if[]-lemma ∙~ rfl~ [ < sym~ coh ∙~ TT[] >~ ]) 
                         (u [ δ ])) 
                   (coe~ rfl~ (sym~ if[]-lemma ∙~ rfl~ [ < sym~ coh ∙~ FF[] >~ ]) 
@@ -206,8 +207,8 @@ data Tm~ where
   [id] : Tm~ rfl~ [id] (t [ id ]) t 
   [][] : Tm~ rfl~ [][] (t [ δ ] [ σ ]) (t [ δ ⨾ σ ])
 
-  ifTT : Tm~ rfl~ rfl~ (if TT u v) u
-  ifFF : Tm~ rfl~ rfl~ (if FF u v) v
+  ifTT : Tm~ rfl~ rfl~ (if A TT u v) u
+  ifFF : Tm~ rfl~ rfl~ (if A FF u v) v
 
   β    : Tm~ rfl~ rfl~ (ƛ⁻¹ ƛ t) t
   η    : Tm~ rfl~ rfl~ (ƛ ƛ⁻¹ t) t

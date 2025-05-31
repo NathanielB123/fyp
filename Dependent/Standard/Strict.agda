@@ -48,18 +48,18 @@ variable
   t~ t₁~ t₂~ : Tm~ _ _ t₁ t₂
 
 data Ctx where
-  ε       : Ctx
-  _,_     : ∀ Γ → Ty Γ → Ctx
+  •       : Ctx
+  _▷_     : ∀ Γ → Ty Γ → Ctx
 
 data Ty where
   coe~ : Ctx~ Γ₁ Γ₂ → Ty Γ₁ → Ty Γ₂
 
   𝔹 : Ty Γ   
-  Π : ∀ A → Ty (Γ , A) → Ty Γ
+  Π : ∀ A → Ty (Γ ▷ A) → Ty Γ
 
-  if   : Tm Γ 𝔹 → Ty Γ → Ty Γ → Ty Γ
+  IF   : Tm Γ 𝔹 → Ty Γ → Ty Γ → Ty Γ
 
-_[_]T : Ty Γ → Tms Δ Γ → Ty Δ
+_[_]Ty : Ty Γ → Tms Δ Γ → Ty Δ
 
 data Ctx~ where
   -- Equivalence
@@ -68,44 +68,44 @@ data Ctx~ where
   _∙~_ : Ctx~ Γ₁ Γ₂ → Ctx~ Γ₂ Γ₃ → Ctx~ Γ₁ Γ₃
 
   -- Congruence
-  _,_    : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Ctx~ (Γ₁ , A₁) (Γ₂ , A₂)
+  _▷_    : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Ctx~ (Γ₁ ▷ A₁) (Γ₂ ▷ A₂)
 
-<_> : Tm Γ A → Tms Γ (Γ , A)
+<_> : Tm Γ A → Tms Γ (Γ ▷ A)
 
 data Tms where
   coe~ : Ctx~ Δ₁ Δ₂ → Ctx~ Γ₁ Γ₂ → Tms Δ₁ Γ₁ → Tms Δ₂ Γ₂
 
-  ε     : Tms Δ ε
-  _,_   : ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]T) → Tms Δ (Γ , A) 
+  ε     : Tms Δ •
+  _,_   : ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]Ty) → Tms Δ (Γ ▷ A) 
 
-wk  : Tms (Γ , A) Γ
+wk  : Tms (Γ ▷ A) Γ
 id  : Tms Γ Γ
 _⨾_ : Tms Δ Γ → Tms Θ Δ → Tms Θ Γ
 
 data Var where
   coe~ : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Var Γ₁ A₁ → Var Γ₂ A₂
 
-  vz : Var (Γ , A) (A [ wk ]T)
-  vs : Var Γ B → Var (Γ , A) (B [ wk ]T)
+  vz : Var (Γ ▷ A) (A [ wk ]Ty)
+  vs : Var Γ B → Var (Γ ▷ A) (B [ wk ]Ty)
 
 data Tm where  
   coe~ : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Tm Γ₁ A₁ → Tm Γ₂ A₂
 
   `_   : Var Γ A → Tm Γ A
-  ƛ_   : Tm (Γ , A) B → Tm Γ (Π A B)
-  _·_  : Tm Γ (Π A B) → ∀ (u : Tm Γ A) → Tm Γ (B [ < u > ]T)
+  ƛ_   : Tm (Γ ▷ A) B → Tm Γ (Π A B)
+  _·_  : Tm Γ (Π A B) → ∀ (u : Tm Γ A) → Tm Γ (B [ < u > ]Ty)
 
   TT : Tm Γ 𝔹
   FF : Tm Γ 𝔹
   if : ∀ A (t : Tm Γ 𝔹) 
-     → Tm Γ (A [ < TT > ]T) 
-     → Tm Γ (A [ < FF > ]T)
-     → Tm Γ (A [ < t > ]T)
+     → Tm Γ (A [ < TT > ]Ty) 
+     → Tm Γ (A [ < FF > ]Ty)
+     → Tm Γ (A [ < t > ]Ty)
 
-lookup : Var Γ A → ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]T)
-_[_]   : Tm Γ A → ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]T)
+lookup : Var Γ A → ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]Ty)
+_[_]   : Tm Γ A → ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]Ty)
 
-_^_ : ∀ (δ : Tms Δ Γ) A → Tms (Δ , (A [ δ ]T)) (Γ , A)
+_^_ : ∀ (δ : Tms Δ Γ) A → Tms (Δ ▷ (A [ δ ]Ty)) (Γ ▷ A)
 
 data Ty~ where
   -- Equivalence
@@ -118,32 +118,32 @@ data Ty~ where
 
   -- Congruence
   𝔹    : Ty~ Γ~ 𝔹 𝔹
-  Π    : ∀ A~ → Ty~ (Γ~ , A~) B₁ B₂ → Ty~ Γ~ (Π A₁ B₁) (Π A₂ B₂)
-  if   : Tm~ Γ~ 𝔹 t₁ t₂ → Ty~ Γ~ A₁ A₂ → Ty~ Γ~ B₁ B₂ 
-       → Ty~ Γ~ (if t₁ A₁ B₁) (if t₂ A₂ B₂)
+  Π    : ∀ A~ → Ty~ (Γ~ ▷ A~) B₁ B₂ → Ty~ Γ~ (Π A₁ B₁) (Π A₂ B₂)
+  IF   : Tm~ Γ~ 𝔹 t₁ t₂ → Ty~ Γ~ A₁ A₂ → Ty~ Γ~ B₁ B₂ 
+       → Ty~ Γ~ (IF t₁ A₁ B₁) (IF t₂ A₂ B₂)
 
   -- Computation
-  ifTT : Ty~ rfl~ (if TT A B) A
-  ifFF : Ty~ rfl~ (if FF A B) B
+  IF-TT : Ty~ rfl~ (IF TT A B) A
+  IF-FF : Ty~ rfl~ (IF FF A B) B
 
 -- Additional congruences
 postulate
-  _[_]T~ : ∀ (A~ : Ty~ Γ~ A₁ A₂) (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) 
-         → Ty~ Δ~ (A₁ [ δ₁ ]T) (A₂ [ δ₂ ]T)
+  _[_]Ty~ : ∀ (A~ : Ty~ Γ~ A₁ A₂) (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) 
+         → Ty~ Δ~ (A₁ [ δ₁ ]Ty) (A₂ [ δ₂ ]Ty)
 
 -- Strictified computation
 {-# NON_COVERING #-}
 {-# TERMINATING #-}
--- coe~ Γ~ A [ δ ]T = A [ coe~ rfl~ (sym~ Γ~) δ ]T
-𝔹         [ δ ]T = 𝔹
-Π A B     [ δ ]T = Π (A [ δ ]T) (B [ δ ^ A ]T)
-if t A B  [ δ ]T = if (t [ δ ]) (A [ δ ]T) (B [ δ ]T)
+-- coe~ Γ~ A [ δ ]Ty = A [ coe~ rfl~ (sym~ Γ~) δ ]Ty
+𝔹         [ δ ]Ty = 𝔹
+Π A B     [ δ ]Ty = Π (A [ δ ]Ty) (B [ δ ^ A ]Ty)
+IF t A B  [ δ ]Ty = IF (t [ δ ]) (A [ δ ]Ty) (B [ δ ]Ty)
 
-postulate [id]T : A [ id ]T ≡ A
-{-# REWRITE [id]T #-}
+postulate [id]Ty : A [ id ]Ty ≡ A
+{-# REWRITE [id]Ty #-}
 
-postulate [][]T : A [ δ ]T [ σ ]T ≡ A [ δ ⨾ σ ]T
-{-# REWRITE [][]T #-}
+postulate [][]Ty : A [ δ ]Ty [ σ ]Ty ≡ A [ δ ⨾ σ ]Ty
+{-# REWRITE [][]Ty #-}
 
 < t > = id , t
 
@@ -164,13 +164,13 @@ postulate wk⨾ : wk ⨾ (δ , t) ≡ δ
 {-# REWRITE wk⨾ #-}
 
 -- We make η-contraction a rewrite
-postulate ,η : ∀ {δ : Tms Δ (Γ , A)} → ((wk ⨾ δ) , lookup vz δ) ≡ δ 
+postulate ,η : ∀ {δ : Tms Δ (Γ ▷ A)} → ((wk ⨾ δ) , lookup vz δ) ≡ δ 
 {-# REWRITE ,η #-}
 
-wk {Γ = ε} = ε
-id {Γ = ε} = ε
+wk {Γ = •} = ε
+id {Γ = •} = ε
 
-postulate idη : wk , (` vz) ≡ id {Γ = Γ , A}
+postulate idη : wk , (` vz) ≡ id {Γ = Γ ▷ A}
 {-# REWRITE idη #-}
 
 data Tms~ where
@@ -185,8 +185,8 @@ data Tms~ where
 
   -- Congruence
   ε     : Tms~ Δ~ rfl~ ε ε
-  _,_   : ∀ (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) → Tm~ Δ~ (A~ [ δ~ ]T~) t₁ t₂
-        → Tms~ Δ~ (Γ~ , A~) (δ₁ , t₁) (δ₂ , t₂)
+  _,_   : ∀ (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) → Tm~ Δ~ (A~ [ δ~ ]Ty~) t₁ t₂
+        → Tms~ Δ~ (Γ~ ▷ A~) (δ₁ , t₁) (δ₂ , t₂)
 
   εη : Tms~ Δ~ Γ~ δ ε
 
@@ -194,7 +194,7 @@ data Tms~ where
 postulate
   id~   : Tms~ Γ~ Γ~ id id
   _⨾~_  : Tms~ Δ~ Γ~ δ₁ δ₂ → Tms~ Θ~ Δ~ σ₁ σ₂ → Tms~ Θ~ Γ~ (δ₁ ⨾ σ₁) (δ₂ ⨾ σ₂)
-  wk~  : ∀ (A~ : Ty~ Γ~ A₁ A₂) → Tms~ (Γ~ , A~) Γ~ wk wk
+  wk~  : ∀ (A~ : Ty~ Γ~ A₁ A₂) → Tms~ (Γ~ ▷ A~) Γ~ wk wk
 
 δ ^ A = (δ ⨾ wk) , (` vz)
 
@@ -209,8 +209,8 @@ data Var~ where
   coh  : Var~ Γ~ A~ i (coe~ Γ~ A~ i)
 
   -- Congruence
-  vz : Var~ (Γ~ , A~) (A~ [ wk~ A~ ]T~) vz vz
-  vs : Var~ Γ~ B~ i₁ i₂ → Var~ (Γ~ , A~) (B~ [ wk~ A~ ]T~) (vs i₁) (vs i₂)
+  vz : Var~ (Γ~ ▷ A~) (A~ [ wk~ A~ ]Ty~) vz vz
+  vs : Var~ Γ~ B~ i₁ i₂ → Var~ (Γ~ ▷ A~) (B~ [ wk~ A~ ]Ty~) (vs i₁) (vs i₂)
 
 -- Strict computation
 lookup vz     (δ , t)        = t
@@ -231,15 +231,15 @@ postulate [][] : t [ δ ] [ σ ] ≡ t [ δ ⨾ σ ]
 {-# REWRITE [][] #-}
 
 -- coe~ Γ~ A~ t [ δ ]
---   = coe~ rfl~ (A~ [ sym~ coh ]T~) (t [ coe~ rfl~ (sym~ Γ~) δ ])
+--   = coe~ rfl~ (A~ [ sym~ coh ]Ty~) (t [ coe~ rfl~ (sym~ Γ~) δ ])
 (` i)      [ δ ] = lookup i δ
 (ƛ t)      [ δ ] = ƛ (t [ δ ^ _ ])
 (t · u)    [ δ ] = (t [ δ ]) · (u [ δ ])
 TT         [ δ ] = TT
 FF         [ δ ] = FF
-if A t u v [ δ ] = if (A [ δ ^ 𝔹 ]T) (t [ δ ]) (u [ δ ]) (v [ δ ])
+if A t u v [ δ ] = if (A [ δ ^ 𝔹 ]Ty) (t [ δ ]) (u [ δ ]) (v [ δ ])
 
-<_>~ : Tm~ Γ~ A~ t₁ t₂ → Tms~ Γ~ (Γ~ , A~) < t₁ > < t₂ >
+<_>~ : Tm~ Γ~ A~ t₁ t₂ → Tms~ Γ~ (Γ~ ▷ A~) < t₁ > < t₂ >
 
 data Tm~ where
   -- Equivalence
@@ -253,31 +253,37 @@ data Tm~ where
 
   --Congruence  
   `_   : Var~ Γ~ A~ i₁ i₂ → Tm~ Γ~ A~ (` i₁) (` i₂)
-  ƛ_   : Tm~ (Γ~ , A~) B~ t₁ t₂ → Tm~ Γ~ (Π A~ B~) (ƛ t₁) (ƛ t₂)
+  ƛ_   : Tm~ (Γ~ ▷ A~) B~ t₁ t₂ → Tm~ Γ~ (Π A~ B~) (ƛ t₁) (ƛ t₂)
   _·_  : Tm~ Γ~ (Π A~ B~) t₁ t₂ → ∀ (u~ : Tm~ Γ~ A~ u₁ u₂)
-       → Tm~ Γ~ (B~ [ < u~ >~ ]T~) (t₁ · u₁) (t₂ · u₂) 
+       → Tm~ Γ~ (B~ [ < u~ >~ ]Ty~) (t₁ · u₁) (t₂ · u₂) 
 
   TT   : ∀ (Γ~ : Ctx~ Γ₁ Γ₂) → Tm~ Γ~ 𝔹 TT TT
   FF   : ∀ (Γ~ : Ctx~ Γ₁ Γ₂) → Tm~ Γ~ 𝔹 FF FF
-  if   : ∀ (A~ : Ty~ (Γ~ , 𝔹) A₁ A₂) (t~ : Tm~ Γ~ 𝔹 t₁ t₂) 
-       → Tm~ Γ~ (A~ [ < TT Γ~ >~ ]T~) u₁ u₂
-       → Tm~ Γ~ (A~ [ < FF Γ~ >~ ]T~) v₁ v₂
-       → Tm~ Γ~ (A~ [ < t~ >~ ]T~) 
+  if   : ∀ (A~ : Ty~ (Γ~ ▷ 𝔹) A₁ A₂) (t~ : Tm~ Γ~ 𝔹 t₁ t₂) 
+       → Tm~ Γ~ (A~ [ < TT Γ~ >~ ]Ty~) u₁ u₂
+       → Tm~ Γ~ (A~ [ < FF Γ~ >~ ]Ty~) v₁ v₂
+       → Tm~ Γ~ (A~ [ < t~ >~ ]Ty~) 
                 (if A₁ t₁ u₁ v₁) (if A₂ t₂ u₂ v₂)
-
+ 
   -- Computation
-  ifTT : ∀ (A : Ty (Γ , 𝔹)) {u v} → Tm~ rfl~ rfl~ (if A TT u v) u
-  ifFF : ∀ (A : Ty (Γ , 𝔹)) {u v} → Tm~ rfl~ rfl~ (if A FF u v) v
+  𝔹β₁  : ∀ (A : Ty (Γ ▷ 𝔹)) {u v} → Tm~ rfl~ rfl~ (if A TT u v) u
+  𝔹β₂  : ∀ (A : Ty (Γ ▷ 𝔹)) {u v} → Tm~ rfl~ rfl~ (if A FF u v) v
 
-  β    : Tm~ rfl~ rfl~ ((ƛ t) · u) (t [ < u > ])
-  η    : Tm~ (rfl~ {Γ = Γ}) (rfl~ {A = Π A B}) t 
+  Πβ   : Tm~ rfl~ rfl~ ((ƛ t) · u) (t [ < u > ])
+  Πη   : Tm~ (rfl~ {Γ = Γ}) (rfl~ {A = Π A B}) t 
               (ƛ ((t [ wk ]) · (` vz))) 
 
 -- Additional congruences
 postulate
   lookup~ : Var~ Γ~ A~ i₁ i₂ → ∀ (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) 
-          → Tm~ Δ~ (A~ [ δ~ ]T~) (lookup i₁ δ₁) (lookup i₂ δ₂)
+          → Tm~ Δ~ (A~ [ δ~ ]Ty~) (lookup i₁ δ₁) (lookup i₂ δ₂)
   _[_]~ : Tm~ Γ~ A~ t₁ t₂ → ∀ (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) 
-        → Tm~ Δ~ (A~ [ δ~ ]T~) (t₁ [ δ₁ ]) (t₂ [ δ₂ ]) 
+        → Tm~ Δ~ (A~ [ δ~ ]Ty~) (t₁ [ δ₁ ]) (t₂ [ δ₂ ]) 
 
 <_>~ {A~ = A~} t~ = _,_ {A~ = A~} id~ t~
+
+π₁ : Tms Δ (Γ ▷ A) → Tms Δ Γ
+π₁ δ = wk ⨾ δ
+
+π₂ : ∀ (δ : Tms Δ (Γ ▷ A)) → Tm Δ (A [ π₁ δ ]Ty)
+π₂ δ = lookup vz δ
