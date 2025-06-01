@@ -13,22 +13,25 @@ data Ctx  : Sig → Set
 variable 
   Ψ Φ Ξ Ψ₁ Ψ₂ Ψ₃ Φ₁ Φ₂ Φ₃ : Sig
 
-data Ty     : Ctx Ψ → Set
-data DefVar : ∀ Ψ (Γ : Ctx Ψ) → Ty Γ → Set
-data Var    : ∀ (Γ : Ctx Ψ) → Ty Γ → Set
-data Tm     : ∀ (Γ : Ctx Ψ) → Ty Γ → Set
+data Ty     : Ctx Ξ → Set
+data DefVar : ∀ Ξ (Γ : Ctx Ξ) → Ty Γ → Set
+data Var    : ∀ (Γ : Ctx Ξ) → Ty Γ → Set
+data Tm     : ∀ (Γ : Ctx Ξ) → Ty Γ → Set
 data Wk     : Sig → Sig → Set
-data Tms    : Ctx Ψ → Ctx Ψ → Set
+data Tms    : Ctx Ξ → Ctx Ξ → Set
 
 variable
-  Γ Δ Θ Γ₁ Γ₂ Γ₃ Δ₁ Δ₂ Δ₃ : Ctx Ψ
+  Γ Δ Θ Γ₁ Γ₂ Γ₃ Δ₁ Δ₂ Δ₃ : Ctx Ξ
   A B C A₁ A₂ A₃ B₁ B₂ : Ty Γ
   i j k i₁ i₂ i₃ : Var Γ A
-  f g h : DefVar Ψ Γ A
+  f g h : DefVar Ξ Γ A
   t u v t₁ t₂ t₃ u₁ u₂ u₃ v₁ v₂ v₃ : Tm Γ A
   δ σ γ δ₁ δ₂ δ₃ σ₁ σ₂ : Tms Δ Γ
   φ ψ ξ ξ₁ ξ₂ : Wk Φ Ψ
   b b₁ b₂ : Bool
+
+𝔹′ : Ty Γ
+data EqVar  : ∀ (Γ : Ctx Ψ) → Tm Γ 𝔹′ → Bool → Set
 
 data Ctx~  : Ctx Ψ → Ctx Ψ → Prop
 data Ty~   : Ctx~ {Ψ = Ψ} Γ₁ Γ₂ → Ty Γ₁ → Ty Γ₂ → Prop
@@ -41,12 +44,10 @@ variable
   A~ B~ A₁₂~ A₂₃~ A₁~ A₂~ A₃~ A₄~ : Ty~ _ A₁ A₂
   t~ t₁~ t₂~ : Tm~ _ _ t₁ t₂
 
-𝔹′ : Ty Γ
-
 data Ctx where
   •       : Ctx Ψ
   _▷_     : ∀ (Γ : Ctx Ψ) → Ty Γ → Ctx Ψ
-  _▷_>rw_ : ∀ (Γ : Ctx Ψ) → Tm Γ 𝔹′ → Bool → Ctx Ψ
+  _▷_>eq_ : ∀ (Γ : Ctx Ψ) → Tm Γ 𝔹′ → Bool → Ctx Ψ
 
 _[_]Ctx : Ctx Ψ → Wk Φ Ψ → Ctx Φ
 
@@ -78,13 +79,13 @@ IF t A B [ δ ]Ty = IF (t [ δ ]) (A [ δ ]Ty) (B [ δ ]Ty)
 rflCtx′ : Ctx~ Γ Γ
 rflTy′  : Ty~ rflCtx′ A A
 
-wkrw : Tms (Γ ▷ t >rw b) Γ
+wkeq : Tms (Γ ▷ t >eq b) Γ
 
 data Sig where
   •                  : Sig
   _▷_⇒_if_then_else_ : ∀ Ψ (Γ : Ctx Ψ) A → (t : Tm Γ 𝔹′) 
-                     → Tm (Γ ▷ t >rw true) (A [ wkrw ]Ty) 
-                     → Tm (Γ ▷ t >rw false) (A [ wkrw ]Ty)
+                     → Tm (Γ ▷ t >eq true) (A [ wkeq ]Ty) 
+                     → Tm (Γ ▷ t >eq false) (A [ wkeq ]Ty)
                      → Sig
 
 data Wk where
@@ -102,11 +103,11 @@ data Tms where
   _,_   : ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]Ty) → Tms Δ (Γ ▷ A) 
   -- We do some Fording here to enforce that |t [ δ ]| is considered a 
   -- structural subterm.
-  ,rwℱ : ∀ (δ : Tms Δ Γ) {u} → t [ δ ] ≡ u
+  ,eqℱ : ∀ (δ : Tms Δ Γ) {u} → t [ δ ] ≡ u
          → Tm~ rflCtx′ rflTy′ (t [ δ ]) ⌜ b ⌝𝔹
-         → Tms Δ (Γ ▷ t >rw b)
+         → Tms Δ (Γ ▷ t >eq b)
 
-pattern _,rw_ δ t~ = ,rwℱ δ refl t~
+pattern _,eq_ δ t~ = ,eqℱ δ refl t~
 
 _[_]Tms : Tms Δ Γ → ∀ (ξ : Wk Φ Ψ) → Tms (Δ [ ξ ]Ctx) (Γ [ ξ ]Ctx)
 
@@ -125,8 +126,14 @@ data DefVar where
 data Var where
   coe~ : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Var Γ₁ A₁ → Var Γ₂ A₂
 
-  vz : Var (Γ ▷ A) (A [ wk ]Ty)
-  vs : Var Γ B → Var (Γ ▷ A) (B [ wk ]Ty)
+  vz    : Var (Γ ▷ A) (A [ wk ]Ty)
+  vs    : Var Γ B → Var (Γ ▷ A) (B [ wk ]Ty)
+  vseq  : Var Γ B → Var (Γ ▷ t >eq b) (B [ wkeq ]Ty)
+
+data EqVar where
+  ez    : EqVar (Γ ▷ t >eq b) (t [ wkeq ]) b
+  es    : EqVar Γ t b → EqVar (Γ ▷ A) (t [ wk ]) b
+  eseq  : EqVar Γ t b₁ → EqVar (Γ ▷ u >eq b₂) (t [ wkeq ]) b₁
 
 <_> : Tm Γ A → Tms Γ (Γ ▷ A)
 
@@ -156,7 +163,7 @@ data Ctx~ where
 
   -- Congruence
   _▷_    : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Ctx~ (Γ₁ ▷ A₁) (Γ₂ ▷ A₂)
-  _▷_>rw : ∀ Γ~ → Tm~ Γ~ 𝔹~′ t₁ t₂ → Ctx~ (Γ₁ ▷ t₁ >rw b) (Γ₂ ▷ t₂ >rw b)
+  _▷_>eq : ∀ Γ~ → Tm~ Γ~ 𝔹~′ t₁ t₂ → Ctx~ (Γ₁ ▷ t₁ >eq b) (Γ₂ ▷ t₂ >eq b)
 
 rflCtx′ = rfl~
 
@@ -225,20 +232,20 @@ rflTms′ : Tms~ rfl~ rfl~ δ δ
 
 ε            ⨾ σ = ε
 (δ , t)      ⨾ σ = (δ ⨾ σ) , (t [ σ ])
-(δ ,rw t~)   ⨾ σ = (δ ⨾ σ) ,rw (t~ [ rflTms′ ]~)
+(δ ,eq t~)   ⨾ σ = (δ ⨾ σ) ,eq (t~ [ rflTms′ ]~)
 
 postulate wk⨾ : wk ⨾ (δ , t) ≡ δ
 {-# REWRITE wk⨾ #-}
 
-postulate wkrw⨾ : wkrw ⨾ (δ ,rw t~) ≡ δ
-{-# REWRITE wkrw⨾ #-}
+postulate wkeq⨾ : wkeq ⨾ (δ ,eq t~) ≡ δ
+{-# REWRITE wkeq⨾ #-}
 
 -- We make η-contraction a rewrite
 postulate ,η : ∀ {δ : Tms Δ (Γ ▷ A)} → ((wk ⨾ δ) , lookup vz δ) ≡ δ 
 {-# REWRITE ,η #-}
 
 wk   {Γ = •} = ε
-wkrw {Γ = •} = ε
+wkeq {Γ = •} = ε
 id   {Γ = •} = ε
 
 data Tms~ where
@@ -255,9 +262,9 @@ data Tms~ where
   ε     : Tms~ Δ~ rfl~ ε ε
   _,_   : ∀ (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) → Tm~ Δ~ (A~ [ δ~ ]Ty~) t₁ t₂
         → Tms~ Δ~ (Γ~ ▷ A~) (δ₁ , t₁) (δ₂ , t₂)
-  ,rw~  : ∀ {Δ~ : Ctx~ {Ψ = Ψ} Δ₁ Δ₂} (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) 
+  ,eq~  : ∀ {Δ~ : Ctx~ {Ψ = Ψ} Δ₁ Δ₂} (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) 
             {t₁~ : Tm~ rfl~ _ _ ⌜ b ⌝𝔹}            
-        → Tms~ Δ~ (Γ~ ▷ t~ >rw) (δ₁ ,rw t₁~) (δ₂ ,rw t₂~) 
+        → Tms~ Δ~ (Γ~ ▷ t~ >eq) (δ₁ ,eq t₁~) (δ₂ ,eq t₂~) 
 
   εη : Tms~ Δ~ Γ~ δ ε
 
@@ -266,7 +273,7 @@ postulate
   id~   : Tms~ Γ~ Γ~ id id
   _⨾~_  : Tms~ Δ~ Γ~ δ₁ δ₂ → Tms~ Θ~ Δ~ σ₁ σ₂ → Tms~ Θ~ Γ~ (δ₁ ⨾ σ₁) (δ₂ ⨾ σ₂)
   wk~   : ∀ (A~ : Ty~ Γ~ A₁ A₂) → Tms~ (Γ~ ▷ A~) Γ~ wk wk
-  wkrw~ : Tms~ (Γ~ ▷ t~ >rw) Γ~ (wkrw {b = b}) wkrw
+  wkeq~ : Tms~ (Γ~ ▷ t~ >eq) Γ~ (wkeq {b = b}) wkeq
 
 rflTms′ = rfl~
 
@@ -287,8 +294,9 @@ data Var~ where
   vs : Var~ Γ~ B~ i₁ i₂ → Var~ (Γ~ ▷ A~) (B~ [ wk~ A~ ]Ty~) (vs i₁) (vs i₂)
 
 -- Strict computation
-lookup vz     (δ , t)        = t
-lookup (vs i) (δ , t)        = lookup i δ
+lookup vz       (δ , t)        = t
+lookup (vs i)   (δ , t)        = lookup i δ
+lookup (vseq i) (δ ,eq t~)     = lookup i δ
 
 postulate lookup-wk⨾ : lookup i (wk ⨾ δ) ≡ lookup (vs i) δ
 {-# REWRITE lookup-wk⨾ #-}
@@ -317,8 +325,8 @@ record Def Ψ (Γ : Ctx Ψ) (A : Ty Γ) : Set where
   pattern
   field
     scrut : Tm Γ 𝔹
-    lhs   : Tm (Γ ▷ scrut >rw true)  (A [ wkrw ]Ty)
-    rhs   : Tm (Γ ▷ scrut >rw false) (A [ wkrw ]Ty) 
+    lhs   : Tm (Γ ▷ scrut >eq true)  (A [ wkeq ]Ty)
+    rhs   : Tm (Γ ▷ scrut >eq false) (A [ wkeq ]Ty) 
 open Def public
 
 lookup𝒮 : ∀ Ψ {Γ A} → DefVar Ψ Γ A → Def Ψ Γ A
@@ -344,6 +352,9 @@ data Tm~ where
 
   call : ∀ (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) → Tm~ Γ~ A~ (call f δ₁) (call f δ₂) 
 
+  -- Equational assumptions
+  eq  : EqVar Γ t b → Tm~ rfl~ rfl~ t ⌜ b ⌝𝔹
+
   -- Computation
   Πβ   : Tm~ rfl~ rfl~ ((ƛ t) · u) (t [ < u > ])
   Πη   : Tm~ {Ψ = Ψ} (rfl~ {Γ = Γ}) (rfl~ {A = Π A B}) 
@@ -351,10 +362,10 @@ data Tm~ where
 
   call-TT : ∀ (t~ : Tm~ rfl~ rfl~ (lookup𝒮 Ψ f .scrut [ δ ]) TT)
           → Tm~ (rfl~ {Γ = Δ}) (rfl~ {A = _}) 
-                (call f δ) (lookup𝒮 Ψ f .lhs [ δ ,rw t~ ])
+                (call f δ) (lookup𝒮 Ψ f .lhs [ δ ,eq t~ ])
   call-FF : ∀ (t~ : Tm~ rfl~ rfl~ (lookup𝒮 Ψ f .scrut [ δ ]) FF)
           → Tm~ (rfl~ {Γ = Δ}) (rfl~ {A = _}) 
-                (call f δ) (lookup𝒮 Ψ f .rhs [ δ ,rw t~ ])
+                (call f δ) (lookup𝒮 Ψ f .rhs [ δ ,eq t~ ])
 
 -- Additional congruences
 postulate
@@ -368,6 +379,12 @@ postulate
 
 π₂ : ∀ (δ : Tms Δ (Γ ▷ A)) → Tm Δ (A [ π₁ δ ]Ty)
 π₂ δ = lookup vz δ
+
+π₁eq : Tms Δ (Γ ▷ t >eq b) → Tms Δ Γ
+π₁eq δ = wkeq ⨾ δ
+
+π₂eq : ∀ (δ : Tms Δ (Γ ▷ t >eq b)) → Tm~ rfl~ rfl~ (t [ π₁eq δ ]) ⌜ b ⌝𝔹
+π₂eq δ = eq ez [ rfl~ {δ = δ} ]~
 
 -- Presheaf laws for the category of thinnings
 
@@ -387,8 +404,8 @@ postulate
 coeDef : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Def Ψ Γ₁ A₁ → Def Ψ Γ₂ A₂
 coeDef Γ~ A~ (if t u v) 
   = if (coe~ Γ~ 𝔹 t) 
-       (coe~ (Γ~ ▷ coh >rw) (A~ [ wkrw~ {t~ = coh} ]Ty~) u) 
-       (coe~ (Γ~ ▷ coh >rw) (A~ [ wkrw~ {t~ = coh} ]Ty~) v) 
+       (coe~ (Γ~ ▷ coh >eq) (A~ [ wkeq~ {t~ = coh} ]Ty~) u) 
+       (coe~ (Γ~ ▷ coh >eq) (A~ [ wkeq~ {t~ = coh} ]Ty~) v) 
 
 -- We have a fun inter-dependency between |_[_]Ctx| and |_[_]Ty⁺|
 -- If we defined the syntax as one big inductive-inductive type
@@ -399,7 +416,7 @@ postulate 𝔹[]⁺ : 𝔹 {Γ = Γ} [ ξ ]Ty⁺ ≡ 𝔹
 
 •             [ ξ ]Ctx = •
 (Γ ▷ A)       [ ξ ]Ctx = (Γ [ ξ ]Ctx) ▷ (A [ ξ ]Ty⁺)
-(Γ ▷ t >rw b) [ ξ ]Ctx = (Γ [ ξ ]Ctx) ▷ (t [ ξ ]⁺) >rw b
+(Γ ▷ t >eq b) [ ξ ]Ctx = (Γ [ ξ ]Ctx) ▷ (t [ ξ ]⁺) >eq b
 
 -- TODO: I think generalising these identity weakening laws to any weakening
 -- of type |Wk Ψ Ψ| should be sound
@@ -440,7 +457,7 @@ postulate [][]⁺⁺ : t [ φ ]⁺ [ ψ ]⁺ ≡ t [ φ ⨾𝒮 ψ ]⁺
 
 ε          [ ξ ]Tms = ε
 (δ , t)    [ ξ ]Tms = (δ [ ξ ]Tms) , (t [ ξ ]⁺)
-(δ ,rw t~) [ ξ ]Tms = (δ [ ξ ]Tms) ,rw (t~ []~⁺)
+(δ ,eq t~) [ ξ ]Tms = (δ [ ξ ]Tms) ,eq (t~ []~⁺)
 
 postulate id[]Tms : id {Γ = Γ} [ ξ ]Tms ≡ id
 {-# REWRITE id[]Tms #-}
@@ -452,8 +469,8 @@ postulate wk[]   : wk {A = A} [ ξ ]Tms ≡ wk
 {-# REWRITE wk[] #-}
 
 postulate 
-  wkrw[] : wkrw {t = t} {b = b} [ ξ ]Tms ≡ wkrw
-{-# REWRITE wkrw[] #-}
+  wkeq[] : wkeq {t = t} {b = b} [ ξ ]Tms ≡ wkeq
+{-# REWRITE wkeq[] #-}
 
 _[_]DefVar : DefVar Ψ Γ A → ∀ (ξ : Wk Φ Ψ) 
            → DefVar Φ (Γ [ ξ ]Ctx) (A [ ξ ]Ty⁺)
@@ -461,8 +478,9 @@ f [ id𝒮    ]DefVar = f
 f [ φ ⨾𝒮 ψ ]DefVar = f [ φ ]DefVar [ ψ ]DefVar 
 f [ wk𝒮    ]DefVar = fs f
 
-vz   [ ξ ]Var = vz
-vs i [ ξ ]Var = vs (i [ ξ ]Var)
+vz     [ ξ ]Var = vz
+vs   i [ ξ ]Var = vs (i [ ξ ]Var)
+vseq i [ ξ ]Var = vseq (i [ ξ ]Var)
 
 (` i)    [ ξ ]⁺ = ` (i [ ξ ]Var) 
 (ƛ t)    [ ξ ]⁺ = ƛ (t [ ξ ]⁺)
