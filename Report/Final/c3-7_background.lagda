@@ -140,9 +140,9 @@ We also index thinnings by equivalent substitutions
 
 \begin{code}
 data Thin : ∀ Δ Γ → Tms Δ Γ → Set where
-  ε     : Thin • • ε
-  _^ᵀʰ_ : Thin Δ Γ δ → ∀ A → Thin (Δ ▷ (A [ δ ]Ty)) (Γ ▷ A) (δ ^ A)
-  _⁺ᵀʰ_ : Thin Δ Γ δ → ∀ A → Thin (Δ ▷ A) Γ (δ ⨾ wk)
+  ε      : Thin • • ε
+  _^ᵀʰ_  : Thin Δ Γ δ → ∀ A → Thin (Δ ▷ (A [ δ ]Ty)) (Γ ▷ A) (δ ^ A)
+  _⁺ᵀʰ_  : Thin Δ Γ δ → ∀ A → Thin (Δ ▷ A) Γ (δ ⨾ wk)
 
 _[_]Nf   : Nf Γ A t → Thin Δ Γ δ → Nf Δ (A [ δ ]Ty) (t [ δ ])
 _[_]Ne   : Ne Γ A t → Thin Δ Γ δ → Ne Δ (A [ δ ]Ty) (t [ δ ])
@@ -194,6 +194,10 @@ _∋_[_]𝒱 : ∀ A {t} → Val Γ A Δ δ ρ t → ∀ (σᵀʰ : Thin Θ Δ �
 \end{code}
 %endif
 
+\sideremark{As in STLC (\refremark{funvalnat}), we technically should enforce 
+naturality of |Π|-typed values here. To keep the presentation simpler, we skip
+this for now.}
+
 \begin{code}
 if-Val : ∀ Γ A B Δ δ (ρ : Env Δ Γ δ) {u[]} 
        → Tm Δ (IF u[] (A [ δ ]Ty) (B [ δ ]Ty)) 
@@ -217,7 +221,7 @@ We also enforce |η|-equality of functions this time by embedding neutrals
 only at |𝔹| and stuck |IF| types. This will slightly simplify the case
 in the fundamental theorem for function application, at the cost of making
 the embedding of neutrals into values more complicated. We call this
-embedding operation ``unquoting'':
+embedding operation ``unquoting'', and define it mutually with |qval|.
 
 \begin{code}
 uval : ∀ A {t} → Ne Δ (A [ δ ]Ty) t → Val Γ A Δ δ ρ t
@@ -287,7 +291,7 @@ implicitly constructing via evaluation. The motives for
 record Motives : Set₂ where field
   PCtx  : Ctx → Set₁
   PTy   : PCtx Γ → Ty Γ → Set₁
-  PVar  :  ∀ (Γᴾ : PCtx Γ) → PTy Γᴾ A → Var Γ A → Set
+  PVar  : ∀ (Γᴾ : PCtx Γ) → PTy Γᴾ A → Var Γ A → Set
   PTm   : ∀ (Γᴾ : PCtx Γ) → PTy Γᴾ A → Tm Γ A → Set
   PTms  : ∀ (Δᴾ : PCtx Δ) (Γᴾ : PCtx Γ) → Tms Δ Γ → Set
 \end{code}
@@ -315,37 +319,37 @@ So that, modulo reordering of arguments, these match the types of
 
 %if False
 \begin{code}
-module _ where
-  open Motives NbE
+open Motives NbE
  
-  variable
-    Γᴾ Δᴾ : PCtx Γ
-    Aᴾ Bᴾ : PTy Γᴾ A
+variable
+  Γᴾ Δᴾ : PCtx Γ
+  Aᴾ Bᴾ : PTy Γᴾ A
 \end{code}
 %endif
 
 \begin{code}
-  elimCtx  : ∀ Γ  → PCtx Γ
-  elimTy   : ∀ A  → PTy (elimCtx Γ) A
-  elimVar  : ∀ i → PVar (elimCtx Γ) (elimTy A) i
-  elimTm   : ∀ t  → PTm (elimCtx Γ) (elimTy A) t
-  elimTms  : ∀ δ  → PTms (elimCtx Δ) (elimCtx Γ) δ
+elimCtx  : ∀ Γ  → PCtx Γ
+elimTy   : ∀ A  → PTy (elimCtx Γ) A
+elimVar  : ∀ i → PVar (elimCtx Γ) (elimTy A) i
+elimTm   : ∀ t  → PTm (elimCtx Γ) (elimTy A) t
+elimTms  : ∀ δ  → PTms (elimCtx Δ) (elimCtx Γ) δ
 
-  elimCtx  Γ  Δ  δ       = Env Δ Γ δ
-  elimTy   A  Δ  δ  ρ t  = Val _ A Δ δ ρ t 
-  elimVar  i  Δ  δ  ρ    = lookupℰ i ρ
-  elimTm   t  Δ  δ  ρ    = eval t ρ
-  elimTms  δ  Θ  σ  ρ    = eval* δ ρ
+elimCtx  Γ  Δ  δ       = Env Δ Γ δ
+elimTy   A  Δ  δ  ρ t  = Val _ A Δ δ ρ t 
+elimVar  i  Δ  δ  ρ    = lookupℰ i ρ
+elimTm   t  Δ  δ  ρ    = eval t ρ
+elimTms  δ  Θ  σ  ρ    = eval* δ ρ
 \end{code}
 
-Under this perspective, we can see the law we need corresponds to preservation
+From this perspective, we can see the law we need corresponds to preservation
 of type substistitution in the model:
 
 \begin{code}
-  _[_]Tyᴾ : PTy Γᴾ A → PTms Δᴾ Γᴾ δ → PTy Δᴾ (A [ δ ]Ty)
-  Aᴾ [ δᴾ ]Tyᴾ = λ Θ σ ρ t → Aᴾ Θ _ (δᴾ Θ σ ρ) t
+_[_]Tyᴾ : PTy Γᴾ A → PTms Δᴾ Γᴾ δ → PTy Δᴾ (A [ δ ]Ty)
+Aᴾ [ δᴾ ]Tyᴾ = λ Θ σ ρ t → Aᴾ Θ _ (δᴾ Θ σ ρ) t
 
-  elim-[]Ty : ∀ {δ : Tms Δ Γ} → elimTy (A [ δ ]Ty) ≡ elimTy A [ elimTms δ ]Tyᴾ
+elim-[]Ty  : ∀ {δ : Tms Δ Γ} 
+           → elimTy (A [ δ ]Ty) ≡ elimTy A [ elimTms δ ]Tyᴾ
 
 shiftVal[] {ρ = ρ} {t = t} = 
   cong-app (cong-app (cong-app (cong-app elim-[]Ty _) _) ρ) t
@@ -353,36 +357,27 @@ shiftVal[] {ρ = ρ} {t = t} =
 
 It turns out we will also rely on preservation of |id| and |wk|:
 
-%if False
-\begin{code}
-module _ where
-  open Motives NbE
-\end{code}
-%endif
-
 \sideremark{These laws are why we decided to implement |Env| recursively.
 In an inductive definition of |Env|, we would only get isomorphisms here.}
 
 \begin{code}
-  _,ᴾ_ : ∀ Γᴾ → PTy Γᴾ A → PCtx (Γ ▷ A)
-  Γᴾ ,ᴾ Aᴾ = λ Δ δ → Σ⟨ ρ ∶ Γᴾ Δ (wk ⨾ δ) ⟩× Aᴾ Δ (wk ⨾ δ) ρ ((` vz) [ δ ])
+_,ᴾ_ : ∀ Γᴾ → PTy Γᴾ A → PCtx (Γ ▷ A)
+Γᴾ ,ᴾ Aᴾ = λ Δ δ → Σ⟨ ρ ∶ Γᴾ Δ (wk ⨾ δ) ⟩× Aᴾ Δ (wk ⨾ δ) ρ ((` vz) [ δ ])
 
-  wkᴾ : ∀ {Aᴾ : PTy Γᴾ A} → PTms (Γᴾ ,ᴾ Aᴾ) Γᴾ (wk {A = A})
-  wkᴾ = λ θ σ ρ → ρ .fst
+wkᴾ : ∀ {Aᴾ : PTy Γᴾ A} → PTms (Γᴾ ,ᴾ Aᴾ) Γᴾ (wk {A = A})
+wkᴾ = λ θ σ ρ → ρ .fst
 
-  idᴾ : PTms Γᴾ Γᴾ id
-  idᴾ = λ θ σ ρ → ρ
+idᴾ : PTms Γᴾ Γᴾ id
+idᴾ = λ θ σ ρ → ρ
 
-  elim-id  : elimTms (id {Γ = Γ}) ≡ idᴾ
-  elim-wk  : elimTms (wk {A = A}) ≡ wkᴾ {Aᴾ = elimTy A}
+elim-id  : elimTms (id {Γ = Γ}) ≡ idᴾ
+elim-wk  : elimTms (wk {A = A}) ≡ wkᴾ {Aᴾ = elimTy A}
 \end{code}
 
-From now on, we assume both the functor laws corresponding to |_[_]ℰ| and 
-the above preservation laws hold definitionally. Of
+From now on, we assume both the functor laws for |_[_]ℰ| and 
+the above preservation equations hold definitionally. Of
 course, we will need to prove both of these properties
-propositionally later, and technically
-we should manually transport over them, but this adds significant clutter
-without much meaningful benefit.
+propositionally later.
 
 %if False
 \begin{code}
@@ -426,15 +421,9 @@ eval-if  : ∀ A {t u v} (tᴺᶠ : Nf Δ 𝔹 t)
          → Val (Γ ▷ 𝔹) A Δ (δ , FF) (ρ Σ, FF) v
          → Val (Γ ▷ 𝔹) A Δ (δ , t) (ρ Σ, tᴺᶠ) (if (A [ δ ^ 𝔹 ]Ty) t u v)
 eval-if {δ = δ} A TT uⱽ vⱽ 
-  = coe𝒱  (rfl~ {A = A}) 
-          (sym~ (𝔹β₁ (A [ δ ^ 𝔹 ]Ty)) 
-          ∙~ if (rfl~ {A = A [ δ ^ 𝔹 ]Ty}) (TT rfl~) rfl~ rfl~)
-          uⱽ
+  = coe𝒱 (rfl~ {A = A}) (sym~ (𝔹β₁  (A [ δ ^ 𝔹 ]Ty))) uⱽ
 eval-if {δ = δ} A FF uⱽ vⱽ 
-  = coe𝒱  (rfl~ {A = A}) 
-          (sym~ (𝔹β₂ (A [ δ ^ 𝔹 ]Ty)) 
-          ∙~ if (rfl~ {A = A [ δ ^ 𝔹 ]Ty}) (FF rfl~) rfl~ rfl~)
-          vⱽ
+  = coe𝒱 (rfl~ {A = A}) (sym~ (𝔹β₂  (A [ δ ^ 𝔹 ]Ty))) vⱽ
 eval-if {δ = δ} A (ne𝔹 tᴺᵉ) uⱽ vⱽ 
   = uval A (if (A [ δ ^ 𝔹 ]Ty) tᴺᵉ (qval A uⱽ) (qval A vⱽ))
 \end{code}
@@ -455,8 +444,7 @@ eval FF         ρ = FF
 
 \begin{code}
 eval (t · u)       ρ = eval t ρ idᵀʰ (eval u ρ)
-eval (if A t u v)  ρ
-  = eval-if A (eval t ρ) (eval u ρ) (eval v ρ)
+eval (if A t u v)  ρ = eval-if A (eval t ρ) (eval u ρ) (eval v ρ)
 \end{code}
 
 We must also check in both |Val| and |eval| that |β| (and |η| in the case of
@@ -472,14 +460,29 @@ eval ((ƛ t) · u) ρ == coe𝒱 _ _ (eval t (ρ Σ, eval u ρ))
 and
 \begin{spec}
 eval (ƛ ((t [ wk ]) · (` vz))) ρ 
-  == λ γᵀʰ {u} uⱽ → coe𝒱 _ _ (eval (t [ wk ]) ((ρ [ γᵀʰ ]ℰ) Σ, uⱽ) idᵀʰ uⱽ)
+  == λ γᵀʰ {u} uⱽ → coe𝒱 _ _  (eval (t [ wk ]) 
+                              ((ρ [ γᵀʰ ]ℰ) Σ, uⱽ) idᵀʰ uⱽ)
 \end{spec}
 
 But this does not get us quite far enough in either case. We need preservation
 of term substitution.
 
+\begin{code}
+_[_]ᴾ  : ∀ {Γᴾ : PCtx Γ} {Δᴾ : PCtx Δ} {Aᴾ : PTy Γᴾ A}
+       → PTm Γᴾ Aᴾ t → ∀ (δᴾ : PTms Δᴾ Γᴾ δ) 
+       → PTm Δᴾ (Aᴾ [ δᴾ ]Tyᴾ) (t [ δ ])
+tᴾ [ δᴾ ]ᴾ = λ Δ σ ρ → tᴾ Δ (_ ⨾ σ) (δᴾ Δ σ ρ)
+\end{code}
+\begin{spec}
+elim-[] : elimTm (t [ δ ]) ≡ elimTm t [ elimTms δ ]ᴾ
+\end{spec}
+
 %if False
 \begin{code}
+elim-[]  : ∀ {t : Tm Γ A} {δ : Tms Δ Γ}
+         →  elimTm (t [ δ ]) 
+         ≡  _[_]ᴾ {t = t} {Aᴾ = elimTy A} (elimTm t) (elimTms δ)
+
 elimIF-TT : Val Γ (IF TT A B) Δ δ ρ t ≡ Val Γ A Δ δ ρ (coe~ rfl~ IF-TT t)
 elimIF-TT = {!!}
 
@@ -496,7 +499,7 @@ elim𝔹β₁ = {!!}
 %endif
 
 Finally, we can proceed to the definitions of quoting and unquoting.
-These functions are mutually recursive on types with much of the
+These functions are mutually recursive on types, with much of the
 complexity coming from dealing with large |IF|.
 
 \begin{code}
@@ -520,9 +523,8 @@ uval-if A B (ne𝔹 uᴺᵉ)  tᴺᵉ = tᴺᵉ
 qval 𝔹           tⱽ = tⱽ
 qval (IF b A B)  tⱽ = qval-if A B (eval b _) tⱽ
 qval (Π A B)     tⱽ = coeNf~ rfl~ rfl~ (sym~ Πη) tᴺᶠ 
-  where vzⱽ = uval {δ = _ ⨾ wk {A = (A [ _ ]Ty)}} A (` vz)
-        tvz = tⱽ wkᵀʰ vzⱽ
-        tᴺᶠ = ƛ qval B tvz
+  where  vzⱽ  = uval {δ = _ ⨾ wk {A = (A [ _ ]Ty)}} A (` vz)
+         tᴺᶠ  = ƛ qval B (tⱽ wkᵀʰ vzⱽ)
 
 qval-if A B TT  tⱽ 
   = coeNf~ rfl~ (sym~ IF-TT)  (sym~ coh) (qval A tⱽ)
@@ -552,7 +554,7 @@ that for |tᴺᶠ : Nf Γ A t|, we have |t ≡ ⌜ tᴺᶠ ⌝Nf|.
 
 We should also technically check preservation of substitution operations
 and the functor laws for thinning of values/environments. Functor laws for
-thinnings are relatively simple by induction on types/contexts and eventually
+thinnings follow by induction on types/contexts and eventually
 (in the |𝔹| base case) on normal/neutral forms.
 
 Preservation of substitution operations require checking the associated 

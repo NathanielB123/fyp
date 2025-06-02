@@ -115,7 +115,6 @@ data Tm : Ctx → Ty → Set where
   ⟨⟩   : Tm Γ 𝟙
 \end{spec}
 
-%TODO we probably want to delay discussion of quotienting...
 % Note that while our syntax is instrinsically-typed and to some extent
 % CwF-inspired, we have not gone so far as to actually quotient by conversion
 % (we won't even define a conversion relation explicitly). This is merely for
@@ -192,8 +191,6 @@ We regard lists of variables as renamings,
 The action of both is witnessed by the following recursively defined 
 substitution operation:
 
-
-% TODO: Actually fill in the definitions of these substitution operations...
 \begin{code}
 _[_] : Tm[ q ] Γ A → Tms[ r ] Δ Γ → Tm[ q ⊔ r ] Δ A
 \end{code}
@@ -237,6 +234,8 @@ identity substitutions |id|
 (backwards lists of increasing variables), 
 composition |_⨾_|, single weakenings |wk| and single
 substitutions |<_>|.
+
+\pagebreak
 
 \sideremark{Single-weakening of terms via |suc[_]| and its fold over
 substitutions |_⁺_| can be regarded ultimately as implementation details
@@ -603,7 +602,7 @@ proceeds under λ-abstractions, we call this property ``strong normalisation'',
 because we can define an algorithm which takes a term |t| and
 by induction on the well-founded order, produces
 an equivalent (w.r.t. algorithmic conversion) but irreducible term |tᴺᶠ|,
-|t|'s ``normal form''\remarknote[][*-6]{Technically, if reduction is not 
+|t|'s ``normal form''\remarknote[][*-10]{Technically, if reduction is not 
 confluent, it might be possible to reduce a term |t| to multiple distinct
 normal forms. In principle, we can still explore all 
 possible reduction

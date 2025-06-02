@@ -15,32 +15,36 @@ module Report.Final.c3-5_background where
 \labsec{quotsetfibre}
 
 As previously mentioned 
-(\refsec{equivquot}, support for quotient types in modern proof assistants 
+in \refsec{equivquot}, support for quotient types in modern proof assistants 
 is somewhat hit-or-miss. 
-\sideremark{Two-level type theory (2LTT) \sidecite[*4]{annenkov2023two} 
-enables working with an ``inner'' and ``outer'' equality, 
-which can differ in their degree of extensionality,
-and indeed some exploration has been done
+\sideremark{In a two-level metatheory \sidecite[*-7]{annenkov2023two}
+it is possible to simultaneously work with quotient types up to equivalence
+when convenient and then go down to a 
+raw syntactic level when required. The key idea behind 2LTT 
+is to have both an
+``inner'' and ``outer'' propositional equality, which differ in
+their degrees of extensionality.
+Indeed some exploration has been done
 on using this framework to formalise ``elaboration'' 
-\sidecite[*6]{kovacs2024elab}, a seemingly inevitably syntactic procedure.
+\sidecite[*-16]{kovacs2024elab}, a somewhat inherently syntactic 
+algorithm.\\\\
 2LTT  also comes with some restrictions
-on eliminators mapping between levels though, which I think would be
-painful if the objective was to prove e.g. strong normalisation.\\\\
-A pertinent question here is probably: why not just scrap intrinsically-typed
-syntax and use inductive typing relations on untyped terms. Perhaps
-if my \textit{only} focus was on proving e.g. strong normalisation, this would 
+on eliminators mapping between the two levels though, which I expect to be
+problematic in proving e.g. strong normalisation.
+A pertinent question arises here: why not just scrap intrinsically-typed
+syntax and use inductive typing relations on untyped terms? Perhaps
+if our \textit{only} aim was proving e.g. strong normalisation, this would 
 be a sensible course of action.}
 Quotienting by conversion also prevents us
 from performing more
-fine-grained ``intensional'' analysis on terms \cite{kovacs2022staged}
-or using more ``syntactic''
+fine-grained ``intensional'' analysis on terms 
+\sidecite[*-2.5]{kovacs2022staged} or using more ``syntactic''
 proof techniques such as reduction. 
 Therefore, when mechanising in Agda, we prefer to work
 with setoids rather than QIITs directly.
 
 We follow essentially the translation as outlined in
-\sidecite{altenkirch1999extensional, altenkirch2019setoid, 
-pujet2022observational, kovacs2022staged}).
+\cite{kovacs2022staged}.
 Contexts become a setoid, types become a setoid fibration on contexts,
 substitutions become a setoid fibration on pairs of contexts and terms
 become a setoid fibration on types paired with their contexts.
@@ -53,7 +57,8 @@ for convenience.
 \begin{code}
 data Ctx~  : Ctx → Ctx → Prop
 data Ty~   : Ctx~ Γ₁ Γ₂ → Ty Γ₁ → Ty Γ₂ → Prop
-data Tm~   : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Tm Γ₁ A₁ → Tm Γ₂ A₂ → Prop
+data Tm~   : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Tm Γ₁ A₁ → Tm Γ₂ A₂ 
+           → Prop
 data Tms~  : Ctx~ Δ₁ Δ₂ → Ctx~ Γ₁ Γ₂ → Tms Δ₁ Γ₁ → Tms Δ₂ Γ₂ 
            → Prop
 \end{code}
@@ -117,7 +122,7 @@ We are missing the computation rule for substitutions applied to
 
 \begin{spec}
 IF[]   :  IF t A B [ δ ]Ty 
-        ≡  IF (subst (Tm Δ) 𝔹[] (t [ δ ])) (A [ δ ]Ty) (B [ δ ]Ty)
+       ≡  IF (subst (Tm Δ) 𝔹[] (t [ δ ])) (A [ δ ]Ty) (B [ δ ]Ty)
 \end{spec}
 
 The transport here is essential. |t [ δ ]| only has type |𝔹 [ δ ]Ty|, but
@@ -127,27 +132,27 @@ to each indexed sort (|Ty|, |Tm| and |Tms|)
 corresponding to coercion over the equivalence:
 
 \begin{code}
-  coeTy~   : Ctx~ Γ₁ Γ₂ → Ty Γ₁ → Ty Γ₂
+  coeTy   : Ctx~ Γ₁ Γ₂ → Ty Γ₁ → Ty Γ₂
 
-  coeTm~   : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Tm Γ₁ A₁ → Tm Γ₂ A₂
+  coeTm   : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Tm Γ₁ A₁ → Tm Γ₂ A₂
 
-  coeTms~  : Ctx~ Δ₁ Δ₂ → Ctx~ Γ₁ Γ₂ → Tms Δ₁ Γ₁ → Tms Δ₂ Γ₂
+  coeTms  : Ctx~ Δ₁ Δ₂ → Ctx~ Γ₁ Γ₂ → Tms Δ₁ Γ₁ → Tms Δ₂ Γ₂
 \end{code}
 
 |IF[]~| can now be written with an explicit coercion:
 
 \begin{code}
-  if[]~  : Ty~ rfl~ (IF t A B [ δ ]Ty) 
-                    (IF (coeTm~ rfl~ 𝔹[]~ (t [ δ ])) (A [ δ ]Ty) (B [ δ ]Ty))
+  if[]~  : Ty~ rfl~  (IF t A B [ δ ]Ty) 
+                     (IF (coeTm rfl~ 𝔹[]~ (t [ δ ])) (A [ δ ]Ty) (B [ δ ]Ty))
 \end{code}
 
 The final ingredient to make this work
 is ``coherence'': coercion must respect the equivalence.
 
 \begin{code}
-  cohTy   : Ty~ Γ~ A (coeTy~ Γ~ A)
-  cohTms  : Tms~ Δ~ Γ~ δ (coeTms~ Δ~ Γ~ δ)
-  cohTm   : Tm~ Γ~ A~ t (coeTm~ Γ~ A~ t)
+  cohTy   : Ty~   Γ~  A (coeTy Γ~ A)
+  cohTms  : Tms~  Δ~  Γ~  δ  (coeTms Δ~ Γ~ δ)
+  cohTm   : Tm~   Γ~  A~  t  (coeTm Γ~ A~ t)
 \end{code}
 
 \subsection{Strictification}
@@ -165,7 +170,7 @@ if[]  :   if A t u v [ δ ]
               (subst (Tm Δ) 𝔹[] (t [ δ ])) 
               (subst (Tm Δ) (sym <>-commTy ∙ [][]coh {q = TT[]  }) (u [ δ ])) 
               (subst (Tm Δ) (sym <>-commTy ∙ [][]coh {q = FF[]  }) (v [ δ ])) 
-\end{code}
+\end{spec}
 
 If substitution instead computed recursively, 
 |𝔹[] : 𝔹 [ δ ]Ty ≡ 𝔹|, |TT[] : TT [ δ ] ≡ TT|
@@ -209,37 +214,40 @@ induction principle is derived which refers to these recursive operations.
 
 Unfortunately, while this approach can make substitution equations
 arising from direct computation such as |𝔹 [ δ ]Ty ≡' 𝔹| definitional,
-the functor and naturality laws remain propositional.
+the functor laws remain propositional.
 \sidecite{kaposi2025type} presents a much more involved construction
 based on presheaves, in which
-all laws corresponding to substitutions, except
+all substitution laws, except
 the η law for context extension |▷η : δ ≡ π₁ δ , π₂ δ| /
 |id▷ : id {Γ = Γ ▷ A} ≡ wk , vz|,
-are eventually strictified. Both approaches only allow induction
-via explicit eliminators rather than pattern matching.
+are eventually strictified. When implemented in Agda, both approaches only 
+allow induction via explicit eliminators, rather than pattern matching.
 
 Some proof assistants also support
 reflecting a subset propositional equations into definitional ones 
-via global |REWRITE| rules,
-as implemented in Dedukti \sidecite{assaf2016dedukti}, 
+via global |REWRITE| rules
+(e.g. Dedukti \sidecite{assaf2016dedukti}, 
 Agda \sidecite{cockx2020type} and Rocq
-\sidecite{leray2024rewster}. In general
+\sidecite{leray2024rewster}). Global rewrite rules can be though of a
+restricted version of equality reflection from extensional type theory
+(in which transports/coercions 
+are fully relegated to the typing derivations), and
 \sidecite{hofmann1995conservativity, oury2005extensionality, 
-winterhalter2019eliminating} show that ETT (in which transports/coercions are
-relegated to the typing derivations) is ultimately
+winterhalter2019eliminating} show that ETT is ultimately
 conservative over ITT.
 
-So, if we start with a QIIT definition of type theory, we few possible
-routes towards strictifying equations. There remain problems:
+So, if we start with a QIIT definition of type theory, we have few possible
+routes towards strictifying equations. There remain problems though:
 \begin{itemize}
   \item Strictification can produce a more convenient induction principle for
   the syntax, but this is still just an induction principle. 
   Directly-encoded inductive-recursive types in Agda allow for pattern
-  matching, without any requirement to give cases for non-canonical
-  constructors (i.e. the recursive operation).
+  matching, which is often more convenient (e.g. when pattern matching, 
+  we do not have to explicitly give cases for how to interpret the recursive 
+  operations).
   \item As mentioned in the previous section, Agda's support for quotient
   types is somewhat unsatisfactory, so we would rather use setoids.
-  Rewriting via setoid equations are unsound (because setoid 
+  Rewriting via setoid equations is unsound (because setoid 
   constructors are still provably disjoint w.r.t. propositional equality).
   \item Rewrite rules as implemented in Agda struggle somewhat with
   indexed types \sidecite{burke2024agda}.
@@ -249,27 +257,29 @@ The ultimate goal of this project is to explore new type theories with
 local equational assumptions, not to provide a watertight Agda mechanisation.
 Therefore, in the proofs of normalisation, where, frankly,
 we need all the help we can get,
-I axiomatise ``strict'', implicit-substitution syntaxes 
-(using a combination of |POSTULATE|s, |REWRITE| rules, |NON_TERMINATING| and
-|NON_COVERING| definitions, and even a new flag which disables
-\sidecite{amelia2023rewrite}).
-Critically, while substitution is strict, 
-|β|/|η| convertibility is still
-dealt with via an explicit equivalence relation, so the syntax remains
-setoid-based. 
+I axiomatise ``strict'', implicit-substitution syntaxes,
+using a combination of |POSTULATE|s, |REWRITE| rules, |NON_TERMINATING| and
+|NON_COVERING| definitions, and even a new flag which re-enables
+\sidecite{amelia2023rewrite} (these are of course very unsafe features, but
+the idea is to simulate working in a ``nicer'' metatheory where 
+``transport-hell'' is less of an issue).
+Critically, while substitution is strict, we still deal with
+|β|/|η| convertibility 
+via an explicit equivalence relation, so the syntax remains
+setoid-based.
 
 % TODO: Maybe mention we will use a quotiented syntax rather than equivalence
 % relation for the report, if indeed we will...
 For presentation in the report,
 going over the entire syntax of dependent
-type theory again, switching |_=_| signs to |_≡_| is probably not a
+type theory again, switching |_≡_| signs to |_=_| is probably not a
 super valuable use of anyone's time. I will quickly given
 the definition of variables though, given these are new to the strict
 presentation (though very similar to STLC).
 
 \begin{spec}
 data Var where
-  coe~ : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Var Γ₁ A₁ → Var Γ₂ A₂
+  coeVar : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Var Γ₁ A₁ → Var Γ₂ A₂
 
   vz : Var (Γ , A) (A [ wk ]Ty)
   vs : Var Γ B → Var (Γ , A) (B [ wk ]Ty)

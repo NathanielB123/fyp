@@ -393,7 +393,7 @@ data ℕ : Set where
 \end{spec}
 \end{minipage}
 
-As well as plain inductive datatypes like this, Agda also supports defining
+As well as plain inductive datatypes like these, Agda also supports defining
 parametric inductive types and inductive families, along with forward
 declarations to enable mutual interleaving. We refer to the documentation
 for the details on what is supported and the conditions that ensure inductive

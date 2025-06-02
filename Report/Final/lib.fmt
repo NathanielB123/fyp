@@ -150,6 +150,7 @@
 %format ƛ[]   =  ƛ []
 %format ƛ⁻¹[] = ƛ⁻¹ []
 %format ƛ>    = ƛ >
+%format ƛ*    = ƛ *
 
 %format _*_ = _ * _
 %format _*  = _ *
@@ -157,6 +158,8 @@
 %format _⇒_ = _ ⇒ _
 %format _⇒  = _ ⇒
 %format  ⇒_ =   ⇒ _
+
+%format ⇒β  = ⇒ "\!" β
 
 %format ,   = ","
 %format _,_ = _ , _
@@ -180,6 +183,7 @@
 %format : = "\bm{:}"
 
 %format Type = "\Keyword{Type}"
+%format Prop = "\Keyword{Prop}"
 %format Set  = Type
 %format Set₁ = Type ₁
 
@@ -199,6 +203,9 @@
 %format ⟩≡  = "$}"
 %format ≅⟨ = ≡ "\textit{by $"
 %format ⟩≅ = "$}"
+%format ~⟨  = ~ "\textit{by $"
+%format ⟩~  = ~ "$}"
+%format ∎~  = ∎
 
 %format ≡⟨⟩′ = "\Varid{=⟨⟩}"
 %format ≡⟨′  = "\Varid{=⟨}"
@@ -206,8 +213,9 @@
 
 %format ≡⟨⟩ = "="
 
+
 %format =   = "\colonequiv"
-%format ←   = "\equiv"
+%format ←   = "\colonequiv"
 %format ==  = "\equiv"
 %format _=_ = _ "\!" == "\!" _
 %format ∀   = "\bm{\Pi}"
@@ -223,7 +231,7 @@
 %format _×_ = _ "\!" "\bm{\times}" "\!" _
 %format _⊎_ = _ "\!" "\bm{+}" "\!" _
 
-%format ≡-elim    = ≡ -elim
+%format ≡-elim    = ≡ "\!" -elim
 
 %format tm≡       = tm     "_="
 %format A≡        = A      "_="
@@ -284,6 +292,7 @@
 %format >+    = >   "^+"
 %format >-    = >   "^-"
 %format ]>>+  = ]>> "^+"
+%format ∷+    = ∷ "^+"
 
 %format _>*_  = _ > "^*" _
 %format _>+_  = _ > "^+" _
@@ -315,6 +324,12 @@
 %format ᴾˢʰ      = "^{\Varid{Psh}}"
 %format ⟧ᴾˢʰ     = ⟧ ᴾˢʰ
 %format ⟦_⟧ᴾˢʰ   = ⟦_⟧ ᴾˢʰ
+%format ⟦_⟧ᴾˢʰ′  = ⟦_⟧ᴾˢʰ
+%format ⟧ᴾˢʰ′    = ⟧ᴾˢʰ
+%format 𝟙ᴾˢʰ     = 𝟙 ᴾˢʰ
+%format ×ᴾˢʰ     = × ᴾˢʰ
+%format →ᴾˢʰ     = → ᴾˢʰ
+%format _[_]Psh  = _[_] ᴾˢʰ
 
 %format ᴺᶠ      = "^{\Varid{Nf}}"
 %format ᴺᵉ      = "^{\Varid{Ne}}"
@@ -348,12 +363,19 @@
 %format true  = "\Keyword{tt}"
 %format false = "\Keyword{ff}"
 
-%format ℰ     = "^{\Varid{Env}}"
-%format idℰ   = id ℰ
-%format ]ℰ    = ] ℰ
-%format _[_]ℰ = _[_] ℰ
+%format ℰ       = "^{\Varid{Env}}"
+%format idℰ     = id ℰ
+%format ]ℰ      = ] ℰ
+%format _[_]ℰ   = _[_] ℰ
+%format lookupℰ = lookup ℰ
+%format _^ℰ_    = _^ ℰ _
+%format ^ℰ      = ^ ℰ
 
-%format 𝒱   = "^{\Varid{Val}}"
+%format 𝒱       = "^{\Varid{Val}}"
+%format coe𝒱    = coe 𝒱
+%format _[_]Val = _[_] 𝒱
+%format ]Val    = ] 𝒱
+
 
 %format Nfᴬ = Nf "^{\Varid{A}}"
 
@@ -383,3 +405,19 @@
 %format tⱽ = t ⱽ 
 %format uⱽ = u ⱽ
 %format vⱽ = v ⱽ
+
+%format ᴾ       = "^{\Varid{P}}"
+%format Γᴾ      = Γ ᴾ
+%format Δᴾ      = Δ ᴾ
+%format Aᴾ      = A ᴾ
+%format Bᴾ      = B ᴾ
+%format tᴾ      = t ᴾ 
+%format δᴾ      = δ ᴾ
+%format _[_]ᴾ   = _[_] ᴾ
+%format ]ᴾ      = ] ᴾ
+%format _[_]Tyᴾ = _[_]Ty ᴾ
+%format ]Tyᴾ    = ]Ty ᴾ
+%format ,ᴾ      = , ᴾ
+%format _,ᴾ_    = _ ,ᴾ _
+%format wkᴾ     = wk ᴾ
+%format idᴾ     = id ᴾ

@@ -65,6 +65,7 @@ variable
 \end{code}
 %endif
 
+\pagebreak
 \sidedef{Category}{A type of objects |Ob| and family of morphisms
 |Hom : Ob → Ob → Set| forms a category if |Hom| includes identity and
 composition.
@@ -102,7 +103,7 @@ By quotienting by
 the substitution laws, but not |β|/|η|, we can obtain a syntax that is
 isomorphic (w.r.t. propositional equality) to the recursive substitution 
 approach (the proof of this is given in detail in 
-\sidecite[*-12]{altenkirch2025copypaste}).
+\sidecite[*-9]{altenkirch2025copypaste}).
 
 %if False
 \begin{code}
@@ -119,7 +120,7 @@ postulate
   ⨾⨾   : (δ ⨾ σ) ⨾ γ ≡ δ ⨾ (σ ⨾ γ)
 \end{code}
 
-\sidedef{Terminal Object}{An object |𝟙 : Ob| 
+\sidedef[*1]{Terminal Object}{An object |𝟙 : Ob| 
 in a category |C| with a family of morphisms |Hom| is
 terminal if there is a unique morphism 
 from every other object in the category, |x : Ob|, to |𝟙|, |! : Hom x 𝟙|.
@@ -160,7 +161,7 @@ Terms are a presheaf on substitutions. That is, there is a
 (contravariantly) functorial action
 that applies substitutions to terms.
 
-\sidedef{Presheaf}{
+\sidedef[*1]{Presheaf}{
 \labdef{presheaf}
 We call family of types |F : A → Set| a presheaf 
 on a category |C| (with\\|Ob = A| and a family of morphisms |Hom|)

@@ -588,8 +588,6 @@ equality. For example:
 \end{itemize}
 etc...
 
-% TODO - mention Cubical TT/proof relevant equality?
-
 
 
 % Type theories of this flavour are the
@@ -739,9 +737,11 @@ for term-level (dependent) |if|, we need to use the eliminator.
 ⟦ t [ δ ]     ⟧Tm = λ ρ           → ⟦ t ⟧Tm (⟦ δ ⟧Tms ρ)
 ⟦ π₂ δ        ⟧Tm = λ ρ           → ⟦ δ ⟧Tms ρ .snd
 ⟦ if A t u v  ⟧Tm 
-  = λ ρ → Bool-elim (λ b → ⟦ A ⟧Ty (ρ Σ, b)) (⟦ t ⟧Tm ρ) (⟦ u ⟧Tm ρ) (⟦ v ⟧Tm ρ)
-⟦ J B p t     ⟧Tm = 
-  λ ρ → ≡-elim (λ ⟦u⟧ ⟦p⟧ → ⟦ B ⟧Ty ((ρ Σ, ⟦u⟧) Σ, ⟦p⟧)) (⟦ p ⟧Tm ρ) (⟦ t ⟧Tm ρ)
+  = λ ρ → Bool-elim  (λ b → ⟦ A ⟧Ty (ρ Σ, b)) (⟦ t ⟧Tm ρ) 
+                     (⟦ u ⟧Tm ρ) (⟦ v ⟧Tm ρ)
+⟦ J B p t     ⟧Tm 
+  = λ ρ → ≡-elim     (λ ⟦u⟧ ⟦p⟧ → ⟦ B ⟧Ty ((ρ Σ, ⟦u⟧) Σ, ⟦p⟧)) 
+                     (⟦ p ⟧Tm ρ) (⟦ t ⟧Tm ρ)
 \end{spec}
 
 %if False

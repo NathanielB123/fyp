@@ -5,7 +5,7 @@
 open import Utils hiding (ε)
 open import Utils.IdExtras
 
-module Report.Final.c11_scbool where
+module Report.Final.c5-1_scbool where
 
 \end{code}
 %endif
@@ -19,7 +19,9 @@ module Report.Final.c11_scbool where
 
 In this chapter, we introduce and study a minimal dependently-typed language
 featuring a \SC-like elimination principle for Booleans. We name
-this language \SCBool.
+this language \SCBool. We will also detail the core ideas behind my Haskell
+typechecker for an extended, but nonetheless ultimately 
+\SCBool-based language.
 
 \section{Syntax}
 
