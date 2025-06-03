@@ -13,7 +13,7 @@ module Report.Final.c2_background where
 
 \setchapterpreamble[u]{\margintoc}
 
-\chapter{Related Work}
+\chapter{Related Work and Preliminaries}
 \labch{related}
 
 We begin this section looking at related type-system features and end with
@@ -809,3 +809,67 @@ in \refsec{strict}, is more powerful than Smart Case for the same type), with
 the main
 innovation being to evaluate into a sheaf model rather than 
 the usual presheaf on the category of renamings.
+
+\section{Preliminaries}
+
+Before we get into the meat of the content in this report, we make a few more
+general observations about \SC that motivate the coming chapters.
+
+\subsection{Smart Case is Local Equality Reflection}
+
+\subsubsection{Local Equality Reflection}
+
+Recall the equality reflection rule from ETT
+
+\begin{spec}
+  reflectETT : Tm Γ (Id A t₁ t₂) → t₁ ≡ t₂
+\end{spec}
+
+If we turn this from a meta-level judgement to an object-level one, we arrive
+at a syntactic construct we call ``local equality reflection''
+
+\begin{spec}
+  reflect  : Tm Γ (Id A t₁ t₂) → Tm (Γ ▷ t₁ ≡' t₂) (B [ wk ]Ty)
+           → Tm Γ B
+\end{spec}
+
+This rule assumes some way of extending contexts with convertability 
+assumptions (definitional equalities). Its utility comes from
+the programmer not needing to manually transport over the propositional
+equality |Id A t₁ t₂| manually inside |Tm (Γ ▷ t₁ ≡' t₂) (B [ wk ]Ty)|.
+
+Typechecking dependent types with this local reflection rule is still
+undecidable \sidecite{sjoberg2015programming}. The cited paper brings up
+the example of reflecting the definition of the Collatz function
+(in a context where |f : ℕ ⇒ 𝔹| is a variable).
+\begin{spec}
+Id (ℕ ⇒ 𝔹) f (ƛ n. if even? n then f (n /ℕ 2) else su (3 *ℕ n))
+\end{spec}
+If we accept the new definitional equality, |f| better halt on all
+|ℕ|-typed inputs or |β|-reduction will run into a loop. At least for 
+obviously definitionally inconsistent equations like |Id 𝔹 TT FF|, we can 
+avoid reducing
+terms in such contexts (if all terms are convertible, then normalisation
+is unnecessary - we can just immediately return conversion evidence). 
+For equations like the above though, we cannot assume inconsistency: 
+without a counter-example to the Collatz conjecture, we have no way of
+deriving a contradiction from its assumption.
+
+As another example, imagine the programmer reflects a propositional
+equation between two functions closed from |ℕ|s to |𝔹|s, |Id (ℕ ⇒ 𝔹) t u|.
+If our type theory satisfies function extensionality, such proofs between
+closed but distinct functions should still be provable, but deciding whether
+two functions with infinitary domains are equal on all inputs (for any 
+reasonably expressive theory\remarknote{E.g. is capable for formalising
+Peano arithmetic.} is undecidable. If we reflect |t == u| for a |t| and |u|
+for which there exists a closed natural number |n : ℕ| such that |t n == TT| 
+and |u n == FF|, then by congruence we are in a definitionally inconsistent
+context, and self-application is type-able.
+
+\subsubsection{Indexed Pattern-matching and Forced Patterns}
+
+\subsubsection{Recovering Decidability}
+
+Before tackling dependently typed \SC, we will study the simpler problem of
+deciding conversion for STLC terms modulo equations.
+

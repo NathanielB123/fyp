@@ -5,7 +5,7 @@
 open import Utils hiding (ε; _∘_)
 open import Utils.IdExtras
 
-module Report.Final.c3-3_background where
+module Report.Final.c2-3_background where
 
 \end{code}
 %endif
@@ -182,10 +182,10 @@ module _ {Ob : Set} (F : Ob → Set) {Hom : Ob → Ob → Set}
 %endif
 \begin{code}
   record Presheaf : Set where field
-    fmap :  Hom y x → F x → F y
-    fmap-id  :  fmap idh xs ≡ xs
-    fmap-∘   :  fmap (f ∘ g) xs 
-             ≡  fmap f (fmap g xs)
+    map :  Hom y x → F x → F y
+    map-id  :  map idh xs ≡ xs
+    map-∘   :  map (f ∘ g) xs 
+            ≡  map f (map g xs)
 \end{code}
 \resetcodeindent
 }
@@ -213,7 +213,7 @@ extend substitutions a fresh term to replace the new variable with.
   ,⨾   : (δ , t) ⨾ σ ≡ (δ ⨾ σ) , (t [ σ ])
 \end{code}
 
-We call laws like |,⨾|, which cover how the various constructs of type theory
+We call laws like ``|,⨾|'' which cover how the various constructs of type theory
 interact with 
 the functor operations, ``naturality'' laws. We can express these laws as
 commutative diagrams, e.g.
@@ -270,8 +270,9 @@ _^_ : ∀ (δ : Tms Δ Γ) A → Tms (Δ ▷ A) (Γ ▷ A)
 δ ^ A = (δ ⨾ wk) , vz
 \end{code}
 
-We can extend this syntax with functions by adding the relevant type former,
-introduction and elimination rules. Rather than the usual rule
+We can extend this syntax with functions by adding the relevant type former
+and
+introduction/elimination rules. Rather than the usual rule
 for application, it is convenient in explicit substitution syntaxes to 
 take a more ``pointfree'' combinator as primitive, which directly
 inverts |ƛ_|.

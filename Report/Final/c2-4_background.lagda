@@ -3,9 +3,9 @@
 {-# OPTIONS --prop --rewriting --mutual-rewriting #-}
 
 open import Utils hiding (ε)
-open import Utils.IdExtras
+open import Utils.IdExtras hiding (funext)
 
-module Report.Final.c3-4_background where
+module Report.Final.c2-4_background where
 
 \end{code}
 %endif
@@ -712,7 +712,7 @@ postulate
 \end{code}
 
 Note that for type-level (large) |IF|, we can use |Bool|'s recursor, while
-for term-level (dependent) |if|, we need to use the eliminator.
+for term-level (dependent) |if|, we need to use the dependent eliminator.
 
 \begin{spec}
 ⟦ •      ⟧Ctx = ⊤

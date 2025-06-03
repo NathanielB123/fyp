@@ -105,13 +105,17 @@ module Report.Interim.c0_main where
 %%include c0-1_test.lagda
 
 
-%include c3-1_background.lagda
-%include c3-2_background.lagda
-%include c3-3_background.lagda
-%include c3-4_background.lagda
-%include c3-5_background.lagda
-%include c3-6_background.lagda
-%include c3-7_background.lagda
+%include c2-1_background.lagda
+%include c2-2_background.lagda
+%include c2-3_background.lagda
+%include c2-4_background.lagda
+%include c2-5_background.lagda
+%include c2-6_background.lagda
+%include c2-7_background.lagda
+
+%%include c4-1_booleq.lagda
+%%include c4-2_booleq.lagda
+%%include c4-3_booleq.lagda
 
 %% bibliography
 % \bibliographystyle{apa}

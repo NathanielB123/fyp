@@ -47,6 +47,9 @@
 \newunicodechar{Π}{$\Pi$}
 \newunicodechar{Σ}{$\Sigma$}
 \newunicodechar{Θ}{$\Theta$}
+\newunicodechar{Ξ}{$\Xi$}
+\newunicodechar{Φ}{$\Phi$}
+\newunicodechar{Ψ}{$\Psi$}
 
 \newunicodechar{∀}{$\forall$}
 \newunicodechar{∃}{$\exists$}
@@ -88,24 +91,27 @@
 \newunicodechar{₁}{$_{1}$}
 \newunicodechar{₂}{$_{2}$}
 \newunicodechar{₃}{$_{3}$}
-\newunicodechar{ᵢ}{$_{i}$}
-\newunicodechar{ₙ}{$_{n}$}
 
 \newunicodechar{¹}{$^{1}$}
-\newunicodechar{ᵉ}{$^{e}$}
 \newunicodechar{⁻}{$^{-}$}
 \newunicodechar{⁺}{$^{+}$}
-\newunicodechar{ᶠ}{$_{f}$}
-\newunicodechar{ⁱ}{$^{i}$}
-\newunicodechar{ⁿ}{$^{n}$}
-\newunicodechar{ₒ}{$_{o}$}
-\newunicodechar{ᴾ}{$^{P}$}
-\newunicodechar{ˢ}{$^{s}$}
-\newunicodechar{ʰ}{$^{h}$}
-\newunicodechar{ᴬ}{$^{A}$}
-\newunicodechar{ᴮ}{$^{B}$}
-\newunicodechar{ᴺ}{$^{N}$}
-\newunicodechar{ⱽ}{$^{V}$}
+
+% \newunicodechar{ₙ}{$_{n}$}
+% \newunicodechar{ᵢ}{$_{i}$}
+% \newunicodechar{ᵉ}{$^{e}$}
+% \newunicodechar{ᶠ}{$_{f}$}
+% \newunicodechar{ⁱ}{$^{i}$}
+% \newunicodechar{ⁿ}{$^{n}$}
+% \newunicodechar{ₒ}{$_{o}$}
+% \newunicodechar{ᴾ}{$^{P}$}
+% \newunicodechar{ˢ}{$^{s}$}
+% \newunicodechar{ʰ}{$^{h}$}
+% \newunicodechar{ᴬ}{$^{A}$}
+% \newunicodechar{ᴮ}{$^{B}$}
+% \newunicodechar{ᴺ}{$^{N}$}
+% \newunicodechar{ⱽ}{$^{V}$}
+
+\newunicodechar{∣}{$||$}
 \newunicodechar{∶}{$:$}
 
 % This is slightly cheating...
@@ -160,6 +166,9 @@
 %format  ⇒_ =   ⇒ _
 
 %format ⇒β  = ⇒ "\!" β
+%format ⇒η  = ⇒ "\!" η
+%format ⟦⇒β⟧ = ⟦ ⇒β ⟧ 
+%format ⟦⇒η⟧ = ⟦ ⇒η ⟧ 
 
 %format ,   = ","
 %format _,_ = _ , _
@@ -204,7 +213,7 @@
 %format ≅⟨ = ≡ "\textit{by $"
 %format ⟩≅ = "$}"
 %format ~⟨  = ~ "\textit{by $"
-%format ⟩~  = ~ "$}"
+%format ⟩~  = "$}"
 %format ∎~  = ∎
 
 %format ≡⟨⟩′ = "\Varid{=⟨⟩}"
@@ -336,10 +345,16 @@
 %format tᴺᶠ     = t ᴺᶠ
 %format tᴺᵉ     = t ᴺᵉ
 %format uᴺᶠ     = u ᴺᶠ
+%format uᴺᵉ     = u ᴺᵉ
 %format tuᴺᶠ    = tu ᴺᶠ
 %format t>tᴺᶠ   = t>t ᴺᶠ
 %format u>uᴺᶠ   = u>u ᴺᶠ
 %format tu>tuᴺᶠ = tu>tu ᴺᶠ
+%format ≡ᴺᶠ?    = ≡ ᴺᶠ ?
+%format _≡ᴺᶠ?_  = _ ≡ᴺᶠ? _ 
+%format xᴺᶠ     = x ᴺᶠ
+%format yᴺᶠ     = y ᴺᶠ
+%format vᴺᶠ     = v ᴺᶠ
 
 %format Σ, = "\bm{,}"
 %format _Σ, = _ Σ,
@@ -401,10 +416,11 @@
 %format wkᵀʰ  = wk ᵀʰ 
 %format wkᵀʰ  = wk ᵀʰ 
 
-%format ⱽ = "^{\Varid{V}}"
-%format tⱽ = t ⱽ 
-%format uⱽ = u ⱽ
-%format vⱽ = v ⱽ
+%format ⱽ   = "^{\Varid{V}}"
+%format tⱽ  = t ⱽ 
+%format uⱽ  = u ⱽ
+%format vⱽ  = v ⱽ
+%format vzⱽ = vz ⱽ
 
 %format ᴾ       = "^{\Varid{P}}"
 %format Γᴾ      = Γ ᴾ
@@ -413,6 +429,9 @@
 %format Bᴾ      = B ᴾ
 %format tᴾ      = t ᴾ 
 %format δᴾ      = δ ᴾ
+%format uᴾ      = u ᴾ 
+%format uᴾ′     = uᴾ ′
+%format vᴾ      = v ᴾ
 %format _[_]ᴾ   = _[_] ᴾ
 %format ]ᴾ      = ] ᴾ
 %format _[_]Tyᴾ = _[_]Ty ᴾ
@@ -421,3 +440,70 @@
 %format _,ᴾ_    = _ ,ᴾ _
 %format wkᴾ     = wk ᴾ
 %format idᴾ     = id ᴾ
+
+%format fndThm-ƛ = fndThm- ƛ
+%format ¬ƛ       = "\Varid{¬}" ƛ
+%format _[_]¬ƛ   = _[_] ¬ƛ
+%format ]ƛ       = ] ƛ
+%format ƛ?       = ƛ ?
+
+%format >nd = > "_{N.D.}"
+%format >!  = > "_{!}"
+%format >𝔹  = > "_{" 𝔹 "}"
+%format >β  = > "_{" β "}"
+%format >β! = > "_{" β! "}"
+%format >nd! = > "_{" N.D.! "}"
+
+%format >nd*  = >nd  "\Varid{*}"
+%format >!*   = >!   "\Varid{*}"
+%format >𝔹*   = >𝔹   "\Varid{*}"
+%format >β*   = >β   "\Varid{*}"
+%format >β!*  = >β!  "\Varid{*}"
+%format >nd!* = >nd! "\Varid{*}"
+
+%format _>nd_   = _ >nd _
+%format _>!_    = _ >! _
+%format _>𝔹_    = _ >𝔹 _
+%format _>β_    = _ >β _
+%format _>nd*_  = _ >nd* _
+%format _>!*_   = _ >!* _
+%format _>𝔹*_   = _ >𝔹* _
+%format _>β*_   = _ >β* _
+%format _>β!*_  = _ >β!* _
+%format _>nd!*_ = _ >nd!* _
+
+%format ᴬ    = "^{\Varid{Acc}}"
+%format ndᴬ  = N.D. ᴬ
+%format !ᴬ   = A ᴬ
+%format tᴬ   = t ᴬ
+%format uᴬ   = u ᴬ
+%format vᴬ   = v ᴬ
+%format tuᴬ  = tu ᴬ
+%format t[]ᴬ = t[] ᴬ
+
+%format ⟧ᴬ   = ⟧ "^{\Varid{A}}" 
+%format ⟧ᴮ   = ⟧ "^{\Varid{V}}" 
+%format ⟦_⟧ᴬ = ⟦_ ⟧ᴬ
+%format ⟦_⟧ᴮ = ⟦_ ⟧ᴮ
+
+
+%format /ℕ  = / "_{" ℕ "}"
+%format *ℕ  = * "_{" ℕ "}"
+%format +ℕ  = + "_{" ℕ "}"
+
+%format ᶜ   = "^{\Varid{C}}"
+%format Ξᶜ  = Ξ ᶜ
+
+%format _⊢_>′_ = _⊢_>_
+%format >′     = >
+
+%format >swap = > "_{\Varid{Swap}}"
+%format _>swap_ = _ >swap _
+
+%format Eqs~ = ~ "^{\Varid{Eqs}}"
+%format _Eqs~_ = _ Eqs~ _
+
+%format norm′          = norm 
+%format norm-sound′    = norm-sound
+%format norm-complete′ = norm-complete
+%format pres>′         = pres>

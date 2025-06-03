@@ -6,7 +6,7 @@ open import Utils renaming (ε to [])
 open import Utils.IdExtras
 open import Report.Final.c3-4_background
 
-module Report.Final.c3-5_background where
+module Report.Final.c2-5_background where
 
 \end{code}
 %endif
@@ -139,7 +139,7 @@ corresponding to coercion over the equivalence:
   coeTms  : Ctx~ Δ₁ Δ₂ → Ctx~ Γ₁ Γ₂ → Tms Δ₁ Γ₁ → Tms Δ₂ Γ₂
 \end{code}
 
-|IF[]~| can now be written with an explicit coercion:
+|IF[]~| can now be written with an explicit coercion on the scrutinee:
 
 \begin{code}
   if[]~  : Ty~ rfl~  (IF t A B [ δ ]Ty) 

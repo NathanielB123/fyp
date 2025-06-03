@@ -5,15 +5,16 @@
 open import Utils renaming (ε to [])
 open import Utils.IdExtras
 
-open import Report.Final.c3-2_background
+open import Report.Final.c2-2_background
  
-module Report.Final.c3-6_background where
+module Report.Final.c2-6_background where
 
 \end{code}
 %endif
 
 \pagebreak
 \section{Normalisation by Evaluation}
+\labsec{nbe}
 
 Normalisation by Evaluation (NbE) 
 \sidecite{berger1991inverse, altenkirch1995categorical}
@@ -435,7 +436,7 @@ category of presheaves can be constructed as |F ×ᴾˢʰ G = λ Γ → F Γ × 
 
 The exponential object in the category of presheaves is a bit more
 subtle. We might try to follow the pattern and define 
-|F →ᴾˢʰ G = λ Γ → F Γ →ᴾˢʰ G Γ| but this doesn't quite work. When trying
+|F →ᴾˢʰ G = λ Γ → F Γ → G Γ| but this doesn't quite work. When trying
 to implement\\|thin : Thin Δ Γ → (F →ᴾˢʰ G) Γ → (F →ᴾˢʰ G) Δ| we
 only have access to an |F Δ| and a function which accepts |F Γ|s\remarknote{
 Note the |Thin Δ Γ| thinning can only transform |F Γ|s into |F Δ|s, not the 
@@ -710,7 +711,7 @@ We are done! Of course, to verify our normalisation algorithm is correct
 need to do more work, checking soundness and completeness
 as defined in \refdef{norm}.
 We refer to \sidecite{kovacs2017machine} for the details, but in short, 
-we prove:
+we can prove:
 \begin{itemize}
   \item \textbf{Soundness} by proving that |eval| preserves conversion by 
   induction on terms, and that |qval| preserves propositional equality.

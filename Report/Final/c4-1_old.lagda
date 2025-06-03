@@ -202,3 +202,103 @@ non-determinsitic reduction implies strong normalisation w.r.t. spontaneous
 reduction. In fact, we can prove this result inside untyped lambda calculus
 (removing the |𝔹|-typed condition on spontaneous reduction. We will prove
 this now.
+
+
+
+
+
+
+
+
+
+
+With β-equality alone, we quickly get stuck if the scrutinee is a variable.
+E.g. equations like |if t u u ~ u| or |if t t u ~ TT|. As mentioned in
+(TODO REFERENCE RELATED WORK), strict η for Booleans can make such
+such equations derivable.
+
+\begin{code}
+𝔹η : u [ < t > ] ~ if t (u [ < TT > ]) (v [ < FF > ])
+\end{code}
+
+However, I claim that |𝔹η| is too strong. Existing normalisation algorithms
+all rely on effectively splitting on every Boolean neutral, requiring
+re-normalising on the order of $2^n$ times, where $n$ is the number 
+of distinct neutral Boolean subterms. 
+
+%TODO Finish writing this
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+But is not quite what we want: |_⊢_~_| should not only identify
+terms modulo a fixed set of Boolean equations. We should be introducing
+new equations in the branches of each |if| expression, i.e.
+
+\begin{spec}
+  if  : Ξ ⊢ t₁ ~ t₂ → Ξ ▷ t₁ >eq true ⊢ u₁ ~ u₂ → Ξ ▷ t₁ >eq false ⊢ v₁ ~ v₂
+      → Ξ ⊢ if t₁ u₁ v₁ ~ if t₂ u₂ v₂
+\end{spec}
+
+We somewhat arbitrarily insert |t₁|, rather than |t₂|, into the equational
+context. From stability of conversion over
+weakening the
+equational context
+(i.e. adding new equations), we find the
+choice here is ultimately irrelevant:
+
+
+\begin{code}
+data WkEqs {Γ} : Eqs Γ → Eqs Γ → Set where
+  ε        : WkEqs • •
+  _⁺_>eq_  : WkEqs Φ Ψ → Tm Γ 𝔹 → Bool → WkEqs (Φ ▷ t >eq b) (Ψ ▷ t >eq b)
+
+wkeq : WkEqs (Ξ ▷ t >eq b) Ξ
+
+_[_]Wk~ : Ψ ⊢ t₁ ~ t₂ → WkEqs Φ Ψ → Φ ⊢ t₁ ~ t₂
+
+swapEqVar  : Ξ ⊢ t₁ ~ t₂ → EqVar (Ξ ▷ t₁ >eq true) u b 
+           → Ξ ▷ t₂ >eq true ⊢ u ~ ⌜ b ⌝𝔹
+swapEqVar t~ ez      = t~ [ wkeq ]Wk~ ∙~ eq ez
+swapEqVar t~ (es e)  = eq (es e)
+\end{code}
+
+%if False
+\begin{code}
+_[_]~ : Ξ ⊢ t₁ ~ t₂ → ∀ (δ : Tms[ q ] Δ Γ) → Ξ [ δ ]Eq ⊢ t₁ [ δ ] ~ t₂ [ δ ]
+
+
+-- I think we need an IH that equational contexts are equivalent...
+
+swapEq : Ξ ⊢ t₁ ~ t₂ → (Ξ ▷ t₁ >eq true) ⊢ u₁ ~ u₂
+       → (Ξ ▷ t₂ >eq true) ⊢ u₁ ~ u₂
+swapEq t~ (eq e)            = swapEqVar t~ e
+swapEq t~ (ƛ u~)            = ƛ swapEq (t~ [ wk ]~) u~
+
+swapEq t~ (if u₁~ u₂~ u₃~)  = {!!}
+  -- if (swapEq t~ u₁~) (swapEq {!   !} {!  u₂~ !}) {!!}
+
+swapEq t~ ⇒β = {!   !}
+swapEq t~ 𝔹β₁ = {!   !}
+swapEq t~ 𝔹β₂ = {!   !}
+swapEq t~ rfl~ = {!   !}
+swapEq t~ (sym~ u~) = {!   !}
+swapEq t~ (u~₁ ∙~ u~₂) = {!   !}
+swapEq t~ (u~₁ · u~₂) = {!   !}
+\end{code}
+%endif
+
+% TODO Find a place for these definitions
+

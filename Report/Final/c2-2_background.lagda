@@ -3,11 +3,12 @@
 {-# OPTIONS --prop --rewriting --termination-depth=10 #-}
 
 open import Utils hiding (Bool; true; false)
-module Report.Final.c3-2_background where
+module Report.Final.c2-2_background where
 
 \end{code}
 %endif
 
+\pagebreak
 \section{Simply Typed Lambda Calculus}
 
 Having established our metatheory informally, it is time to start studying type
@@ -88,18 +89,25 @@ to dodge complications arising from variable capture and α-equivalence.
 For legibility and convienience, when writing
 example programs internal to a particular type theory, we will 
 still use named
-variables, assuming the existence of a scope-checking/renaming algorithm
+variables and elide explicit weakening, 
+assuming the existence of a scope-checking/renaming algorithm
 which can translate to
-de Bruijn style.
+de Bruijn style. When writing such examples we will also separate binding(s) and
+body with ``.'' rather than ``|→|'' as to more clearly
+distinguish object-level abstraction from that of the meta (we will also use 
+a non-bolded |ƛ|-symbol).
 % TODO Citation
 
 Terms embed variables, and are otherwised comprised of the 
 standard introduction and
 elimination rules for |_⇒_|, |_*_|, |_+_|, |𝟙|.
 
-\sideremark{To distinguish applications and abstractions of the meta-theory 
-with those of the object language, we annotate |λ|s with a hat and 
-use the binary operator |_·_| instead of plain juxtaposition.}
+\sideremark{In this report, when notation for various constructs is potentially 
+ambiguous
+between the metatheory and object language, we ensure the meta-level version
+is denoted in bold. We also denote object-level function application with the 
+binary operator |_·_| as opposed plain juxtaposition (though when giving
+example programs, we will sometimes elide it).}
 
 \begin{spec}
 data Tm : Ctx → Ty → Set where
@@ -444,7 +452,7 @@ analagous operation ⟦f⟧ such that the following diagram commutes
 
 Given an equational semantics (\refsec{redconv}), we instead must show that |f| 
 preserves the equivalence,
-and in th case of operational semantics, reduction should
+and in the case of operational semantics, reduction should
 be stable under |f|.
 
 % Soundness of \textit{operations} on syntax (e.g. type-checking 
@@ -471,9 +479,9 @@ context |Γ| to context |Δ| can be interpreted as functions from
 \end{code}
 
 The contravariant ordering of |Sub|'s indices is now justified! |Γ|-terms being
-interpreted into functions from |Γ|-environments makes them contravariant
-functors on environment mappings. This allows us to define the semantic
-action of substitution (i.e. substitution inside the model) by function
+interpreted as functions from |Γ|-environments makes them contravariant
+w.r.t. environment mappings. The semantic action of substitution 
+(i.e. substitution inside the model) is just function
 composition.
 
 \begin{code}
@@ -619,7 +627,7 @@ are equal syntactically).
 \sideremark{Note that we do not enforce that normal forms are subset of
 the original type, which is sometimes
 useful flexibility - see e.g. \sidecite[*9.5]{altenkirch2001normalization}.\\\\
-If we have an embedding |⌜_⌝ : Nfᴬ → A|, then completeness is equivalent to
+If we do have an embedding |⌜_⌝ : Nfᴬ → A|, then completeness is equivalent to
 the property |⌜ norm x ⌝ ≡ x|: if we assume |norm x ≡ norm y|, then
 by congruence |⌜ norm x ⌝ ≡ ⌜ norm y ⌝|, which simplifies to |x ≡ y|.}
 
@@ -631,9 +639,9 @@ mappings from some type, |A|,
 to a type of ``normal forms'', |Nfᴬ|, with decidable equality. 
 
 Soundness here
-is defined as usual (i.e. the |norm| preserves equivalence), while we define
-completeness as the converse property: that that equal normal forms
-implies the objects we started with are equivalent.
+is defined as usual (i.e. the mapping preserves equivalence), while we define
+completeness as the converse property: that equal normal forms
+implies equivalence of the objects we started with.
 
 In the formal definition, we assume |A| is quotiented by equivalence, and
 so soundness is ensured by the definition of quotient types.
@@ -654,7 +662,14 @@ module _ (A : Set) (Nfᴬ : Set)
       compl  : norm x ≡ norm y → x ≡ y
 \end{code}
 
-From normalisation and decidabile equality of normal forms |_≡ᴺᶠ?_|, 
+\sideremark{Perhaps unintuitively, for theories which already have decidable 
+equivalence, we are forced to accept
+the identity mapping as a valid (if trivial) implementation of normalisation.
+We can make sense of this
+situation by viewing normalisation as a strategy/technique for
+deciding equivalence, rather than an objective in-and-of-itself.}
+
+From normalisation and decidable equality of normal forms |_≡ᴺᶠ?_|, 
 we can easily decide equality on |A|.
 
 \begin{spec}

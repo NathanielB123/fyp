@@ -3,7 +3,7 @@
 {-# OPTIONS --prop --rewriting --termination-depth=10 #-}
 
 open import Utils
-module Report.Final.c3-1_background where
+module Report.Final.c2-1_background where
 
 \end{code}
 %endif
@@ -563,6 +563,8 @@ doubleQℤ supr    =
 \end{spec}
 
 %TODO Move cubical discussion to the remark here
+% TODO reference https://github.com/agda/agda/issues/7905 as additional
+% issues with using Cubical
 For technical reasons\remarknote{In short: Agda currently only supports
 quotient types as a special cases of higher-inductive type (HIT)s
 when using the |cubical| extension, which is incompatible with 

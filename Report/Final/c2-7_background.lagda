@@ -341,8 +341,8 @@ elimTm   t  Δ  δ  ρ    = eval t ρ
 elimTms  δ  Θ  σ  ρ    = eval* δ ρ
 \end{code}
 
-From this perspective, we can see the law we need corresponds to preservation
-of type substistitution in the model:
+From this perspective, we can see the law we need corresponds exactly to 
+preservation of type substistitution in the model:
 
 \begin{code}
 _[_]Tyᴾ : PTy Γᴾ A → PTms Δᴾ Γᴾ δ → PTy Δᴾ (A [ δ ]Ty)
@@ -376,7 +376,7 @@ elim-wk  : elimTms (wk {A = A}) ≡ wkᴾ {Aᴾ = elimTy A}
 
 From now on, we assume both the functor laws for |_[_]ℰ| and 
 the above preservation equations hold definitionally. Of
-course, we will need to prove both of these properties
+course, we will need to prove these properties
 propositionally later.
 
 %if False
@@ -557,13 +557,15 @@ and the functor laws for thinning of values/environments. Functor laws for
 thinnings follow by induction on types/contexts and eventually
 (in the |𝔹| base case) on normal/neutral forms.
 
-Preservation of substitution operations require checking the associated 
+Preservation of substitution operations requires checking the associated 
 naturality laws. Staying well-founded is a little tricky: assuming 
 substitution operations all respect some well-founded order,
-we could in principle induct w.r.t. that, though in Agda, well-founded induction
+we could in principle induct w.r.t. that, though in Agda (as we saw in
+\refsec{naive}), well-founded induction
 gets quite ugly. We could also of course pivot to explicit eliminators, via
 which preservation laws would hold definitionally, but we would still have to
-show all naturality equations are preserved. Ultimately I argue these technical
+show all naturality equations are preserved, and we would lose the conciseness
+of pattern-matching. Ultimately I argue these technical
 details are not fundamental to the algorithm/proof.
 
 %TODO
