@@ -220,7 +220,7 @@
 %format ≡⟨′  = "\Varid{=⟨}"
 %format ⟩′   = "\Varid{⟩}"
 
-%format ≡⟨⟩ = "="
+%format ≡⟨⟩ = ≡⟨ refl ⟩≡
 
 
 %format =   = "\colonequiv"
@@ -351,10 +351,13 @@
 %format u>uᴺᶠ   = u>u ᴺᶠ
 %format tu>tuᴺᶠ = tu>tu ᴺᶠ
 %format ≡ᴺᶠ?    = ≡ ᴺᶠ ?
-%format _≡ᴺᶠ?_  = _ ≡ᴺᶠ? _ 
+%format _≡ᴺᶠ?_  = _ ≡ᴺᶠ? _
 %format xᴺᶠ     = x ᴺᶠ
 %format yᴺᶠ     = y ᴺᶠ
 %format vᴺᶠ     = v ᴺᶠ
+
+%format ≡?   = ≡ ?
+%format _≡?_ = _ ≡? _
 
 %format Σ, = "\bm{,}"
 %format _Σ, = _ Σ,
@@ -507,3 +510,4 @@
 %format norm-sound′    = norm-sound
 %format norm-complete′ = norm-complete
 %format pres>′         = pres>
+%format norm-pres′     = norm-pres

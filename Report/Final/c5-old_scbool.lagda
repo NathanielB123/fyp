@@ -5,7 +5,7 @@
 open import Utils hiding (ε)
 open import Utils.IdExtras
 
-module Report.Final.c5-1_scbool where
+module Report.Final.c5-old_scbool where
 
 \end{code}
 %endif

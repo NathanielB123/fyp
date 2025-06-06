@@ -134,8 +134,6 @@ lookup𝒮ℰ (Ξℰ Σ, dⱽ) (fs f)
 _[_]ℰ : Env {Ξ = Ξ} Ξℰ Δ Γ δ → Thin Θ Δ σ → Env Ξℰ Θ Γ (δ ⨾ σ)
 
 postulate
-  -- coeℰ : ∀ Δ~ Γ~ (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) → Env Δ₁ Γ₁ δ₁ → Env Δ₂ Γ₂ δ₂
-
   coe𝒱 : ∀ {ρ : Env {Ξ = Ξ} Ξℰ Δ Γ δ} (A~ : Ty~ rfl~ A₁ A₂)
         → Tm~ Δ~ (A~ [ rfl~ ]Ty~) t₁ t₂
         → Val Ξℰ Γ A₁ Δ δ ρ t₁ → Val Ξℰ Γ A₂ Δ δ ρ t₂
@@ -143,6 +141,12 @@ postulate
 Env Ξℰ Δ •       δ = ⊤
 Env Ξℰ Δ (Γ ▷ A) δ = Σ (Env Ξℰ Δ Γ (π₁ δ))
                    λ ρ → Val Ξℰ Γ A Δ (π₁ δ) ρ (π₂ δ)
+-- I am going to leave this as a hole until I reach a point in the NbE code
+-- when it is necessary. In the standard model, we interpreted convertability
+-- assumptions as propositional equalities. In this NbE algorithm, TRS is
+-- already kinda dealing with the rewrites, so I'm not sure what would be
+-- useful to put here (equations between values seem weird to me, but maybe
+-- that is the way to go)
 Env Ξℰ Δ (Γ ▷ t >eq b) δ 
   = {!!}
 

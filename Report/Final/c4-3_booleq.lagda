@@ -211,7 +211,7 @@ P Γ (A ⇒ B) t
   = ∀ {Δ} (δ : Ren Δ Γ) {u} → P Δ A u → P Δ B ((t [ δ ]) · u)
 \end{code}
 
-The resemblence to |Val| in NbE (\refsec{nbe}) should not be so surprising.
+The resemblance to |Val| in NbE (\refsec{nbe}) should not be so surprising.
 If we naively attempt to prove strong normalisation by direct structural 
 induction on terms, we will again get stuck in the case of application, where
 the LHS and RHS being strongly normalising does not imply that their application
@@ -295,7 +295,7 @@ if₃ p [ δ ]> = {!   !}
 
 From stability of reduction under inverted renamings, we can show that |SN| is
 stable under (forwards) renaming, and therefore computability is also.
-Note that we needed stability w.r.t. inversed renamings to show this because the 
+Note that we needed stability w.r.t. inverted renamings to show this because the 
 reduction itself appears in contravariant position (i.e. left of arrow) in 
 the type of |acc| (intuitively, we are transforming reduction chains
 starting from |t [ δ ]| into reduction chains starting from |t|).
@@ -310,7 +310,7 @@ _[_]P   : P Γ A t → ∀ (δ : Ren Δ Γ) → P Δ A (t [ δ ])
 _[_]Ps  : Ps Δ Γ δ → ∀ (σ : Ren Θ Δ) → Ps Θ Γ (δ ⨾ σ)
 \end{code}
 
-By analagous reasoning, strong normalisation is also stable under inverting
+By analogous reasoning, strong normalisation is also stable under inverting
 substitution.
 
 \begin{code}

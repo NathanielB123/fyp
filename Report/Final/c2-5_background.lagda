@@ -22,13 +22,13 @@ it is possible to simultaneously work with quotient types up to equivalence
 when convenient and then go down to a 
 raw syntactic level when required. The key idea behind 2LTT 
 is to have both an
-``inner'' and ``outer'' propositional equality, which differ in
+\emph{inner} and \emph{outer} propositional equality, which differ in
 their degrees of extensionality.
 Indeed some exploration has been done
-on using this framework to formalise ``elaboration'' 
+on using this framework to formalise \emph{elaboration} 
 \sidecite[*-16]{kovacs2024elab}, a somewhat inherently syntactic 
 algorithm.\\\\
-2LTT  also comes with some restrictions
+2LTT also comes with some restrictions
 on eliminators mapping between the two levels though, which I expect to be
 problematic in proving e.g. strong normalisation.
 A pertinent question arises here: why not just scrap intrinsically-typed
@@ -127,7 +127,7 @@ IF[]   :  IF t A B [ δ ]Ty
 
 The transport here is essential. |t [ δ ]| only has type |𝔹 [ δ ]Ty|, but
 |IF| requires a term of type |𝔹|. Typeability in dependent type theory must
-account for convertion. We can achieve this by adding constructors
+account for conversion. We can achieve this by adding constructors
 to each indexed sort (|Ty|, |Tm| and |Tms|)
 corresponding to coercion over the equivalence:
 
@@ -147,7 +147,7 @@ corresponding to coercion over the equivalence:
 \end{code}
 
 The final ingredient to make this work
-is ``coherence'': coercion must respect the equivalence.
+is \emph{coherence}: coercion must respect the equivalence.
 
 \begin{code}
   cohTy   : Ty~   Γ~  A (coeTy Γ~ A)
@@ -175,7 +175,7 @@ if[]  :   if A t u v [ δ ]
 If substitution instead computed recursively, 
 |𝔹[] : 𝔹 [ δ ]Ty ≡ 𝔹|, |TT[] : TT [ δ ] ≡ TT|
 and |FF[] : FF [ δ ] ≡ FF| would hold
-definitionally, enabling the substatially simpler
+definitionally, enabling the substantially simpler
 \begin{spec}
 if[]  :   if A t u v [ δ ] 
       ≡[ Tm≡ refl (sym (<>-commTy {B = A})) ]≡
@@ -205,7 +205,7 @@ finished.
 
 Luckily, there has been some significant progress recently
 towards taking a well-understood explicit substitution syntax as primitive and 
-then ``strictifying''
+then \emph{strictifying}
 various substitution equations, as to construct something easier to work with.
 \sidecite{kaposi2023towards} illustrates one strategy towards achieving this, 
 where
@@ -257,7 +257,7 @@ The ultimate goal of this project is to explore new type theories with
 local equational assumptions, not to provide a watertight Agda mechanisation.
 Therefore, in the proofs of normalisation, where, frankly,
 we need all the help we can get,
-I axiomatise ``strict'', implicit-substitution syntaxes,
+I axiomatise \emph{strict}, implicit-substitution syntaxes,
 using a combination of |POSTULATE|s, |REWRITE| rules, |NON_TERMINATING| and
 |NON_COVERING| definitions, and even a new flag which re-enables
 \sidecite{amelia2023rewrite} (these are of course very unsafe features, but
@@ -285,7 +285,7 @@ data Var where
   vs : Var Γ B → Var (Γ , A) (B [ wk ]Ty)
 \end{spec}
 
-We also use ``pointful'' application:
+We also return to \emph{pointful} application:
 
 \begin{spec}
 _·_  : Tm Γ (Π A B) → ∀ (u : Tm Γ A) → Tm Γ (B [ < u > ]Ty)

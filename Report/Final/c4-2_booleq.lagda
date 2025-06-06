@@ -171,7 +171,7 @@ _>β_ : Tm Γ → Tm Γ → Set
 _>β_ = _[ β-step ]>_
 \end{code}
 
-Spotaneous reduction in this section refers to the relation which only
+Spontaneous reduction in this section refers to the relation which only
 rewrites terms to closed Booleans (as long as the terms not already
 syntactically equal to |TT| or |FF|) - it does not, by default, include
 |β|-reductions as well:
@@ -255,13 +255,13 @@ We can prove this by checking all the cases for individual |nd-step|s/single
 Boolean rewrites:
 \begin{itemize}
   \item When the step is a |⇒β| contraction, then the Boolean rewrite
-        must have occured inside the lambda body or the argument, and so we can
+        must have occurred inside the lambda body or the argument, and so we can
         instead β-reduce before the rewrite and then rewrite to get back to 
         the same
         term (potentially multiple times, given the argument could have 
         been duplicated).
   \item When the step is a non-deterministic choice, the Boolean
-        rewrite must have occured inside the scrutinee, LHS or RHS of the if
+        rewrite must have occurred inside the scrutinee, LHS or RHS of the if
         expression. We can instead perform the non-deterministic choice
         before the rewrite and then either get back to the term immediately
         (if the rewrite applied to the scrutinee or the dropped branch of
@@ -283,13 +283,13 @@ _[_]𝔹>* : t >𝔹* u → δ >Tms𝔹* σ → t [ δ ] >𝔹* u [ σ ]
 𝔹/nd-comm (l· (ƛ p))        ⇒β  
   = _ Σ, ⇒β Σ, ⟪ p ⟫* [ refl ]𝔹>*
 𝔹/nd-comm (·r {t = ƛ t} p)  ⇒β  
-  = _ Σ, ⇒β Σ, ε {x = t} [ refl {δ = id} , (p ∷ ε) ]𝔹>*
-𝔹/nd-comm (if₁ p)  ndl = _ Σ, ndl  Σ, ε
-𝔹/nd-comm (if₂ p)  ndl = _ Σ, ndl  Σ, (p ∷ ε)
-𝔹/nd-comm (if₃ p)  ndl = _ Σ, ndl  Σ, ε
-𝔹/nd-comm (if₁ p)  ndr = _ Σ, ndr  Σ, ε
-𝔹/nd-comm (if₂ p)  ndr = _ Σ, ndr  Σ, ε 
-𝔹/nd-comm (if₃ p)  ndr = _ Σ, ndr  Σ, (p ∷ ε)
+  = _ Σ, ⇒β Σ, rfl* {x = t} [ refl {δ = id} , (p ∷ rfl*) ]𝔹>*
+𝔹/nd-comm (if₁ p)  ndl = _ Σ, ndl  Σ, rfl*
+𝔹/nd-comm (if₂ p)  ndl = _ Σ, ndl  Σ, ⟪ p ⟫*
+𝔹/nd-comm (if₃ p)  ndl = _ Σ, ndl  Σ, rfl*
+𝔹/nd-comm (if₁ p)  ndr = _ Σ, ndr  Σ, rfl*
+𝔹/nd-comm (if₂ p)  ndr = _ Σ, ndr  Σ, rfl*
+𝔹/nd-comm (if₃ p)  ndr = _ Σ, ndr  Σ, ⟪ p ⟫*
 \end{code}
 
 We can also prove that spontaneous reduction alone is strongly normalising by
@@ -331,7 +331,7 @@ snnd!> p ndᴬ        (acc !ᴬ)  (inr q)
   = snnd! (p <∶ !𝔹> q) ndᴬ (!ᴬ q)
 
 snnd→snnd! : SN _>nd_ t → SN _>nd!_ t
-snnd→snnd! ndᴬ = snnd! ε ndᴬ (sn! _)
+snnd→snnd! ndᴬ = snnd! rfl* ndᴬ (sn! _)
 \end{code}
 
 Finally, we recover our original goal

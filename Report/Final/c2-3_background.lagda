@@ -2,7 +2,7 @@
 \begin{code}
 {-# OPTIONS --prop --rewriting --mutual-rewriting #-}
 
-open import Utils hiding (ε; _∘_)
+open import Utils hiding (_∘_)
 open import Utils.IdExtras
 
 module Report.Final.c2-3_background where
@@ -120,7 +120,7 @@ postulate
   ⨾⨾   : (δ ⨾ σ) ⨾ γ ≡ δ ⨾ (σ ⨾ γ)
 \end{code}
 
-\sidedef[*1]{Terminal Object}{An object |𝟙 : Ob| 
+\sidedef{Terminal Object}{An object |𝟙 : Ob| 
 in a category |C| with a family of morphisms |Hom| is
 terminal if there is a unique morphism 
 from every other object in the category, |x : Ob|, to |𝟙|, |! : Hom x 𝟙|.
@@ -202,8 +202,10 @@ postulate
   [][]  : t [ δ ] [ σ ] ≡ t [ δ ⨾ σ ]
 \end{code}
 
-To support binding, we must support a context extension 
-operation |_▷_ : Ctx → Ty → Ctx|, and an associated way to
+To support binding, we must equip our CwF with 
+\emph{context comprehension}, including a context extension 
+operation |_▷_ : Ctx → Ty → Ctx|, 
+and an associated way to
 extend substitutions a fresh term to replace the new variable with.
 
 \begin{code}
@@ -215,7 +217,7 @@ extend substitutions a fresh term to replace the new variable with.
 
 We call laws like ``|,⨾|'' which cover how the various constructs of type theory
 interact with 
-the functor operations, ``naturality'' laws. We can express these laws as
+the functor operations, \emph{naturality} laws. We can express these laws as
 commutative diagrams, e.g.
 
 \begin{tikzcd}[scaleedge cd=1.25, sep=huge]
@@ -226,13 +228,14 @@ commutative diagrams, e.g.
 \end{tikzcd}
 
 Given our intuition of parallel substitutions as lists of terms, we 
-should expect an isomorphism:
+should expect a (natural) isomorphism:
 \begin{spec}
 Tms Δ (Γ ▷ A) ≃ Tms Δ Γ × Tm Δ A
 \end{spec}
 This can be witnessed either directly with projection operations, or we
 can take single-weakening and the zero de Bruijn variable as primitive
-(|wk ≡' π₁ id|, |vz ≡' π₂ id|) \sidecite[*-2]{castellan2019cwf}.
+(|wk = π₁ id| and |vz = π₂ id|, or
+|π₁ δ = wk ⨾ δ| and |π₂ δ = vz [ δ ]|) \sidecite[*-2]{castellan2019cwf}.
 
 \begin{widepar}
 \begin{minipage}{0.5\textwidth}
@@ -240,8 +243,10 @@ can take single-weakening and the zero de Bruijn variable as primitive
   π₁   : Tms Δ (Γ ▷ A) → Tms Δ Γ
   π₂   : Tms Δ (Γ ▷ A) → Tm Δ A
   ▷η   : δ ≡ π₁ δ , π₂ δ
-  π₁,  : π₁ (δ , t) ≡ δ
-  π₂,  : π₂ (δ , t) ≡ t
+  π₁,  : π₁ (δ  ,  t) ≡ δ
+  π₂,  : π₂ (δ  ,  t) ≡ t
+  π₁⨾  : π₁ (δ  ⨾  σ) ≡ π₁ δ ⨾ σ
+  π₂⨾  : π₂ (δ  ⨾  σ) ≡ π₂ δ [ σ ]
 \end{code}
 \end{minipage}
 \begin{minipage}{0.5\textwidth}
@@ -274,7 +279,7 @@ We can extend this syntax with functions by adding the relevant type former
 and
 introduction/elimination rules. Rather than the usual rule
 for application, it is convenient in explicit substitution syntaxes to 
-take a more ``pointfree'' combinator as primitive, which directly
+take a more \emph{pointfree} combinator as primitive, which directly
 inverts |ƛ_|.
 
 %if False

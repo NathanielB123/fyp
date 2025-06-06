@@ -14,7 +14,7 @@ infixl 6  _·_
 infix  7  `_
 
 
-infix 4 _~_ _⊢_~_ _⊢_>′_ _⊢_>′*_ _⊢_>_ _⊢_>*_ _>!_ _Eqs>!_ EqsClosure
+infix 4 _~_ _⊢_~_ _⊢_>′_ _⊢_>′*_ _⊢_>_ _⊢_>*_ _>!_
 infixr 4 _∙~_
 \end{code}
 %endif
@@ -24,14 +24,11 @@ infixr 4 _∙~_
 \chapter{STLC Modulo Equations}
 \labch{simply}
 
-
-
-
-
 \section{STLC with Boolean Equations}
+\labsec{simplebooleq}
 
 We begin our exploration of \SC or local equality reflection by
-studying convertability of STLC terms modulo equations.
+studying convertibility of STLC terms modulo equations.
 We will start with an extremely restricted set of equations, being only
 those of the form |t == b| where |t| is a |𝔹|-typed term and |b| is a closed
 Boolean.
@@ -178,14 +175,11 @@ Conversion relative to a set of in-scope equations can then be defined
 inductively.
 
 \begin{code}
-data EqVar :  Eqs Γ → Tm Γ 𝔹 → Bool → Set 
-data _⊢_~_ (Ξ : Eqs Γ) : Tm Γ A → Tm Γ A → Set
-
-data EqVar where
+data EqVar :  Eqs Γ → Tm Γ 𝔹 → Bool → Set where
   ez  : EqVar (Ξ ▷ t >eq b) t b
   es  : EqVar Ξ t b₁ → EqVar (Ξ ▷ u >eq b₂) t b₁
   
-data _⊢_~_ Ξ where
+data _⊢_~_ (Ξ : Eqs Γ) : Tm Γ A → Tm Γ A → Set where
     -- Equivalence
   rfl~ : Ξ ⊢ t ~ t
   sym~ : Ξ ⊢ t₁ ~ t₂ → Ξ ⊢ t₂ ~ t₁
@@ -209,6 +203,14 @@ data _⊢_~_ Ξ where
 Note that the rule for |if| here is not ``smart'' in the sense of \SC: we
 do not introduce equations on the scrutinee in the branches.
 
+\begin{spec}
+  if  : Ξ ⊢ t₁ ~ t₂ → Ξ ▷ t₁ >eq true ⊢ u₁ ~ u₂ → Ξ ▷ t₁ >eq false ⊢ v₁ ~ v₂
+      → Ξ ⊢ if t₁ u₁ v₁ ~ if t₂ u₂ v₂
+\end{spec}
+
+We will study the effect of locally introducing equations with this rule later
+in section \refsec{localext}.
+
 % Setoid reasoning combinators
 
 %if False
@@ -224,6 +226,7 @@ pattern _∎~ x = rfl~ {t = x}
 Before moving on, we give a couple important definitions.
 
 \begin{definition}[Definitional Inconsistency] \phantom{a}
+\labdef{defincon}
 
 We define definitionally inconsistent equational contexts
 % I don't think we have a definition of this yet - should probably go
@@ -252,7 +255,6 @@ collapse {u = u} {v = v} tf~ =
 \end{definition}
 
 \begin{definition}[Equational Context Equivalence] \phantom{a}
-\labdef{defincon}
 
 We define equivalence of equational contexts observationally: two equational
 contexts |Ξ₁| and |Ξ₂| are equivalent if they equate the same sets of
@@ -270,14 +272,22 @@ record _Eqs~_ (Ξ₁ Ξ₂ : Eqs Γ) : Set where field
 open _Eqs~_
 
 rflEqs~ : Ξ Eqs~ Ξ
+rflEqs~ .to   t~ = t~
+rflEqs~ .from t~ = t~
+
 symEqs~ : Ξ₁ Eqs~ Ξ₂ → Ξ₂ Eqs~ Ξ₁
+symEqs~ Ξ~ .to   = Ξ~ .from
+symEqs~ Ξ~ .from = Ξ~ .to
+
 _∙Eqs~_ : Ξ₁ Eqs~ Ξ₂ → Ξ₂ Eqs~ Ξ₃ → Ξ₁ Eqs~ Ξ₃
+(Ξ~₁ ∙Eqs~ Ξ~₂) .to    t~ = Ξ~₂ .to    (Ξ~₁ .to    t~)
+(Ξ~₁ ∙Eqs~ Ξ~₂) .from  t~ = Ξ~₁ .from  (Ξ~₂ .from  t~)
 \end{code}
 %endif
 
 \subsection{Difficulties with Reduction}
 
-Rewriting gives a nice intution for the operational behaviour of 
+Rewriting gives a nice intuition for the operational behaviour of 
 these
 equations (in the context |Γ ▷ t >eq true|, |t| should reduce to
 |TT|), but declarative conversion being an equivalence by definition
@@ -309,16 +319,18 @@ data _⊢_>′_ (Ξ : Eqs Γ) : Tm Γ A → Tm Γ A → Set where
 \begin{code}
 _⊢_>′*_ : Eqs Γ → Tm Γ A → Tm Γ A → Set 
 Ξ ⊢ t₁ >′* t₂ = t₁ [ Ξ ⊢_>′_ ]* t₂
+
+postulate
 \end{code}
 %endif
 
 we do at least stay conservative over conversion
 
 \begin{code}
-pres>′ : Ξ ⊢ t₁ >′ t₂ → Ξ ⊢ t₁ ~ t₂
+  pres>′ : Ξ ⊢ t₁ >′ t₂ → Ξ ⊢ t₁ ~ t₂
 \end{code}
 
-we find that the induced notion of algorithmic convertability is much weaker
+we find that the induced notion of algorithmic convertibility is much weaker
 that our declarative specification. Note that the LHS
 terms in contextual equations need not themselves be irreducible, so e.g.
 in the equational context |• ▷ if TT TT v >eq false|, we can derive 
@@ -380,7 +392,7 @@ data _⊢_>_ (Ξ : Eqs Γ) : Tm Γ A → Tm Γ A → Set where
 _⊢_>*_ : Eqs Γ → Tm Γ A → Tm Γ A → Set 
 Ξ ⊢ t₁ >* t₂ = t₁ [ Ξ ⊢_>_ ]* t₂
 
-pres>* : Ξ ⊢ t₁ >* t₂ → Ξ ⊢ t₁ ~ t₂
+postulate pres>* : Ξ ⊢ t₁ >* t₂ → Ξ ⊢ t₁ ~ t₂
 \end{code}
 %endif
 
@@ -408,6 +420,7 @@ replacing subterms in some large expression with |TT| or |FF| can unlock new
 reductions, so well-foundedness is not completely trivial.
 
 \section{Normalisation via Completion}
+\labsec{simplenormcompl}
 
 In the prior section, we ended by gesturing at a reduction relation similar to
 |_⊢_>_|, but without a pre-condition on rewriting. We will now make this
@@ -468,6 +481,13 @@ Complete : Eqs Γ → Set
 Complete Ξ = AllStk Ξ Ξ
 \end{code}
 
+%if False
+\begin{code}
+postulate 
+  _[_]Eqsᶜ : Complete Ξ → ∀ (δ : Ren Δ Γ) → Complete (Ξ [ δ ]Eq) 
+\end{code} 
+%endif
+
 Under complete equational contexts, there are no critical pairs (terms do not
 overlap), so we can prove that reduction is confluent (ordinary
 β-reduction cases are dealt with by switching to parallel reduction
@@ -475,8 +495,8 @@ overlap), so we can prove that reduction is confluent (ordinary
 the term is otherwise irreducible from |Stk (Ξ - e) t|).
 
 \begin{code}
-compl-confl  : Complete Ξ → Ξ ⊢ t >* u → Ξ ⊢ t >* v
-             → Σ⟨ w ∶ Tm Γ A ⟩× (Ξ ⊢ u >* w × Ξ ⊢ v >* w)
+  compl-confl  : Complete Ξ → Ξ ⊢ t >* u → Ξ ⊢ t >* v
+              → Σ⟨ w ∶ Tm Γ A ⟩× (Ξ ⊢ u >* w × Ξ ⊢ v >* w)
 \end{code} 
 
 Therefore, we can define algorithmic conversion and prove that declarative
@@ -498,7 +518,6 @@ open _⊢_<~>_
 %endif
 
 \begin{code}
-
 <~>-trans : Complete Ξ → Ξ ⊢ t₁ <~> t₂ → Ξ ⊢ t₂ <~> t₃ → Ξ ⊢ t₁ <~> t₃
 <~>-trans Ξᶜ (t₁> ∣ t₂>) (t₂>′ ∣ t₃>) 
   using w Σ, t₁>′ Σ, t₃>′ ← compl-confl Ξᶜ t₂> t₂>′
@@ -507,14 +526,14 @@ open _⊢_<~>_
 <~>-pres : Complete Ξ → Ξ ⊢ t₁ ~ t₂ → Ξ ⊢ t₁ <~> t₂
 \end{code}
 
-Algorithmic of convertability of stuck terms implies syntactic equality 
+Algorithmic of convertibility of stuck terms implies syntactic equality 
 (|Stk<~>|), so 
 we can further derive uniqueness of normal forms (stuck terms under complete
 equational context reduction).
 
 \begin{code}
 Stk>* : Stk Ξ t₁ → Ξ ⊢ t₁ >* t₂ → t₁ ≡ t₂
-Stk>* ¬t₁> ε              = refl
+Stk>* ¬t₁> rfl*           = refl
 Stk>* ¬t₁> (t₁> ∶> t₁>*)  = ⊥-elim (¬t₁> _ t₁>)
 
 Stk<~> : Stk Ξ t₁ → Stk Ξ t₂ → Ξ ⊢ t₁ <~> t₂ → t₁ ≡ t₂
@@ -526,28 +545,43 @@ nf-uniq Ξᶜ ¬t₁> ¬t₂> t~ = Stk<~> ¬t₁> ¬t₂> (<~>-pres Ξᶜ t~)
 
 %if False
 \begin{code}
-<~>-pres Ξᶜ rfl~ = {!   !}
-<~>-pres Ξᶜ (sym~ t~) = {!   !}
-<~>-pres Ξᶜ (t~₁ ∙~ t~₂) = <~>-trans Ξᶜ (<~>-pres Ξᶜ t~₁) (<~>-pres Ξᶜ t~₂)
-<~>-pres Ξᶜ ⇒β = {!   !}
-<~>-pres Ξᶜ 𝔹β₁ = {!   !}
-<~>-pres Ξᶜ 𝔹β₂ = {!   !}
-<~>-pres Ξᶜ (eq x) = {!   !}
-<~>-pres Ξᶜ (ƛ t~) = {!   !}
-<~>-pres Ξᶜ (t~ · t~₁) = {!   !}
-<~>-pres Ξᶜ (if t~ t~₁ t~₂) = {!   !}
+postulate
+  ƛ<~>   : (Ξ [ wk ]Eq) ⊢ t₁ <~> t₂ → Ξ ⊢ (ƛ t₁) <~> (ƛ t₂)
+  ·<~>   : Ξ ⊢ t₁ <~> t₂ → Ξ ⊢ u₁ <~> u₂ → Ξ ⊢ (t₁ · u₁) <~> (t₂ · u₂)
+  if<~>  : Ξ ⊢ t₁ <~> t₂ → Ξ ⊢ u₁ <~> u₂ → Ξ ⊢ v₁ <~> v₂
+         → Ξ ⊢ if t₁ u₁ v₁ <~> if t₂ u₂ v₂
+  Complete¬𝔹 : Complete Ξ → EqVar Ξ t b → ¬is 𝔹? t
 
-compl¬𝔹 : Complete Ξ → EqVar Ξ t b → ¬is 𝔹? t
+<~>-sym : Ξ ⊢ t₁ <~> t₂ → Ξ ⊢ t₂ <~> t₁
+<~>-sym (t₁> ∣ t₂>) = t₂> ∣ t₁>
+
+<~>-pres Ξᶜ rfl~ = rfl* ∣ rfl*
+<~>-pres Ξᶜ (sym~ t~) = <~>-sym (<~>-pres Ξᶜ t~)
+<~>-pres Ξᶜ (t~₁ ∙~ t~₂) = <~>-trans Ξᶜ (<~>-pres Ξᶜ t~₁) (<~>-pres Ξᶜ t~₂)
+<~>-pres Ξᶜ ⇒β = ⟪ ⇒β ⟫* ∣ rfl*
+<~>-pres Ξᶜ 𝔹β₁ = ⟪ 𝔹β₁ ⟫* ∣ rfl*
+<~>-pres Ξᶜ 𝔹β₂ = ⟪ 𝔹β₂ ⟫* ∣ rfl*
+<~>-pres Ξᶜ (eq i) = ⟪ rw (Complete¬𝔹 Ξᶜ i) i ⟫* ∣ rfl*
+<~>-pres Ξᶜ (ƛ t~) = ƛ<~> (<~>-pres (Ξᶜ [ wk ]Eqsᶜ) t~)
+<~>-pres Ξᶜ (t~ · u~) = ·<~> (<~>-pres Ξᶜ t~) (<~>-pres Ξᶜ u~)
+<~>-pres Ξᶜ (if t~ u~ v~) 
+  = if<~> (<~>-pres Ξᶜ t~) (<~>-pres Ξᶜ u~) (<~>-pres Ξᶜ v~)
 \end{code}
 %endif
 
 We now specify the completion algorithm as a function that completes equational
-contexts whiile preserving equivalence.
+contexts while preserving equivalence.
+
+%if False
+\begin{code}
+postulate
+\end{code}
+%endif
 
 \begin{code}
-complete′        : Eqs Γ → Eqs Γ
-complete-pres′   : Ξ Eqs~ complete′ Ξ
-complete-compl′  : Complete (complete′ Ξ) 
+  complete′        : Eqs Γ → Eqs Γ
+  complete-pres′   : Ξ Eqs~ complete′ Ξ
+  complete-compl′  : Complete (complete′ Ξ) 
 \end{code}
 
 Under complete equational contexts |Ξ|, we have shown that 
@@ -561,6 +595,8 @@ terms w.r.t. |Ξ ⊢_>eq_|.
 \begin{code}
 ≡~ : t₁ ≡ t₂ → Ξ ⊢ t₁ ~ t₂
 ≡~ refl = rfl~
+
+postulate
 \end{code}
 %endif
 
@@ -569,39 +605,40 @@ terms w.r.t. |Ξ ⊢_>eq_|.
 equality on first-order datatypes.}
 
 \begin{code}
--- |reduce| fully reduces terms w.r.t. |_⊢_>_|
-reduce          : Eqs Γ → Tm Γ A → Tm Γ A
-reduce-reduces  : Ξ ⊢ t >* reduce Ξ t 
-reduce-Stk      : Stk Ξ (reduce Ξ t)
-
-norm : Eqs Γ → Tm Γ A → Tm Γ A
-norm Ξ t = reduce (complete′ Ξ) t
+  -- |reduce| fully reduces terms w.r.t. |_⊢_>_|
+  reduce          : Eqs Γ → Tm Γ A → Tm Γ A
+  reduce-reduces  : Ξ ⊢ t >* reduce Ξ t 
+  reduce-Stk      : Stk Ξ (reduce Ξ t)
+\end{code}
+\begin{code}
+norm′ : Eqs Γ → Tm Γ A → Tm Γ A
+norm′ Ξ t = reduce (complete′ Ξ) t
 
 reduce-pres : Ξ ⊢ t ~ reduce Ξ t
 reduce-pres = pres>* reduce-reduces
 
-norm-sound : Ξ ⊢ t₁ ~ t₂ → norm Ξ t₁ ≡ norm Ξ t₂
-norm-sound {Ξ = Ξ} {t₁ = t₁} {t₂ = t₂} t~
+norm-sound′ : Ξ ⊢ t₁ ~ t₂ → norm′ Ξ t₁ ≡ norm′ Ξ t₂
+norm-sound′ {Ξ = Ξ} {t₁ = t₁} {t₂ = t₂} t~
   =  nf-uniq complete-compl′ reduce-Stk reduce-Stk (
-     norm Ξ t₁
+     norm′ Ξ t₁
      ~⟨ sym~ reduce-pres ⟩~
      t₁ 
      ~⟨ complete-pres′ .to t~ ⟩~
      t₂
      ~⟨ reduce-pres ⟩~
-     norm Ξ t₂ ∎~)
+     norm′ Ξ t₂ ∎~)
 
-norm-pres : Ξ ⊢ t ~ norm Ξ t 
-norm-pres = complete-pres′ .from reduce-pres
+norm-pres′ : Ξ ⊢ t ~ norm′ Ξ t 
+norm-pres′ = complete-pres′ .from reduce-pres
 
-norm-compl : norm Ξ t₁ ≡ norm Ξ t₂ → Ξ ⊢ t₁ ~ t₂
-norm-compl {Ξ = Ξ} {t₁ = t₁} {t₂ = t₂} t≡ = 
+norm-compl′ : norm′ Ξ t₁ ≡ norm′ Ξ t₂ → Ξ ⊢ t₁ ~ t₂
+norm-compl′ {Ξ = Ξ} {t₁ = t₁} {t₂ = t₂} t≡ = 
   t₁
-  ~⟨ norm-pres ⟩~
-  norm Ξ t₁
+  ~⟨ norm-pres′ ⟩~
+  norm′ Ξ t₁
   ~⟨ ≡~ t≡ ⟩~ 
-  norm Ξ t₂
-  ~⟨ sym~ norm-pres ⟩~
+  norm′ Ξ t₂
+  ~⟨ sym~ norm-pres′ ⟩~
   t₂ ∎~
 \end{code}
 
@@ -611,9 +648,17 @@ Specifically, it is provable that in all equational contexts satisfying
 |Complete|, deriving |Ξ ⊢ TT ~ FF| is impossible, so clearly completion
 cannot preserve context equivalence in these cases.
 
+%if False
 \begin{code}
-complete-not-incon : Complete Ξ → ¬ Ξ ⊢ TT ~ FF
+postulate
+\end{code}
+%endif
 
+\begin{code}
+  complete-not-incon : Complete Ξ → ¬ Ξ ⊢ TT ~ FF
+\end{code}
+
+\begin{code}
 contradiction : ⊥
 contradiction 
   = complete-not-incon (complete-compl′ {Ξ = Ξ⊥}) (complete-pres′ .to (eq ez))
@@ -653,16 +698,23 @@ Nf : ∀ Γ (Ξ : Eqs Γ) → Ty → Complete? Ξ → Set
 Nf Γ Ξ A (compl Ξ′ _ _)  = Σ⟨ t ∶ Tm Γ A ⟩× Stk Ξ′ t
 Nf Γ Ξ A (!! _)          = ⊤
 
-norm′           : ∀ (Ξ : Eqs Γ) → Tm Γ A → Nf Γ Ξ A (complete Ξ) 
-norm-sound′     : Ξ ⊢ t₁ ~ t₂ → norm Ξ t₁ ≡ norm Ξ t₂
-norm-complete′  : norm Ξ t₁ ≡ norm Ξ t₂ → Ξ ⊢ t₁ ~ t₂
+norm           : ∀ (Ξ : Eqs Γ) → Tm Γ A → Nf Γ Ξ A (complete Ξ) 
+\end{code}
+%if False
+\begin{code}
+postulate
+\end{code}
+%endif
+\begin{code}
+  norm-sound     : Ξ ⊢ t₁ ~ t₂ → norm Ξ t₁ ≡ norm Ξ t₂
+  norm-complete  : norm Ξ t₁ ≡ norm Ξ t₂ → Ξ ⊢ t₁ ~ t₂
 \end{code}
 
 Normalisation can then be implemented as before in the case completion succeeds
 (i.e. returns |compl ...|) or otherwise can just return |tt|.
 
 \begin{code}
-norm′ Ξ t with complete Ξ
+norm Ξ t with complete Ξ
 ... | compl Ξ′ _ _  = reduce Ξ′ t Σ, reduce-Stk
 ... | !! _          = tt
 \end{code}
@@ -677,3 +729,13 @@ context). |complete| then can be implemented by repeatedly reducing terms,
 with termination justified by extending |_>!_| lexicographically over the
 % TODO: We have written some of the Agda for this, might be worth adding
 equational context.
+
+%if False
+\begin{code}
+-- TODO: I want to eventually put a real implementation of |complete| here
+-- in terms of |reduce| - I don't think it will be too hard.
+postulate complete-impl : ∀ (Ξ : Eqs Γ) → Complete? Ξ
+
+complete = complete-impl
+\end{code}
+%endif

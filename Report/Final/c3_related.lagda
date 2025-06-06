@@ -816,8 +816,10 @@ Before we get into the meat of the content in this report, we make a few more
 general observations about \SC that motivate the coming chapters.
 
 \subsection{Smart Case is Local Equality Reflection}
+\labsec{screflect}
 
 \subsubsection{Local Equality Reflection}
+\labsec{loceqreflect}
 
 Recall the equality reflection rule from ETT
 

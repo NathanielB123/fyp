@@ -7,7 +7,7 @@ open import Utils.IdExtras
 
 open import Dependent.Standard.Strict
 
-module Report.Final.c3-7_background where
+module Report.Final.c2-7_background where
 
 \end{code}
 %endif
@@ -42,7 +42,7 @@ Unfortunately, multiple things go wrong here:
   The case for |A| can be
   fixed by relying on how thinnings do not structurally alter
   (substitution-normal) types in a meaningful way. However, |B [ δ , u ]| is 
-  harder In the presense of large elimination \refremark{condisj}, there is no
+  harder In the presence of large elimination \refremark{condisj}, there is no
   easy structurally-derived order on types which is
   also stable w.r.t. substitution\remarknote{
   Consider e.g. recursing on a natural number to build an iterated |Π|-types,
@@ -98,7 +98,7 @@ eval*  : ∀ δ (ρ : Env Θ Δ σ) → Env Θ Γ (δ ⨾ σ)
 \end{code}
 
 Given we are indexing values by the evaluated term, it is convenient to also
-index noral forms by the normalised term (ultimately, working up to conversion,
+index normal forms by the normalised term (ultimately, working up to conversion,
 any term which happens to be convertible to the normal form).
 
 \begin{code}
@@ -195,8 +195,8 @@ _∋_[_]𝒱 : ∀ A {t} → Val Γ A Δ δ ρ t → ∀ (σᵀʰ : Thin Θ Δ �
 %endif
 
 \sideremark{As in STLC (\refremark{funvalnat}), we technically should enforce 
-naturality of |Π|-typed values here. To keep the presentation simpler, we skip
-this for now.}
+naturality of |Π|-typed values here. To keep the presentation simpler, we again
+skip this.}
 
 \begin{code}
 if-Val : ∀ Γ A B Δ δ (ρ : Env Δ Γ δ) {u[]} 
@@ -221,7 +221,7 @@ We also enforce |η|-equality of functions this time by embedding neutrals
 only at |𝔹| and stuck |IF| types. This will slightly simplify the case
 in the fundamental theorem for function application, at the cost of making
 the embedding of neutrals into values more complicated. We call this
-embedding operation ``unquoting'', and define it mutually with |qval|.
+embedding operation \emph{unquoting}, and define it mutually with |qval|.
 
 \begin{code}
 uval : ∀ A {t} → Ne Δ (A [ δ ]Ty) t → Val Γ A Δ δ ρ t
@@ -265,8 +265,9 @@ identity thinning, |eval t ρ idᵀʰ (eval u ρ)| but hit two different
 type errors:
 \begin{itemize}
   \item First of all, |eval t ρ idᵀʰ| expects a value in the environment
-        |ρ [ idᵀʰ ]ℰ|. We can separately prove the identity law for
-        values and environments to account for this discrepency.
+        |ρ [ idᵀʰ ]ℰ|, rather than |ρ|. We can separately prove the identity 
+        law for thinning of
+        values and environments to account for this discrepancy.
   \item The overall type of the application ends up as
         \begin{spec}
         Val (Γ ▷ A) B Δ (δ , (u [ δ ])) (ρ Σ, eval u ρ) ((t [ δ ]) · (u [ δ ]))
@@ -303,7 +304,7 @@ module _ where
 \end{code}
 %endif
 
-and we instantiate these as follows
+and in the case of evaluation, we instantiate these as follows
 
 \begin{code}
   NbE : Motives 
@@ -314,7 +315,7 @@ and we instantiate these as follows
   NbE .PTms  Δᴾ  Γᴾ  δ  = ∀ Θ σ (ρ : Δᴾ Θ σ) → Γᴾ Θ (δ ⨾ σ)
 \end{code}
 
-So that, modulo reordering of arguments, these match the types of
+such that, modulo reordering of arguments, these match the types of
 |Env|, |Val|, |eval| and |eval*|
 
 %if False
@@ -330,7 +331,7 @@ variable
 \begin{code}
 elimCtx  : ∀ Γ  → PCtx Γ
 elimTy   : ∀ A  → PTy (elimCtx Γ) A
-elimVar  : ∀ i → PVar (elimCtx Γ) (elimTy A) i
+elimVar  : ∀ i  → PVar (elimCtx Γ) (elimTy A) i
 elimTm   : ∀ t  → PTm (elimCtx Γ) (elimTy A) t
 elimTms  : ∀ δ  → PTms (elimCtx Δ) (elimCtx Γ) δ
 
@@ -341,8 +342,8 @@ elimTm   t  Δ  δ  ρ    = eval t ρ
 elimTms  δ  Θ  σ  ρ    = eval* δ ρ
 \end{code}
 
-From this perspective, we can see the law we need corresponds exactly to 
-preservation of type substistitution in the model:
+From this perspective, we can see that the law we need corresponds exactly to 
+preservation of type substitution in the model:
 
 \begin{code}
 _[_]Tyᴾ : PTy Γᴾ A → PTms Δᴾ Γᴾ δ → PTy Δᴾ (A [ δ ]Ty)
@@ -408,8 +409,8 @@ eval* ε        ρ = tt
 eval* (δ , t)  ρ = eval* δ ρ Σ, eval t ρ
 \end{code}
 
-Finally, we return to dealing with the eliminator cases of the |eval|.
-Evaluation of application just applied the left and right-hand-side values,
+Finally, we return to dealing with the eliminator cases of |eval|.
+Evaluation of application just applies the left and right-hand-side values,
 while evaluation of |if|-expressions splits on the scrutinee. In the |TT| and
 |FF| cases, we just select the appropriate value, while if the scrutinee
 is a stuck neutral, we build a neutral |if| expression and embed it into
@@ -546,7 +547,7 @@ idℰ : Env Γ Γ id
 \begin{code}
 norm : ∀ t → Nf Γ A t
 norm t = qval {δ = id} _ (eval t idℰ)
-\end{code}  
+\end{code} 
 
 We have checked soundness throughout the development of the algorithm.
 Completeness instead follows from a simple inductive proof (on normal forms) 
@@ -558,13 +559,17 @@ thinnings follow by induction on types/contexts and eventually
 (in the |𝔹| base case) on normal/neutral forms.
 
 Preservation of substitution operations requires checking the associated 
-naturality laws. Staying well-founded is a little tricky: assuming 
+naturality laws (which in-turn requires ensuring 
+naturality of |Π|-typed values are natural). 
+Staying well-founded is a little tricky: assuming 
 substitution operations all respect some well-founded order,
 we could in principle induct w.r.t. that, though in Agda (as we saw in
 \refsec{naive}), well-founded induction
-gets quite ugly. We could also of course pivot to explicit eliminators, via
-which preservation laws would hold definitionally, but we would still have to
-show all naturality equations are preserved, and we would lose the conciseness
+gets quite ugly. We could also pivot to explicit eliminators, via
+which preservation laws would hold definitionally
+(see e.g. the canonicity proof given in \sidecite{kaposi2025type}), 
+but we would still have to
+check all naturality equations, and we would lose the conciseness
 of pattern-matching. Ultimately I argue these technical
 details are not fundamental to the algorithm/proof.
 
@@ -575,7 +580,7 @@ details are not fundamental to the algorithm/proof.
 % We have also liberally used pattern-matching in our metatheory.
 % 
 % In general, pattern-matching acts as syntactic sugar for elimination
-% rules. It covers a number of convieniences, including generalising
+% rules. It covers a number of conveniences, including generalising
 % induction patterns (e.g. recursing on on any subterm of a pattern,
 % lexicographic orders \sidecite{abel2002recursion}). 
 % 

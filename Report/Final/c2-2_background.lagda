@@ -10,10 +10,11 @@ module Report.Final.c2-2_background where
 
 \pagebreak
 \section{Simply Typed Lambda Calculus}
+\refsec{stlc}
 
 Having established our metatheory informally, it is time to start studying type
 theory more rigorously. As a warm-up, we begin by covering the theory of
-simply-typed lambda calculus (STLC), and then will later cover the extension
+simply-typed lambda calculus (STLC), and then will later cover the extensions
 necessary to support dependent types.
 
 \subsection{Syntax}
@@ -29,15 +30,17 @@ the typing relation (i.e. inference rules), we will define terms as an
 inductive family such that only
 well-typed terms can be constructed. 
 
-\begin{remark}[Syntax Directed Typing] \phantom{a}
+\begin{remark}[Syntax-Directed Typing] \phantom{a}
+
 Intrinsic typing enforces a one-to-one correspondence between term formers and 
 typing rules (i.e. in the language of separate syntax and typing judgements, our
-inference rules must all be ``syntax-directed''). However, features that appear 
+inference rules must all be \emph{syntax-directed}). However, features that 
+appear 
 in conflict with this restriction (such as subtyping
-or implicit coercions) can still be formalised via ``elaboration'': 
+or implicit coercions) can still be formalised via \emph{elaboration}: 
 i.e. in the core type theory, all coercions must be explicit, but this
-does not prevent defining also an untyped surface language along with a partial
-mapping into core terms (the ``elaborator'').
+does not prevent defining also an untyped surface language without coercions 
+along with a partial mapping into core terms (the \emph{elaborator}).
 \end{remark}
 
 In STLC, the only necessary validity criteria on types and contexts 
@@ -69,7 +72,11 @@ variable
 \end{code}
 %endif
 
-Variables can be viewed as proofs that a particular type occurs in the context.
+Variables can be viewed as (computationally-relevant\remarknote{Note that
+contexts can contain multiple variables of the same type, 
+and it is important to distinguish these.}) 
+proofs that a particular 
+type occurs in the context.
 Trivially, the type |A| occurs in the context |Γ ▷ A|, and recursively
 if the type |B| occurs in context |Γ|, then the type |B| also occurs in
 the context |Γ ▷ A|.
@@ -80,25 +87,28 @@ data Var : Ctx → Ty → Set where
   vs  : Var Γ B → Var (Γ ▷ A) B
 \end{spec}
 
+% David Davies says to capitalise all starting letters of "de Bruijn variables"
+% but I can't seem to find examples of this when searching? Maybe need to
+% look more...
 After erasing the indexing, we are effectively left with de Bruijn variables
-\sidecite{de1972lambda}, natural numbers counting the number of binders between 
+\sidecite{de1972lambda}; natural numbers counting the number of binders between 
 the use of a variable and the location it was bound.
 
 We avoid named representations of variables in order
 to dodge complications arising from variable capture and α-equivalence.
-For legibility and convienience, when writing
+For legibility and convenience, when writing
 example programs internal to a particular type theory, we will 
 still use named
 variables and elide explicit weakening, 
 assuming the existence of a scope-checking/renaming algorithm
 which can translate to
 de Bruijn style. When writing such examples we will also separate binding(s) and
-body with ``.'' rather than ``|→|'' as to more clearly
-distinguish object-level abstraction from that of the meta (we will also use 
-a non-bolded |ƛ|-symbol).
+body with ``.'' rather than ``|→|'' (along with a non-bolded
+|ƛ|-symbol) as to more clearly
+distinguish object-level abstraction from that of the meta.
 % TODO Citation
 
-Terms embed variables, and are otherwised comprised of the 
+Terms embed variables, and are otherwise comprised of the 
 standard introduction and
 elimination rules for |_⇒_|, |_*_|, |_+_|, |𝟙|.
 
@@ -111,19 +121,20 @@ example programs, we will sometimes elide it).}
 
 \begin{spec}
 data Tm : Ctx → Ty → Set where
-  `_   : Var Γ A → Tm Γ A
-  ƛ_   : Tm (Γ ▷ A) B → Tm Γ (A ⇒ B)
-  _·_  : Tm Γ (A ⇒ B) → Tm Γ A → Tm Γ B
-  _,_  : Tm Γ A → Tm Γ B → Tm Γ (A * B)
-  π₁   : Tm Γ (A * B) → Tm Γ A
-  π₂   : Tm Γ (A * B) → Tm Γ B
-  in₁  : Tm Γ A → Tm Γ (A + B)
-  in₂  : Tm Γ B → Tm Γ (A + B)
-  case : Tm Γ (A + B) → Tm (Γ ▷ A) C → Tm (Γ ▷ B) C → Tm Γ C
-  ⟨⟩   : Tm Γ 𝟙
+  `_    : Var Γ A → Tm Γ A
+  ƛ_    : Tm (Γ ▷ A) B → Tm Γ (A ⇒ B)
+  _·_   : Tm Γ (A ⇒ B) → Tm Γ A → Tm Γ B
+  _,_   : Tm Γ A → Tm Γ B → Tm Γ (A * B)
+  π₁    : Tm Γ (A * B) → Tm Γ A
+  π₂    : Tm Γ (A * B) → Tm Γ B
+  in₁   : Tm Γ A → Tm Γ (A + B)
+  in₂   : Tm Γ B → Tm Γ (A + B)
+  case  : Tm Γ (A + B) → Tm (Γ ▷ A) C 
+        → Tm (Γ ▷ B) C → Tm Γ C
+  ⟨⟩    : Tm Γ 𝟙
 \end{spec}
 
-% Note that while our syntax is instrinsically-typed and to some extent
+% Note that while our syntax is intrinsically-typed and to some extent
 % CwF-inspired, we have not gone so far as to actually quotient by conversion
 % (we won't even define a conversion relation explicitly). This is merely for
 % practical convenience - i.e. to avoid getting bogged down in the details, we 
@@ -138,9 +149,10 @@ substitution operations by recursion on our syntax.
 Following \sidecite{altenkirch2025copypaste}, we avoid duplication between
 renaming (the subset of substitutions where variables can only be substituted
 for other variables) and substitutions by factoring via a boolean algebra of 
-|Sort|s, valued either |V : Sort| or |T : Sort| with |V ⊏ T|. 
+|Sort|s, valued either |V : Sort| or |T : Sort| with |V ⊏ T| (|V| standing 
+for ``Variable'' and |T| for ``Term''). 
 We will skip over most of the details of
-how to encode this in Agda but explicitly define |Sort|-parameterised
+how to encode this in Agda but define explicitly |Sort|-parameterised
 terms:
 
 \begin{spec}
@@ -206,11 +218,11 @@ _[_] : Tm[ q ] Γ A → Tms[ r ] Δ Γ → Tm[ q ⊔ r ] Δ A
 Note that |ε : Sub Δ •| gives us the substitution that weakens a term defined in 
 the empty context into |Δ|, and |_,_ : Sub Δ Γ → Tm Δ A → Tms Δ (Γ ▷ A)|
 expresses the principle that to map from a term in a context |Γ| extended with
-|A| into a context |Δ|, we need a term in |Δ| to substite the zero 
+|A| into a context |Δ|, we need a term in |Δ| to substitute the zero 
 de Bruijn variable for, |Tm Δ A|, and a substitution to recursively apply to all
 variables greater than zero, |Sub Δ Γ|.
 
-To implement the compuational behaviour of substitution, we need to be able
+To implement the computational behaviour of substitution, we need to be able
 to coerce up the sort of terms (terms are functorial over sort ordering, |_⊑_|) 
 and lift substitutions over context extension (substitutions are functorial
 over context extension\remarknote{Concretely, we can take the category of
@@ -236,14 +248,12 @@ case t u v  [ δ ]      = case (t [ δ ]) (u [ δ ^ _ ]) (v [ δ ^ _ ])
 (t , u)     [ δ ]      = (t [ δ ]) , (u [ δ ])
 \end{code}
 
-We also define a number of recursively-defined operations to build and 
-manipulate renamings/substitutions, including 
+We also use a number of recursively-defined operations to build and 
+manipulate renamings/substitutions, including construction of 
 identity substitutions |id| 
 (backwards lists of increasing variables), 
 composition |_⨾_|, single weakenings |wk| and single
 substitutions |<_>|.
-
-\pagebreak
 
 \sideremark{Single-weakening of terms via |suc[_]| and its fold over
 substitutions |_⁺_| can be regarded ultimately as implementation details
@@ -286,19 +296,21 @@ variable
 \end{code}
 %endif
 
+\pagebreak
 \subsection{Soundness}
 
 To show how we can prove properties of type theories from our syntax,
-we will now embark on a proof of ``soundness'' for STLC.
+we will now embark on a proof of \emph{soundness} for STLC.
 
 \sideremark{Soundness expresses that STLC as a \curry{logic} is 
 \curry{consistent}
 relative to our metatheory (Agda).
-From a \howard{PL} perspective, constructing the ``standard model'' effectively 
+From a \howard{PL} perspective, constructing the 
+\emph{standard model} effectively 
 entails writing
 \howard{interpreter}/\howard{evaluator} for STLC \howard{programs}, and 
 soundness
-is strongly related to STLC being a ``\howard{total}'' 
+is strongly related to STLC being a \howard{total}
 programming language - it does not admit \howard{general recursion} or 
 \howard{unchecked exceptions}.}
 
@@ -313,16 +325,18 @@ stlc-sound : ¬ Tm • 𝟘
 \end{code}
 \end{definition}
 
-Our strategy to prove this will be based on giving ``denotational''
+Our strategy to prove this will be based on giving denotational
 semantics to STLC: we will interpret STLC constructs as objects in some other
 theory (i.e. construct a model). 
-A natural choice is to interpret into objects in our metatheory (Agda),
-developing what is known as the ``standard model'' or ``meta-circular
-interpretation''.
+A natural choice is to interpret into corresponding objects in our metatheory 
+(Agda),
+% David Davies also suggests "Henkin models" and 
+developing what is known as the `standard model' or `meta-circular
+interpretation'.
 
 In the standard model, we interpret object-theory types into their counterparts
-in |Set|. We call the inhabitants of these interpreted types ``values'' -
-i.e. |⟦ A ⟧ᵗʸ| is the type of closed values of type |A|.
+in |Set|. We call the inhabitants of these interpreted types \emph{values} -
+i.e. |⟦ A ⟧ᵗʸ| is the type of |A|-typed closed values.
 
 \begin{code}
 ⟦Ty⟧ : Set₁
@@ -337,7 +351,7 @@ i.e. |⟦ A ⟧ᵗʸ| is the type of closed values of type |A|.
 \end{code}
 
 Contexts are interpreted as nested pairs of values. We call inhabitants of
-these nested pairs ``environments'' - i.e. |⟦ Γ ⟧ᶜᵗˣ| is the type of
+these nested pairs \emph{environments} - i.e. |⟦ Γ ⟧ᶜᵗˣ| is the type of
 environments at type |Γ|.
 
 \begin{code}
@@ -404,7 +418,7 @@ stlc-sound t = ⟦ t ⟧ᵗᵐ tt
 \end{code}
 
 The standard model is useful for more than just soundness. Note that
-after interpreting, computationaly-equivalent closed terms become
+after interpreting, computationally-equivalent closed terms become
 definitionally equal.
 
 \begin{code}
@@ -434,7 +448,14 @@ action respects those semantics.
 The nature of this respect depends somewhat
 on the semantics in question: for soundness w.r.t. a model, we show that 
 the model admits an 
-analagous operation ⟦f⟧ such that the following diagram commutes
+analogous operation ⟦f⟧ such that the following diagram 
+\emph{commutes}\remarknote{We say a diagram commutes if all paths 
+(compositions of the arrows)
+that begin and end at the same pair of points
+are equivalent (e.g. applying the associated actions in sequence
+always produces the same end-result). In the case
+of commuting squares like this, we therefore require that going right and
+then down is equivalent to going down and then right.}
 
 \begin{tikzcd}[scaleedge cd=1.25, sep=huge]
 |x| \arrow[r, "|⟦_⟧ᴬ|"] \arrow[d, swap, "|f|"]
@@ -501,9 +522,9 @@ postulate
   []-sound : ⟦ t [ δ ] ⟧ᵗᵐ ≡ ⟦[]⟧ ⟦ t ⟧ᵗᵐ ⟦ δ ⟧ˢᵘᵇ
 \end{code}
 
-The case for e.g. |t = ⟨⟩| is trivial |[]-sound {t = ⟨⟩} = refl|, but
-to prove this law general, we also need to implement semantic versions of our 
-other substitution operations (i.e. |_^_|, |_⁺_|, etc...) and mutually
+The case for e.g. |t = ⟨⟩| is trivial (|[]-sound {t = ⟨⟩} = refl|), but
+to prove this law in general, we also need to implement semantic versions of our 
+other recursive substitution operations (i.e. |_^_|, |_⁺_|, etc...) and mutually
 show preservation of all them.
 
 After all of this work, we can finally prove |⟦β⟧| using |[]-sound|
@@ -538,13 +559,16 @@ postulate
   ⟦ t [ < u > ] ⟧ᵗᵐ ∎
 \end{code}
 
+% David Davies says to give some flavour here as to not end on an equation
+
+\pagebreak
 \subsection{Reduction and Conversion}
 \labsec{redconv}
 
 Constructing a model is not the only way to give a semantics to a type theory.
-We can also give ``operational'' or
-``equational'' semantics to STLC using inductive relations named 
-``reduction'' and ``conversion'' respectively.
+We can also give \emph{operational} and
+\emph{equational} semantics to STLC using inductive relations named 
+\emph{reduction} and \emph{conversion} respectively.
 
 We arrive at (strong) one-step β-reduction by taking the smallest monotonic 
 relation on terms which includes our computation rules:
@@ -587,7 +611,7 @@ reduct, |t₂|, if |t₁ >β* t₂| (where
 |_>β*_ : Tm Γ A → Tm Γ A → Set| is the reflexive-transitive closure of
 |_>β_|).
 Using this relation, we define terms to be equivalent w.r.t. reduction
-(``algorithmic convertion'') if they have a common reduct.
+(\emph{algorithmic conversion}) if they have a common reduct.
 
 %if False
 \begin{code}
@@ -606,11 +630,12 @@ record _<~>_ (t₁ t₂ : Tm Γ A) : Set where field
 Reduction as a concept becomes much more useful when the
 relation is well-founded. For a full one-step reduction relation 
 that 
-proceeds under λ-abstractions, we call this property ``strong normalisation'',
-because we can define an algorithm which takes a term |t| and
+proceeds under λ-abstractions, we call this property 
+\emph{strong normalisation},
+because we can define an algorithm which takes a term |t| and,
 by induction on the well-founded order, produces
 an equivalent (w.r.t. algorithmic conversion) but irreducible term |tᴺᶠ|,
-|t|'s ``normal form''\remarknote[][*-10]{Technically, if reduction is not 
+|t|'s \emph{normal form}\remarknote[][*-10]{Technically, if reduction is not 
 confluent, it might be possible to reduce a term |t| to multiple distinct
 normal forms. In principle, we can still explore all 
 possible reduction
@@ -622,7 +647,6 @@ are equal syntactically).
 %
 } (we show how to do this explicitly in \refsec{naive}).
 
-\pagebreak
 
 \sideremark{Note that we do not enforce that normal forms are subset of
 the original type, which is sometimes
@@ -636,7 +660,7 @@ by congruence |⌜ norm x ⌝ ≡ ⌜ norm y ⌝|, which simplifies to |x ≡ y|
 
 In this report, we define normalisation algorithms as sound and complete 
 mappings from some type, |A|,
-to a type of ``normal forms'', |Nfᴬ|, with decidable equality. 
+to a type of \emph{normal forms}, |Nfᴬ|, with decidable equality. 
 
 Soundness here
 is defined as usual (i.e. the mapping preserves equivalence), while we define
@@ -662,7 +686,7 @@ module _ (A : Set) (Nfᴬ : Set)
       compl  : norm x ≡ norm y → x ≡ y
 \end{code}
 
-\sideremark{Perhaps unintuitively, for theories which already have decidable 
+\sideremark{Perhaps uninventively, for theories which already have decidable 
 equivalence, we are forced to accept
 the identity mapping as a valid (if trivial) implementation of normalisation.
 We can make sense of this
@@ -684,7 +708,7 @@ _≡ᴺᶠ?_ : ∀ (xᴺᶠ yᴺᶠ : Nfᴬ) → xᴺᶠ ≡ yᴺᶠ ⊎ ¬ xᴺ
 \end{definition}
 
 If we instead take the smallest congruent equivalence relation which includes 
-the computation rules, we arrive at ``declarative'' |β|-conversion.
+the computation rules, we arrive at \emph{declarative} |β|-conversion.
 
 \begin{code}
 data _~_ : Tm Γ A → Tm Γ A → Set where
@@ -714,13 +738,13 @@ data _~_ : Tm Γ A → Tm Γ A → Set where
 We now have three distinct semantics-derived equivalence relations on
 terms. 
 
-Algorithmic and declarative conversion are themselves
-equivalent notions.
-|t₁ ~ t₂ → t₁ <~> t₂| requires proving transitivity of |_<~>_|,
+Algorithmic and declarative |β|-conversion (as we have defined them here) 
+are themselves equivalent notions.
+{|t₁ ~ t₂ → t₁ <~> t₂|} requires proving transitivity of |_<~>_|,
 which follows from confluence (which itself can be proved
-by via ``parallel reduction'' \sidecite{takahashi1995parallel}).
+by via \emph{parallel reduction} \sidecite{takahashi1995parallel}).
 The converse, |t₁ <~> t₂| follows from |_>β_|
-being contained inside |_~_| (|t₁ >β t₂ → t₁ ~ t₂|).
+being contained inside |_~_| ({|t₁ >β t₂ → t₁ ~ t₂|}).
 
 We can also prove that the standard model preserves |_~_|, but
 it turns equality in the standard model is not equivalent to 
@@ -749,16 +773,18 @@ Declaring a |βη|-conversion relation which validates such equations
 is easy (we can just add
 the relevant laws as cases), but doing the
 same for reduction (while retaining normalisation and confluence)
-can be tricky \sidecite{lindley2007extensional}.
+is tricky \sidecite{ghani1995adjoint, lindley2007extensional}.
 
 These interactions motivate taking declarative conversion 
 as the ``default'' specification of the semantics when defining type theories
 from now on.
 Of course, poorly-designed conversion relations might be undecidable
 or equate ``morally'' distinct terms (e.g. |true ~ false| is likely 
-undesirable). We therefore should aim to justify our choice of declarative 
-conversion by constructing models which preserve the equivalence and 
-proving normalisation. Given most operations on terms ought to respect
+undesirable). We therefore should aim to justify our definitions of declarative 
+conversion by e.g. constructing models which preserve the equivalence 
+and proving desirable \emph{metatheoretic} 
+properties of the theory, such as normalisation. 
+Given most operations on terms ought to respect
 conversion,
 it can be quite convenient to quotient (\refsec{equivquot}) terms by the
 relation (of course, up to conversion, reduction is a somewhat ill-defined
@@ -775,7 +801,7 @@ concept).
 % arithmetic expressions built out of |+|, |-| and |×| is a pair of an integer
 % and a map from variables to their coefficients. 
 % \sidecite[*6]{altenkirch2001normalization} and 
-% \sidecite[*8]{sterling2021normalization} analagously define normal forms
+% \sidecite[*8]{sterling2021normalization} analogously define normal forms
 % of their respective typed lambda calculi which don't embed cleanly back into
 % ordinary term syntax.
 % %

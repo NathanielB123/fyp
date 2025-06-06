@@ -2,7 +2,7 @@
 \begin{code}
 {-# OPTIONS --prop --rewriting --mutual-rewriting #-}
 
-open import Utils renaming (ε to [])
+open import Utils
 open import Utils.IdExtras
 
 open import Report.Final.c2-2_background
@@ -20,8 +20,8 @@ Normalisation by Evaluation (NbE)
 \sidecite{berger1991inverse, altenkirch1995categorical}
 is a normalisation algorithm for lambda
 calculus terms, which operates by first evaluating terms into a semantic domain 
-(specifically, the ``presheaf model''), and then inverting
-the evaluation function to ``quote'' back normal forms. It can be motivated
+(specifically, the \emph{presheaf model}), and then inverting
+the evaluation function to \emph{quote} back normal forms. It can be motivated
 from multiple directions: 
 \begin{itemize}
 \item \textbf{No reliance on small-step reductions:} NbE is structurally
@@ -48,17 +48,18 @@ from multiple directions:
       % kovacs2023setoid}.}
 \item \textbf{Efficiency:} NbE avoids repeated expensive
       single-substitutions (which need to traverse the whole syntax tree
-      each time to possibly replace variables with the substitutee) 
+      each time to possibly replace variables with the substitute) 
       \sidecite{kovacs2023smalltt}. 
       Instead, the 
       mappings between variables
-      and semantic values are tracked in a persistent map (the ``environment''), 
+      and semantic values are tracked in a persistent map 
+      (the \emph{environment}), 
       such that variables can be looked up exactly when they are evaluated.
 \end{itemize}
 
 This all means that NbE is useful both as a technique to prove normalisation
 for type theory, and as an algorithm in typechecker implementations for
-deciding convertability of types. We will use NbE for both purposes in this
+deciding convertibility of types. We will use NbE for both purposes in this
 project, and will discuss the shortcuts we can take when implementing NbE
 %TODO reference section
 in a partial programming language (specifically Haskell) in 
@@ -87,7 +88,7 @@ will then extend the technique to dependent type theory following
 
 As a warm-up to NbE, we will start by implementing ``naive'' normalisation,
 i.e. recursing on a term, contracting β-redexes where possible by applying 
-single-substitutions. Using this approach, termination can only be justfied
+single-substitutions. Using this approach, termination can only be justified
 by a separate strong normalisation result.
 
 We first define our goal: β-normal forms, |Nf Γ A|, inductively (mutually 
@@ -163,7 +164,7 @@ we cannot easily define substitution on normal forms to resolve this.
 It is perhaps worth mentioning though, that if one is more careful
 with the representation of neutral spines (among other things), pushing in
 this direction can lead to another structurally recursive normalisation
-algorithm known as ``hereditary substitution''
+algorithm known as \emph{hereditary substitution}
 \sidecite[*4]{keller2010hereditary}. Unfortunately, it is currently 
 unclear whether this technique scales to dependent types.}
 
@@ -210,7 +211,7 @@ module _ {A : Set} where
 Intuitively, |Acc _>_ x| can be thought of as the type of
 finite-depth trees starting at |x|, with branches corresponding to single steps
 along |_>_| and minimal elements w.r.t. |_>_| at the leaves.\\\\
-We use |SN| as a synonymn for |Acc| when the ordering is a small-step reduction
+We use |SN| as a synonym for |Acc| when the ordering is a small-step reduction
 relation that proceeds underneath abstractions.
 }
 Actually, we will make use of 
@@ -299,7 +300,7 @@ nf-app  : ∀ (tᴺᶠ : Nf Γ (A ⇒ B)) (uᴺᶠ : Nf Γ A)
         → SN _>βs⁺_ ⟪ t · u ⟫ → t · u >β* ⌜ tᴺᶠ ⌝Nf · ⌜ uᴺᶠ ⌝Nf
         → Nf> Γ B (t · u)
 
-norm (` i)    a     = ne (` i) Σ, []
+norm (` i)    a     = ne (` i) Σ, rfl*
 norm (ƛ t)    (acc a) 
   using tᴺᶠ  Σ, t>tᴺᶠ  ← norm t (a ⟪ s> ƛ> ⟫) 
   = (ƛ tᴺᶠ)  Σ, ƛ* t>tᴺᶠ
@@ -310,7 +311,7 @@ norm (t · u)  (acc a)
 
 nf-app (ne t)  u _ tu>tuᴺᶠ    
   = ne (t · u) Σ, tu>tuᴺᶠ
-nf-app (ƛ t)   u (acc a) []      
+nf-app (ƛ t)   u (acc a) rfl*    
   using tuᴺᶠ Σ, tu>tuᴺᶠ ← norm (⌜ t ⌝Nf [ < ⌜ u ⌝Nf > ]) (a ⟪ β> ⇒β ⟫) 
   = tuᴺᶠ Σ, ⇒β ∷ tu>tuᴺᶠ
 nf-app (ƛ t)   u (acc a) (p ∷ q) 
@@ -363,7 +364,7 @@ first-order variables into
 values\remarknote{In fact, we are forced to include general, stuck neutral 
 terms to support application where the LHS is a variable.}
 , implement evaluation in open contexts
-and, critically, \textit{invert} evaluation, ``quoting'' back into
+and, critically, \textit{invert} evaluation, \emph{quoting} back into
 normalised first-order terms (i.e. our normal forms). This \textit{evaluation} 
 followed by \textit{quoting} is exactly normalisation by evaluation.
 
@@ -519,21 +520,23 @@ To merely implement NbE algorithm for (unquotiented) STLC,
 allowing unnatural |⇒|-typed values does not cause any trouble.
 However, when proving soundness, this refinement is essential
 \sidecite{kovacs2017machine}
-(specifically, when showing preservation of substitution). For simplicity,
+(specifically, when showing preservation of substitution).
+For simplicity,
 we will ignore the naturality condition for now.
 \end{remark}
 
-A final subtlety arises with the ``positive'' type formers
+A final subtlety arises with the \emph{positive} type formers
 |_+_| and |𝟘|.
 E.g. While |λ Γ → ⊥| does satisfy 
 all the necessary laws of an initial object, 
 \sideremark{\sidecite[*6.5]{altenkirch2001normalization} 
 explores NbE using model based on sheaves (instead of presheaves) to fix this 
 more
-elegantly and in doing so decides |η| (as well as |β|) equivalence for sums, 
+elegantly and in doing so decides |η| (as well as |β|) equivalence for sums,
 but the cost is a much less efficient
 % TODO: Maybe mention how the same trick cannot be played with ℕ, or how
 % extending the idea to dependent types is still a WIP.
+% TODO - probably we can discuss in related work and then forward ref
 algorithm.}
 and terms of type |𝟘| can only occur inside empty contexts (i.e. contexts 
 containing |𝟘|), when it comes to evaluating a variable of type |𝟘|, we 
@@ -595,7 +598,7 @@ thinPshVal 𝟙       δᵀʰ tt          = tt
 \end{code}
 
 To implement NbE, we need to define both evaluation from terms to values and
-``quotation'' from values to normal forms. 
+\emph{quotation} from values to normal forms. 
 
 \begin{code}
 data Env : Ctx → Ctx → Set
@@ -644,8 +647,6 @@ we need to turn quote the RHS back to an |Nf| via |qval| to apply
 quotation).
 
 \begin{code}
-
-
 lookupVal : Var Γ A → Env Δ Γ → Val Δ A
 lookupVal vz      (ρ , tⱽ) = tⱽ
 lookupVal (vs i)  (ρ , tⱽ) = lookupVal i ρ
@@ -714,13 +715,14 @@ We refer to \sidecite{kovacs2017machine} for the details, but in short,
 we can prove:
 \begin{itemize}
   \item \textbf{Soundness} by proving that |eval| preserves conversion by 
-  induction on terms, and that |qval| preserves propositional equality.
-  We also need to enforce naturality of |⇒|-typed values as mentioned in
-  \refremark{funvalnat}.
+  induction on terms, which in turn requires proving preservation of
+  substitution (and to do this, we also need to enforce naturality of 
+  |⇒|-typed values 
+  as mentioned in
+  \refremark{funvalnat}).
   \item \textbf{Completeness} by defining a logical relation between terms
   and values by induction on types, showing |t [ δ ]| and |eval t ρ| are 
   logically related given the terms in |δ| are all logically related 
   to the values in |ρ| and finally proving that |qval| preserves the logical
   relation.
 \end{itemize}
-

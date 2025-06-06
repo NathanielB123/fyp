@@ -89,9 +89,9 @@ module Report.Interim.c0_main where
 \tikzcdset{scalecell cd/.style={cells={nodes={scale=#1}}}}
 
 % Curry-Howard - Proof
-\newcommand{\curry}[1]{\textcolor{Purple}{#1}}
+\newcommand{\curry}[1]{\textit{\textcolor{Purple}{#1}}}
 % Curry-Howard - Programming Language
-\newcommand{\howard}[1]{\textcolor{Blue}{#1}}
+\newcommand{\howard}[1]{\textit{\textcolor{Blue}{#1}}}
 
 \newcommand{\smart}{\textsf{\textbf{smart}}\xspace}
 \newcommand{\SC}{\textsf{\textbf{smart case}}\xspace}
@@ -105,17 +105,20 @@ module Report.Interim.c0_main where
 %%include c0-1_test.lagda
 
 
-%include c2-1_background.lagda
-%include c2-2_background.lagda
-%include c2-3_background.lagda
-%include c2-4_background.lagda
-%include c2-5_background.lagda
-%include c2-6_background.lagda
-%include c2-7_background.lagda
+%%include c2-1_background.lagda
+%%include c2-2_background.lagda
+%%include c2-3_background.lagda
+%%include c2-4_background.lagda
+%%include c2-5_background.lagda
+%%include c2-6_background.lagda
+%%include c2-7_background.lagda
 
 %%include c4-1_booleq.lagda
 %%include c4-2_booleq.lagda
 %%include c4-3_booleq.lagda
+
+%include c5-1_scbool.lagda
+
 
 %% bibliography
 % \bibliographystyle{apa}

@@ -2,7 +2,7 @@
 \begin{code}
 {-# OPTIONS --prop --rewriting --mutual-rewriting #-}
 
-open import Utils hiding (ε)
+open import Utils
 open import Utils.IdExtras hiding (funext)
 
 module Report.Final.c2-4_background where
@@ -12,6 +12,7 @@ module Report.Final.c2-4_background where
 
 \pagebreak
 \section{Dependently Typed Lambda Calculus}
+\secref{dtlc}
 
 We will define an intensional type theory. See \refsec{equality} for discussion
 on alternatives.
@@ -74,7 +75,8 @@ type-equivalence is no longer syntactic).
 
 We start with substitutions. As with STLC, these must form a category.
 Again, we quotient our syntax, but this time, we will go a bit further
-and even quotient by some |β|/|η| laws to account for ``definitional equality''
+and even quotient by some |β|/|η| laws to account for 
+definitional equality
 (in ITT, types should always be considered equivalent up to computation).
 
 \begin{code}
@@ -112,7 +114,7 @@ operation |_▷_  : ∀ Γ → Ty Γ → Ctx|.
  
 \begin{code}
   _▷_  : ∀ Γ → Ty Γ → Ctx
-  _,_  : Tms Δ Γ → Tm Δ (A [ δ ]Ty) → Tms Δ (Γ ▷ A)
+  _,_  : ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]Ty) → Tms Δ (Γ ▷ A)
   
   ,⨾ : (δ , t) ⨾ σ ≡ (δ ⨾ σ) , subst (Tm Θ) [][]Ty (t [ σ ])
 \end{code}
@@ -132,6 +134,9 @@ single-weakening and the zero de Bruijn variable as primitive.
   ▷η   : δ ≡ π₁ δ , π₂ δ
   π₁,  : π₁ (δ , t) ≡ δ
   π₂,  : π₂ (δ , t) ≡[ Tm≡ refl (cong (A [_]Ty) π₁,) ]≡ t
+  π₁⨾  : π₁ (δ ⨾ σ) ≡ π₁ δ ⨾ σ
+  π₂⨾  : π₂ (δ ⨾ σ) 
+       ≡[ Tm≡ refl (cong (A [_]Ty) π₁⨾ ∙ sym [][]Ty) ]≡ π₂ δ [ σ ]
 \end{code}
 \end{minipage}
 \begin{minipage}{0.75\textwidth}
@@ -313,8 +318,8 @@ postulate
 We also show how to extend our syntax with Booleans and their dependent
 elimination rule.
 
-Given the term |if A t u v|, we call |A| the ``motive'' and |t| the 
-``scrutinee''.
+Given the term |if A t u v|, we call |A| the \emph{motive} and |t| the 
+\emph{scrutinee}.
 
 \begin{code}
   𝔹    : Ty Γ  
@@ -348,17 +353,18 @@ A common way to account for this without adding much complexity
 \sidecite{danielsson2006formalisation, altenkirch2016type} is to
 add universes. Minimally, we can add one type former standing for 
 a universe |U : Ty Γ| and embed |U|-typed terms in |Ty Γ| with
-|El : Tm Γ U → Ty Γ|. However, because this universe cannot
+|El : Tm Γ U → Ty Γ|. However, because |U| cannot
 contain |Π|-types (to ensure predicativity\remarknote{To prevent
 Russel's paradox, it is important that |Π|-types always be placed in larger
-universes than their domain or range.}), minised type theories like this 
+universes than their domain or range.}), minimised type theories like this 
 are something of a special case. Specifically, in this setting, it is possible
 to statically compute
 the ``spine'' of |Π|s associated with each type, and use this to
 (in proofs) justify
 taking the inductive step from e.g. |Π A B| to |B [ < u > ]Ty|
+\cite{danielsson2006formalisation}
 (i.e. |B [ < u > ]Ty|'s spine is guaranteed 
-to be smaller than |Π A B|s) \cite{danielsson2006formalisation}.
+to be smaller than |Π A B|s).
 
 \sideremark{In a type theory with a hierarchy of universes, 
 we could implement dependent and large elimination with the same
@@ -366,7 +372,7 @@ primitive by generalising the motive of |if| to a type of any universe level.}
 
 For the type theories that form the basis of modern proof assistants
 (e.g. Agda), this
-technique does not work due to the presense of ``large elimination'' (recall 
+technique does not work due to the presence of large elimination (recall 
 from \refremark{condisj} that this is the
 feature that allows us to generically prove constructor disjointness, 
 among other things).
@@ -391,7 +397,7 @@ much extra complexity.
 We also show how extend the syntax with a propositional identity type 
 |Id A t₁ t₂|. Elements of this type are introduced with reflexivity and 
 eliminated with the
-J rule (``path induction'').
+J rule (\emph{path induction}).
 
 %if False
 \begin{code}
@@ -499,10 +505,11 @@ postulate
            (subst (Tm Δ) <>,-comm′ (t [ δ ])) 
 \end{code}
 
-Given the term |J B p t|, we call |B| the ``motive'' and |p| the ``scrutinee''.
+Given the term |J B p t|, we call |B| the \emph{motive} and |p| 
+the \emph{scrutinee}.
 
-We can recover transporting (i.e. ``identity of indiscernables'') from |J|
-by weakening the motive.
+We can recover transporting (i.e. \emph{indiscernibility-of-identicals}) 
+from |J| by weakening the motive.
 
 \begin{code}
 transp  : ∀ (B : Ty (Γ ▷ A)) → Tm Γ (Id A t₁ t₂) 
@@ -515,8 +522,8 @@ transp B p t
 \labsec{equality}
 
 Both our metatheory (Agda) and the syntax-so-far are examples of 
-``intensional'' type theory (ITT). Equality judgements are divided into
-``definitional'' (in Agda, denoted with |_=_|) and ``propositional''
+\emph{intensional} type theory (ITT). Equality judgements are divided into
+\emph{definitional} (in Agda, denoted with |_=_|) and \emph{propositional}
 (in Agda, denoted by |_≡_|). As we have quotiented our syntax by conversion, 
 definitional equality in our object theory corresponds to propositional equality
 in the meta, |_≡_|, while propositional equality is represented with the
@@ -539,7 +546,7 @@ rfl′ refl = rfl
 So, both of these rules together make propositional and definitional equality
 equivalent.}
 as Agda, it is not the only option. Our type theory can be turned into an
-extensional type theory (ETT) by adding the ``equality reflection'' rule:
+extensional type theory (ETT) by adding the \emph{equality reflection} rule:
 
 %if False
 \begin{code}
@@ -571,7 +578,7 @@ equality. For example:
   \begin{code}
   uip : ∀ (p : Tm Γ (Id A t t)) → Tm Γ (Id (Id A t t) p rfl)
   \end{code}
-  Or equivalently, as ``axiom K''
+  Or equivalently, as \emph{axiom K}
   \begin{code}
   K  : ∀ (B : Ty (Γ ▷ Id A t t)) (p : Tm Γ (Id A t t)) 
      → Tm Γ (B [ < rfl > ]Ty) → Tm Γ (B [ < p > ]Ty)
@@ -583,7 +590,7 @@ equality. For example:
   \end{code}
   as in OTT and □TT.
   \item Whether equality at the level of types (i.e. in a type theory with 
-        universes) is relaxed to that of ``equivalences'' (and is therefore
+        universes) is relaxed to that of \emph{equivalences} (and is therefore
         computationally relevant, contradicting UIP) as in □TT.
 \end{itemize}
 etc...
@@ -665,6 +672,7 @@ etc...
 % to turn an intensional type theory into an extensional one.
 
 \subsection{Soundness}
+\labsec{depsound}
 
 Soundness of dependent type theory can be shown very similarly to STLC - we
 construct the standard model. Rather than adding a dedicated empty type, we
@@ -718,11 +726,11 @@ for term-level (dependent) |if|, we need to use the dependent eliminator.
 ⟦ •      ⟧Ctx = ⊤
 ⟦ Γ ▷ A  ⟧Ctx = Σ ⟦ Γ ⟧Ctx ⟦ A ⟧Ty
 
-⟦ 𝔹          ⟧Ty = λ ρ → Bool
-⟦ Id A t₁ t₂ ⟧Ty = λ ρ → ⟦ t₁ ⟧Tm ρ ≡ ⟦ t₂ ⟧Tm ρ
-⟦ Π A B      ⟧Ty = λ ρ → ∀ uⱽ → ⟦ B ⟧Ty (ρ Σ, uⱽ)
-⟦ A [ δ ]Ty  ⟧Ty = λ ρ → ⟦ A ⟧Ty (⟦ δ ⟧Tms ρ)
-⟦ IF t A B   ⟧Ty = λ ρ → Bool-rec (⟦ t ⟧Tm ρ) (⟦ A ⟧Ty ρ) (⟦ B ⟧Ty ρ)
+⟦ 𝔹           ⟧Ty = λ ρ → Bool
+⟦ Id A t₁ t₂  ⟧Ty = λ ρ → ⟦ t₁ ⟧Tm ρ ≡ ⟦ t₂ ⟧Tm ρ
+⟦ Π A B       ⟧Ty = λ ρ → ∀ uⱽ → ⟦ B ⟧Ty (ρ Σ, uⱽ)
+⟦ A [ δ ]Ty   ⟧Ty = λ ρ → ⟦ A ⟧Ty (⟦ δ ⟧Tms ρ)
+⟦ IF t A B    ⟧Ty = λ ρ → Bool-rec (⟦ t ⟧Tm ρ) (⟦ A ⟧Ty ρ) (⟦ B ⟧Ty ρ)
 
 ⟦ π₁ δ   ⟧Tms = λ ρ → ⟦ δ ⟧Tms ρ .fst
 ⟦ id     ⟧Tms = λ ρ → ρ                            
@@ -792,8 +800,8 @@ postulate ⟦[]⟧ : ⟦ t [ δ ] ⟧Tm ≡ λ ρ → ⟦ t ⟧Tm (⟦ δ ⟧Tms
 %endif
 
 \begin{code}
-true/false-disj : ¬ true ≡ false 
-true/false-disj ()
+tt/ff-disj : ¬ true ≡ false 
+tt/ff-disj ()
 
-sound t = true/false-disj (⟦ t ⟧Tm tt)
+sound t = tt/ff-disj (⟦ t ⟧Tm tt)
 \end{code}

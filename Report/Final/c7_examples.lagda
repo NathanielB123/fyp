@@ -131,30 +131,6 @@ impossible. For example, |x ~ su (pred x)| holds for all |x == su y|.
 % Actually maybe |x ~ su (if (f x) then pred x else x)| could work better.
 
 
-% Theorem:
-Subject reduction/type preservation is non-trivial.
-
-Consider the equation
-\begin{spec}
-x >rw TT
-\end{spec}
-and the definition
-\begin{spec}
-y : if x then Bool else String
-\end{spec}
-
-Then we add an equation
-\begin{spec}
-y >rw TT
-\end{spec}
-
-
-% TODO - not sure if this example is good or makes sense
-
-This has a severe consequence: it is seemingly impossible to give an
-intrinsically-typed presentation of \textbf{smart case}.
-
-
 % Theorem
 Let an ordered equation set be linearly-dependent if typing of later
 equations only depends on prior ones.

@@ -156,7 +156,7 @@ Note that variables in TRS rules always stand for any term
 \begin{example}[SKI] \phantom{a}
 
 We can encode the SKI calculus as a term rewriting system with four function
-symbols and three variabes.
+symbols and three variables.
 
 \begin{code}
 pattern S  = f0
