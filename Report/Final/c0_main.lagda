@@ -95,6 +95,8 @@ module Report.Interim.c0_main where
 
 \newcommand{\smart}{\textsf{\textbf{smart}}\xspace}
 \newcommand{\SC}{\textsf{\textbf{smart case}}\xspace}
+\newcommand{\SCBool}{$\textsf{SC}^\textsc{Bool}$\xspace}
+\newcommand{\SCDef}{$\textsf{SC}^\textsc{Def}$\xspace}
 
 \newcommand{\nocodeindent}{\setlength\mathindent{0em}}
 \newcommand{\resetcodeindent}{\setlength\mathindent{1em}}
@@ -118,6 +120,8 @@ module Report.Interim.c0_main where
 %%include c4-3_booleq.lagda
 
 %include c5-1_scbool.lagda
+%include c6-1_scdef.lagda
+%include c6-2_scdef.lagda
 
 
 %% bibliography

@@ -211,7 +211,7 @@ postulate
 {-# REWRITE []Ty⁺-pres-rw #-}
 
 SigEnv • = ⊤
-SigEnv (Ψ ▷ Γ ⇒ A if t then u else v)
+SigEnv (Ψ ▷ Γ ⇒ A if t ≔ u ∣ v)
   = Σ⟨ Ξℰ ∶ SigEnv Ψ ⟩× DefVal Ξℰ (if t u v)
 
 lookup𝒮ℰ : ∀ (Ξℰ : SigEnv Ξ) (f : DefVar Ξ Γ A) → DefVal Ξℰ (lookup𝒮 Ξ f)

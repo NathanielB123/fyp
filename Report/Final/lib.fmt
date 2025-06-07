@@ -50,6 +50,8 @@
 \newunicodechar{Ξ}{$\Xi$}
 \newunicodechar{Φ}{$\Phi$}
 \newunicodechar{Ψ}{$\Psi$}
+\newunicodechar{Ω}{$\Omega$}
+\newunicodechar{φ}{$\phi$}
 
 \newunicodechar{∀}{$\forall$}
 \newunicodechar{∃}{$\exists$}
@@ -84,6 +86,7 @@
 \newunicodechar{∧}{$\land$}
 \newunicodechar{↦}{$\mapsto$}
 \newunicodechar{⟶}{$\longrightarrow$}
+\newunicodechar{≔}{$\coloneq$}
 
 \newunicodechar{∞}{$\infty$}
 \newunicodechar{≥}{$\geq$}
@@ -185,6 +188,7 @@
 %format _[   = _ [
 %format [_]  = [ _ ]
 
+%format ]≡' = ] ≡
 
 %format `_ = "\texttt{\textasciigrave}" _
 %format ` = "\texttt{\textasciigrave}"
@@ -259,10 +263,8 @@
 %format lam≡      = lam    "_="
 %format lamsem≡   = lamsem "_="
 %format _[_]≡     = _[_]   "_="
-
-%format ≡[        = ≡ "^{\textit{$"
-%format ]≡        = "$}}"
-
+%format t≡        = t      "_="
+%format u≡        = u      "_="
 %format _[_]tm≡   = _[_]tm "_="
 %format ]tm≡      = ]tm    "_="
 %format []tm≡     = []tm   "_="
@@ -271,7 +273,14 @@
 %format ↑∘os≡     = ↑∘os   "_="
 %format ⟦⟧T≡      = ⟦⟧T    "_="
 %format to-coe≡   = to-coe "_="
+%format Tm≡       = Tm     "_="
+%format ⟦A⟧≡      = ⟦A⟧    "_="
+
 %format to-coe≡⁻¹ = to-coe≡ "^-1"
+
+
+%format ≡[        = ≡ "^{\textit{$"
+%format ]≡        = "$}}"
 
 %format 𝛽→≡       = 𝛽 → ≡
 %format ⟧≡⟦       = ⟧ ≡ ⟦
@@ -494,8 +503,10 @@
 %format *ℕ  = * "_{" ℕ "}"
 %format +ℕ  = + "_{" ℕ "}"
 
-%format ᶜ   = "^{\Varid{C}}"
-%format Ξᶜ  = Ξ ᶜ
+%format ᶜ  = "^{\Varid{C}}"
+
+%format Ξᶜ = Ξ ᶜ
+%format Γᶜ = Γ ᶜ 
 
 %format _⊢_>′_ = _⊢_>_
 %format >′     = >
@@ -511,3 +522,27 @@
 %format norm-complete′ = norm-complete
 %format pres>′         = pres>
 %format norm-pres′     = norm-pres
+%format Tms′           = Tms
+%format ε′             = ε
+
+%format >eq            = "\Rrightarrow"
+
+%format 𝒲    = "^{" \Varid{Wk} "}"
+
+%format id𝒲  = id 𝒲
+%format ⁺𝒲   = ⁺  𝒲
+%format ⨾𝒲   = ⨾  𝒲
+%format wk𝒲  = wk 𝒲
+
+%format _⁺𝒲_ = _ ⁺𝒲 _
+%format _⨾𝒲_ = _ ⨾𝒲 _
+
+%format 𝒮 = "^{\Varid{Sig}}"
+
+%format lookup𝒮 = lookup 𝒮
+%format •𝒮      = • 𝒮
+
+%format ᴾᴺᵉ = "^{\Varid{PreNe}}"
+%format tᴾᴺᵉ = t ᴾᴺᵉ
+%format uᴾᴺᵉ = u ᴾᴺᵉ
+

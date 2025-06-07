@@ -85,15 +85,15 @@ wkeq : Tms (Γ ▷ t >eq b) Γ
 
 data Sig where
   •                  : Sig
-  _▷_⇒_if_then_else_ : ∀ Ψ (Γ : Ctx Ψ) A → (t : Tm Γ 𝔹′) 
-                     → Tm (Γ ▷ t >eq true) (A [ wkeq ]) 
-                     → Tm (Γ ▷ t >eq false) (A [ wkeq ])
-                     → Sig
+  _▷_⇒_if_≔_∣_ : ∀ Ψ (Γ : Ctx Ψ) A → (t : Tm Γ 𝔹′) 
+               → Tm (Γ ▷ t >eq true) (A [ wkeq ]) 
+               → Tm (Γ ▷ t >eq false) (A [ wkeq ])
+               → Sig
 
 data Wk where
   id  : Wk Ψ Ψ
   _⨾_ : Wk Φ Ψ → Wk Ξ Φ → Wk Ξ Ψ
-  wk𝒮 : Wk (Ψ ▷ Γ ⇒ A if t then u else v) Ψ
+  wk𝒮 : Wk (Ψ ▷ Γ ⇒ A if t ≔ u ∣ v) Ψ
 
 data Tms where
   coe~ : Ctx~ Δ₁ Δ₂ → Ctx~ Γ₁ Γ₂ → Tms Δ₁ Γ₁ → Tms Δ₂ Γ₂
@@ -125,7 +125,7 @@ data Tm where
   TT : Tm Γ 𝔹
   FF : Tm Γ 𝔹
   
-  call : Tm {Ψ = Ψ ▷ Γ ⇒ A if t then u else v} (Γ [ wk𝒮 ]) (A [ wk𝒮 ])
+  call : Tm {Ψ = Ψ ▷ Γ ⇒ A if t ≔ u ∣ v} (Γ [ wk𝒮 ]) (A [ wk𝒮 ])
 
   π₂   : ∀ (δ : Tms Δ (Γ ▷ A)) → Tm Δ (A [ π₁ δ ])
   _[_] : Tm Γ A → ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ])

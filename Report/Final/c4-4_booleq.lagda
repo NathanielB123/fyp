@@ -17,7 +17,7 @@ infix 4 _⊢_~_
 \section{Locally Introducing Equations}
 \labsec{localext}
 
-Back in \secref{simplebooleq}, we discussed potentially enhancing our
+Back in \refsec{simplebooleq}, we discussed potentially enhancing our
 notion of conversion-modulo-equations by introducing new equations
 on the scrutinee if the LHS and RHS branches of |if|-expressions.
 

@@ -13,6 +13,7 @@ module Report.Final.c2-7_background where
 %endif
 
 \subsection{NbE for Dependent Types}
+\labsec{depnbe}
 
 When applying NbE for dependent types, we need to deal with terms embedded
 inside types. As a first approximation, we might try and keep a similar

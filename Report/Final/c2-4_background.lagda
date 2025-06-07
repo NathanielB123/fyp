@@ -12,7 +12,7 @@ module Report.Final.c2-4_background where
 
 \pagebreak
 \section{Dependently Typed Lambda Calculus}
-\secref{dtlc}
+\labsec{dtlc}
 
 We will define an intensional type theory. See \refsec{equality} for discussion
 on alternatives.
@@ -162,10 +162,13 @@ _^_ : ∀ (δ : Tms Δ Γ) A → Tms (Δ ▷ (A [ δ ]Ty)) (Γ ▷ A)
 δ ^ A = (δ ⨾ wk) , subst (Tm _) [][]Ty vz
 \end{code}
 
-We can also prove some derived substitution lemmas, such as commutation of
-single substitution.
+We can also prove some derived substitution lemmas, such as how 
+single-substitution commutes with functoriality of context extension.
 
 % TODO: Maybe add the proof
+% Also maybe state the other lemmas we use (but it is a bit awkward, because
+% most of the others are just laws we have immediately on raw substitutions,
+% only lifted to types/terms)
 \begin{code}
 <>-comm : (δ ^ A) ⨾ < t [ δ ] > ≡ < t > ⨾ δ
 \end{code}
@@ -196,10 +199,10 @@ _⨾≡_ {Δ≡ = refl} {Γ≡ = refl} {Θ≡ = refl} refl refl = refl
      → < t₁ > ≡[ Tms≡ Γ≡ (Γ≡ ▷≡ A≡) ]≡ < t₂ >
 <_>≡ {Γ≡ = refl} {A≡ = refl} refl = refl
 
-_[_]≡ : ∀ {Γ≡ : Γ₁ ≡ Γ₂} {Δ≡ : Δ₁ ≡ Δ₂} {A≡ : A₁ ≡[ Ty≡ Γ≡ ]≡ A₂} 
+_[_]≡' : ∀ {Γ≡ : Γ₁ ≡ Γ₂} {Δ≡ : Δ₁ ≡ Δ₂} {A≡ : A₁ ≡[ Ty≡ Γ≡ ]≡ A₂} 
           (t≡ : t₁ ≡[ Tm≡ Γ≡ A≡ ]≡ t₂) (δ≡ : δ₁ ≡[ Tms≡ Δ≡ Γ≡ ]≡ δ₂)
         → t₁ [ δ₁ ] ≡[ Tm≡ Δ≡ (A≡ [ δ≡ ]Ty≡) ]≡ t₂ [ δ₂ ]
-_[_]≡ {Γ≡ = refl} {Δ≡ = refl} {A≡ = refl} refl refl = refl
+_[_]≡' {Γ≡ = refl} {Δ≡ = refl} {A≡ = refl} refl refl = refl
 
 -- TODO: Solve the transport hell
 -- Ideal solution would probably be to carefully abstract over the equality
@@ -222,7 +225,7 @@ wk⨾Tm {t = t} {δ = δ} {u = u} =
   subst (Tm _) wk⨾Ty (t [ wk ] [ δ , u ])
   ≡⟨ cong (subst (Tm _) (cong (_ [_]Ty) wk⨾)) [][] ⟩≡
   subst (Tm _) (cong (_ [_]Ty) wk⨾) (t [ wk ⨾ (δ , u) ])
-  ≡⟨ refl [ wk⨾ ]≡ ⟩≡
+  ≡⟨ refl [ wk⨾ ]≡' ⟩≡
   t [ δ ] ∎
 
 wk<>Ty : A [ wk ]Ty [ < t > ]Ty ≡ A

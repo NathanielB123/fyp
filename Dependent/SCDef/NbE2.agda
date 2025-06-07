@@ -88,14 +88,18 @@ data ComplTRS (Γ : Ctx Ψ) : Set where
 
 data 𝔹Valᵗᶠ : ∀ (Γ : Ctx Ψ) {A} → Tm Γ A → Set where
   TT : Tm~ Γ~ A~ t TT → 𝔹Valᵗᶠ Γ t
-  FF : Tm~ Γ~ B~ t FF → 𝔹Valᵗᶠ Γ t
+  FF : Tm~ Γ~ A~ t FF → 𝔹Valᵗᶠ Γ t
 
 data 𝔹Val : ∀ (Γ : Ctx Ψ) {A} → Tm Γ A → Set where
   TT : Tm~ Γ~ A~ t TT → 𝔹Val Γ t
-  FF : Tm~ Γ~ B~ t FF → 𝔹Val Γ t
+  FF : Tm~ Γ~ A~ t FF → 𝔹Val Γ t
   ne : Ty~ Γ~ A 𝔹 → Ne Γ A t → 𝔹Val Γ t
 
-checkrw : TRS Γ → PreNe Γ A t → Ne Γ A t × 𝔹Valᵗᶠ Γ t
+⌜_⌝𝔹𝒱 : 𝔹Valᵗᶠ Γ t → 𝔹Val Γ t 
+⌜ TT t~ ⌝𝔹𝒱 = TT t~
+⌜ FF t~ ⌝𝔹𝒱 = FF t~
+
+checkrw : TRS Γ → PreNe Γ A t → Box (predNe Γ A t) ⊎ 𝔹Valᵗᶠ Γ t
 
 -- Ah I think we need to add signature-environments back, but not for
 -- storing evaluated definitions. Instead, they should store TRSs!
@@ -108,7 +112,8 @@ eval*  : ∀ δ (ρ : Env Ξ Θ Δ σ) → Env Ξ Θ Γ (δ ⨾ σ)
 variable
   ρ : Env Ξ Δ Γ δ
 
-uval : ∀ A {t} → PreNe Δ (A [ δ ]Ty) t → Val Γ A Δ δ ρ t
+uvalpre : ∀ A {t} → PreNe Δ (A [ δ ]Ty) t → Val Γ A Δ δ ρ t
+uval    : ∀ A {t} → Ne Δ (A [ δ ]Ty) t → Val Γ A Δ δ ρ t
 
 postulate
   coe𝒱 : ∀ {ρ : Env Ξ Δ Γ δ} (A~ : Ty~ rfl~ A₁ A₂)
@@ -130,6 +135,8 @@ Env Ξ Δ (Γ ▷ A) δ = Σ (Env Ξ Δ Γ (π₁ δ))
                    λ ρ → Val Γ A Δ (π₁ δ) ρ (π₂ δ)
 Env Ξ Δ (Γ ▷ t >eq b) δ
   = Env Ξ Δ Γ (π₁eq δ)
+
+idℰ : Env Ξ Γ Γ id
 
 postulate
   id-pres-rw    : ∀ {ρ : Env Ξ Δ Γ δ} 
@@ -174,7 +181,11 @@ eval-call {f = f} ρ (TT {Γ~ = Γ~} t~)      uⱽ vⱽ
 eval-call {f = f} ρ (FF {Γ~ = Γ~} t~)      uⱽ vⱽ
   = coe𝒱 {ρ = ρ} rfl~ (sym~ (call-FF {f = f} (t~ ∙~ FF (sym~ Γ~)))) vⱽ′
   where vⱽ′ = vⱽ (t~ ∙~ FF (sym~ Γ~))
-eval-call ρ (ne A~ tᴺᵉ)  uⱽ vⱽ = {!   !}
+-- Interesting: Because |call| only recurses into the definition 
+-- when the equation is satisfied, we don't have any dependence on quoting
+-- here.
+eval-call {f = f} ρ (ne A~ tᴺᵉ) uⱽ vⱽ 
+  = uvalpre _ (callNe {f = f} tᴺᵉ)
 
 eval (coe~ Γ~ A~ t) ρ = {!   !}
 eval (` i)          ρ = {!   !}
@@ -188,4 +199,21 @@ eval {δ = σ} (call f δ)     ρ
   | (λ t~ →  eval {δ = (δ ⨾ σ) ,eq t~} (lookup𝒮 _ f .lhs) δⱽ)
   | (λ t~ →  eval {δ = (δ ⨾ σ) ,eq t~} (lookup𝒮 _ f .rhs) δⱽ)
 ... | tⱽ | uⱽ | vⱽ = eval-call {f = f} δⱽ tⱽ uⱽ vⱽ
+
+checkrw Γᶜ tᴾᴺᵉ = {!!}
+
+uvalpre {δ = δ} A tᴾᴺᵉ with checkrw {!!} tᴾᴺᵉ
+... | inl ¬𝔹 = uval A (tᴾᴺᵉ Σ, ¬𝔹)
+-- Can we relax constraints here such that |⌜_⌝𝔹𝒱| *just works*??
+... | inr tⱽ  = {!⌜ tⱽ ⌝𝔹𝒱!}
+-- ... | inr (TT {A~ = A~} t~) 
+--   = {!foo!}
+--   where foo = coe𝒱 {δ = id} {A₁ = 𝔹} {A₂ = A [ δ ]Ty} {ρ = idℰ} 
+--                    (𝔹 ∙~ sym~ A~) (TT _ ∙~ sym~ t~) (TT rfl~)
+-- ... | inr (FF {A~ = A~} t~) = {!   !}
+
+uval (coe~ Γ~ A) tᴺᵉ = {!   !}
+uval 𝔹 tᴺᵉ = ne rfl~ tᴺᵉ
+uval (Π A B) tᴺᵉ = {!   !}
+uval (IF t A B) tᴺᵉ = {!   !}
 

@@ -82,19 +82,16 @@ rflTy′  : Ty~ rflCtx′ A A
 wkeq : Tms (Γ ▷ t >eq b) Γ
 
 data Sig where
-  •                  : Sig
-  _▷_⇒_if_then_else_ : ∀ Ψ (Γ : Ctx Ψ) A → (t : Tm Γ 𝔹′) 
-                     → Tm (Γ ▷ t >eq true) (A [ wkeq ]Ty) 
-                     → Tm (Γ ▷ t >eq false) (A [ wkeq ]Ty)
-                     → Sig
+  •            : Sig
+  _▷_⇒_if_≔_∣_ : ∀ Ψ (Γ : Ctx Ψ) A → (t : Tm Γ 𝔹′) 
+               → Tm (Γ ▷ t >eq true) (A [ wkeq ]Ty) 
+               → Tm (Γ ▷ t >eq false) (A [ wkeq ]Ty)
+               → Sig
 
 data Wk where
   id𝒮   : Wk Ψ Ψ
   _⨾𝒮_  : Wk Φ Ψ → Wk Ξ Φ → Wk Ξ Ψ
-  wk𝒮   : Wk (Ψ ▷ Γ ⇒ A if t then u else v) Ψ
--- ε                  : Wk • •
--- _⁺_⇒_if_then_else_ : Wk Φ Ψ → ∀ Γ A t u v 
---                     → Wk (Φ ▷ Γ ⇒ A if t then u else v) Ψ
+  wk𝒮   : Wk (Ψ ▷ Γ ⇒ A if t ≔ u ∣ v) Ψ
 
 data Tms where
   coe~ : Ctx~ Δ₁ Δ₂ → Ctx~ Γ₁ Γ₂ → Tms Δ₁ Γ₁ → Tms Δ₂ Γ₂
@@ -119,9 +116,9 @@ wk   : Tms (Γ ▷ A) Γ
 data DefVar where
   coe~ : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → DefVar Ψ Γ₁ A₁ → DefVar Ψ Γ₂ A₂
 
-  fz : DefVar (Ψ ▷ Γ ⇒ A if t then u else v) (Γ [ wk𝒮 ]Ctx) (A [ wk𝒮 ]Ty⁺)
+  fz : DefVar (Ψ ▷ Γ ⇒ A if t ≔ u ∣ v) (Γ [ wk𝒮 ]Ctx) (A [ wk𝒮 ]Ty⁺)
   fs : DefVar Ψ Γ A 
-     → DefVar (Ψ ▷ Δ ⇒ B if t then u else v) (Γ [ wk𝒮 ]Ctx) (A [ wk𝒮 ]Ty⁺)
+     → DefVar (Ψ ▷ Δ ⇒ B if t ≔ u ∣ v) (Γ [ wk𝒮 ]Ctx) (A [ wk𝒮 ]Ty⁺)
 
 data Var where
   coe~ : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Var Γ₁ A₁ → Var Γ₂ A₂
@@ -499,7 +496,7 @@ _[_]Def : Def Ψ Γ A → ∀ (φ : Wk Φ Ψ) → Def Φ (Γ [ φ ]Ctx) (A [ φ 
 if t u v [ φ ]Def = if (t [ φ ]⁺) (u [ φ ]⁺) (v [ φ ]⁺)
 
 lookup𝒮 Ψ (coe~ Γ~ A~ f) = coeDef Γ~ A~ (lookup𝒮 Ψ f)
-lookup𝒮 (Ψ ▷ Γ ⇒ A if t then u else v) fz 
+lookup𝒮 (Ψ ▷ Γ ⇒ A if t ≔ u ∣ v) fz 
   = if (t [ wk𝒮 ]⁺) (u [ wk𝒮 ]⁺) (v [ wk𝒮 ]⁺)
-lookup𝒮 (Ψ ▷ Γ ⇒ A if _ then _ else _) (fs f) 
+lookup𝒮 (Ψ ▷ Γ ⇒ A if _ ≔ _ ∣ _) (fs f) 
   = lookup𝒮 Ψ f [ wk𝒮 ]Def
