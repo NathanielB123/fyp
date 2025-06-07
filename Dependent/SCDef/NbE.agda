@@ -7,6 +7,14 @@ open import Dependent.SCDef.Strict
 
 module Dependent.SCDef.NbE where 
 
+[][]⁺⁺₁ : ∀ {t : Tm Γ 𝔹} → t [ φ ]⁺ [ ψ ]⁺ ≡ t [ φ ⨾𝒮 ψ ]⁺
+[][]⁺⁺₁ = [][]⁺⁺
+{-# REWRITE [][]⁺⁺₁ #-}
+[][]⁺⁺₂ : ∀ {t : Tm (Γ ▷ u >eq b) (A [ wkeq ]Ty)}
+        → t [ φ ]⁺ [ ψ ]⁺ ≡ t [ φ ⨾𝒮 ψ ]⁺
+[][]⁺⁺₂ {t = t} = [][]⁺⁺ {t = t}
+{-# REWRITE [][]⁺⁺₂ #-}
+
 data Thin {Ξ} : ∀ Δ Γ → Tms {Ξ = Ξ} Δ Γ → Set where
   coe~  : ∀ Δ~ Γ~ → Tms~ Δ~ Γ~ δ₁ δ₂ → Thin Δ₁ Γ₁ δ₁ → Thin Δ₂ Γ₂ δ₂
 
@@ -15,6 +23,9 @@ data Thin {Ξ} : ∀ Δ Γ → Tms {Ξ = Ξ} Δ Γ → Set where
         → Thin  (Δ ▷ (A [ δ ]Ty)) (Γ ▷ A) (δ ^ A)
   _⁺ᵀʰ_ : Thin Δ Γ δ 
         → ∀ A → Thin (Δ ▷ A) Γ (δ ⨾ wk)
+
+idᵀʰ : Thin Γ Γ id
+_⨾ᵀʰ_ : Thin Δ Γ δ → Thin Θ Δ σ → Thin Θ Γ (δ ⨾ σ)
 
 Ne : ∀ Γ A → Tm {Ξ = Ξ} Γ A → Set
 data PreNe : ∀ Γ A → Tm {Ξ = Ξ} Γ A → Set
@@ -37,8 +48,8 @@ data PreNe where
   _·_ : Ne Γ (Π A B) t → Nf Γ A u
       → PreNe Γ (B [ < u > ]Ty) (t · u)
 
-  call : Ne Δ 𝔹 (lookup𝒮 Ψ f .scrut [ δ ]) 
-       → PreNe Δ (A [ δ ]Ty) (call {A = A} f δ)
+  callNe : Ne Δ 𝔹 (lookup𝒮 Ψ f .scrut [ δ ]) 
+         → PreNe Δ (A [ δ ]Ty) (call {A = A} f δ)
 
 data Nf where
   coe~ : ∀ Γ~ A~ → Tm~ Γ~ A~ t₁ t₂ → Nf Γ₁ A₁ t₁ → Nf Γ₂ A₂ t₂
@@ -69,23 +80,19 @@ data RwVar : TRS Γ → PreNe Γ 𝔹 t → Bool → Set where
   rz : RwVar (Γᶜ ▷ tᴾᴺᵉ >rw b) tᴾᴺᵉ b
   rs : RwVar Γᶜ tᴾᴺᵉ b₁ → RwVar (Γᶜ ▷ uᴾᴺᵉ >rw b₂) tᴾᴺᵉ b₁
   
+-- TODO: Is this enough for confluence? I don't think so?
 record ValidTRS (Γ : Ctx Ψ) : Set where
   field
     trs    : TRS Γ
     sound  : RwVar {t = t} trs tᴾᴺᵉ b → Tm~ rfl~ rfl~ t ⌜ b ⌝𝔹
     compl  : EqVar Γ t b → ∀ (tᴾᴺᵉ : PreNe Γ 𝔹 t) → RwVar trs tᴾᴺᵉ b
 
--- Disjoint contexts intuitively are ones where every LHS is β-neutral and
--- disjoint
--- This seems kinda miserable to mechanise in Agda
-data DisjCtx : Ctx Ψ → Set where
+def-incon : Ctx Ψ → Prop
+def-incon Γ = Tm~ (rfl~ {Γ = Γ}) rfl~ TT FF
 
--- Disjoint contexts can be "completed" to build TRSs by just 
--- weakening every LHS.
--- Of course, injecting the disjoint β-neutral terms into |Ne| is non-trivial,
--- and completeness is also tricky.
--- I think we might need reduction to get there
-complete : DisjCtx Γ → ValidTRS Γ
+data ComplTRS (Γ : Ctx Ψ) : Set where
+  compl  : ValidTRS Γ → ComplTRS Γ
+  !!     : def-incon Γ → ComplTRS Γ
 
 data 𝔹Valᵗᶠ : ∀ (Γ : Ctx Ψ) {A} → Tm Γ A → Set where
   TT : Tm~ Γ~ A~ t TT → 𝔹Valᵗᶠ Γ t
@@ -106,32 +113,50 @@ eval   : ∀ (Ξℰ : SigEnv Ξ) (t : Tm Γ A) (ρ : Env Ξℰ Δ Γ δ)
 eval*  : ∀ (Ξℰ : SigEnv Ξ) δ (ρ : Env Ξℰ Θ Δ σ) → Env Ξℰ Θ Γ (δ ⨾ σ)
 
 variable
-  Ξℰ : SigEnv Ξ
+  Ξℰ Ψℰ : SigEnv Ξ
   ρ : Env Ξℰ Δ Γ δ
 
 uval : ∀ A {t} → PreNe Δ (A [ δ ]Ty) t → Val Ξℰ Γ A Δ δ ρ t
 
-record DefVal (Ξℰ : SigEnv Ξ) (d : Def Ξ Γ A) : Set where
+-- _[_]𝒮ℰ   : SigEnv Ψ → Wk Φ Ψ → SigEnv Φ
+
+record DefVal (Ψℰ : SigEnv Ψ) (d : Def Ψ Γ A) : Set where
   constructor defⱽ
   pattern
   field
-    lhsⱽ : ∀ (ρ : Env Ξℰ Δ Γ δ) (t~ : Tm~ rfl~ rfl~ (d .scrut [ δ ]) TT)
-         → Val Ξℰ Γ A Δ δ ρ (d .lhs [ δ ,eq t~ ])
-    rhsⱽ : ∀ (ρ : Env Ξℰ Δ Γ δ) (t~ : Tm~ rfl~ rfl~ (d .scrut [ δ ]) FF)
-         → Val Ξℰ Γ A Δ δ ρ (d .rhs [ δ ,eq t~ ])
+    lhsⱽ  : ∀  (ρ : Env Ψℰ Δ Γ δ) 
+               (t~ : Tm~ rfl~ rfl~ (d .scrut [ δ ]) TT)
+          → Val  Ψℰ Γ A Δ δ ρ 
+                 (d .lhs [ δ ,eq t~ ])
+    rhsⱽ  : ∀  (ρ : Env Ψℰ Δ Γ δ) 
+               (t~ : Tm~ rfl~ rfl~ (d .scrut [ δ ]) FF)
+          → Val  Ψℰ Γ A Δ δ ρ 
+                 (d .rhs [ δ ,eq t~ ])
+    -- lhsⱽ  : ∀  (φ : Wk Φ Ψ) {δ} (ρ : Env (Ψℰ [ φ ]𝒮ℰ) Δ (Γ [ φ ]Ctx) δ) 
+    --            (t~ : Tm~ rfl~ rfl~ (d .scrut [ φ ]⁺ [ δ ]) TT)
+    --       → Val  (Ψℰ [ φ ]𝒮ℰ) (Γ [ φ ]Ctx) (A [ φ ]Ty⁺) Δ δ ρ 
+    --              (d .lhs [ φ ]⁺ [ δ ,eq t~ ])
+    -- rhsⱽ  : ∀  (φ : Wk Φ Ψ) {δ} (ρ : Env (Ψℰ [ φ ]𝒮ℰ) Δ (Γ [ φ ]Ctx) δ) 
+    --            (t~ : Tm~ rfl~ rfl~ (d .scrut [ φ ]⁺ [ δ ]) FF)
+    --       → Val  (Ψℰ [ φ ]𝒮ℰ) (Γ [ φ ]Ctx) (A [ φ ]Ty⁺) Δ δ ρ 
+    --              (d .rhs [ φ ]⁺ [ δ ,eq t~ ])
 
-SigEnv • = ⊤
-SigEnv (Ψ ▷ Γ ⇒ A if t then u else v)
-  = Σ⟨ Ξℰ ∶ SigEnv Ψ ⟩× DefVal Ξℰ (if t u v)
+-- _[_]Def𝒱  : ∀ {d : Def Ψ Γ A}
+--           → DefVal Ψℰ d → ∀ (φ : Wk Φ Ψ) → DefVal (Ψℰ [ φ ]𝒮ℰ) (d [ φ ]Def)
 
-lookup𝒮ℰ : ∀ (Ξℰ : SigEnv Ξ) (f : DefVar Ξ Γ A) → DefVal Ξℰ (lookup𝒮 Ξ f)
-lookup𝒮ℰ Ξℰ (coe~ Γ~ A~ f) = {!   !}
-lookup𝒮ℰ (Ξℰ Σ, defⱽ uⱽ vⱽ) fz = defⱽ {!!} {!!}
-lookup𝒮ℰ (Ξℰ Σ, dⱽ) (fs f) 
-  using defⱽ uⱽ vⱽ ← lookup𝒮ℰ Ξℰ f
-  = defⱽ {!!} {!!} 
+-- _[_]Wkℰ  : Env Ψℰ Δ Γ δ → ∀ (φ : Wk Φ Ψ) 
+--          → Env (Ψℰ [ φ ]𝒮ℰ) (Δ [ φ ]Ctx) (Γ [ φ ]Ctx) (δ [ φ ]Tms) 
+_[_]ℰ    : Env {Ξ = Ξ} Ξℰ Δ Γ δ → Thin Θ Δ σ → Env Ξℰ Θ Γ (δ ⨾ σ)
 
-_[_]ℰ : Env {Ξ = Ξ} Ξℰ Δ Γ δ → Thin Θ Δ σ → Env Ξℰ Θ Γ (δ ⨾ σ)
+postulate 
+  -- [id]𝒮ℰ : Ξℰ [ id𝒮 ]𝒮ℰ ≡ Ξℰ
+  [id]ℰ  : ∀ {ρ : Env Ξℰ Δ Γ δ} → ρ [ idᵀʰ ]ℰ ≡ ρ
+  [][]ℰ  : ∀ {ρ : Env Ξℰ Δ Γ δ} 
+             {σᵀʰ : Thin Θ Δ σ} {γᵀʰ : Thin _ Θ γ}
+         → ρ [ σᵀʰ ]ℰ [ γᵀʰ ]ℰ ≡ ρ [ σᵀʰ ⨾ᵀʰ γᵀʰ ]ℰ
+-- {-# REWRITE [id]𝒮ℰ #-}
+{-# REWRITE [id]ℰ #-}
+{-# REWRITE [][]ℰ #-}
 
 postulate
   coe𝒱 : ∀ {ρ : Env {Ξ = Ξ} Ξℰ Δ Γ δ} (A~ : Ty~ rfl~ A₁ A₂)
@@ -142,13 +167,84 @@ Env Ξℰ Δ •       δ = ⊤
 Env Ξℰ Δ (Γ ▷ A) δ = Σ (Env Ξℰ Δ Γ (π₁ δ))
                    λ ρ → Val Ξℰ Γ A Δ (π₁ δ) ρ (π₂ δ)
 -- I am going to leave this as a hole until I reach a point in the NbE code
--- when it is necessary. In the standard model, we interpreted convertability
+-- when it is necessary. In the standard model, we interpreted convertibility
 -- assumptions as propositional equalities. In this NbE algorithm, TRS is
 -- already kinda dealing with the rewrites, so I'm not sure what would be
 -- useful to put here (equations between values seem weird to me, but maybe
 -- that is the way to go)
 Env Ξℰ Δ (Γ ▷ t >eq b) δ 
   = {!!}
+
+-- TODO: Is this the neatest approach?
+-- Strengthening feels inherently a bit ugly to me...
+-- One possible idea: could we parameterise over signature environments?
+-- Oh lol this is literally the idea behind Env
+-- So I guess we could set |SigEnv Ξ = SigEnv′ Ξ Ξ|
+-- Weakening can then take us from |SigEnv′ Φ Ψ| to |SigEnv′ (Φ ▷ ...) Ψ|
+
+[_]𝒮ℰ⁻¹ : Wk Φ Ψ → SigEnv Φ → SigEnv Ψ
+
+[_]ℰ⁻¹_ : ∀ (φ : Wk Φ Ψ) → Env Ξℰ (Δ [ φ ]Ctx) (Γ [ φ ]Ctx) (δ [ φ ]Tms) 
+        → Env ([ φ ]𝒮ℰ⁻¹ Ξℰ) Δ Γ δ
+
+postulate
+  id-pres-rw    : ∀ {Ξℰ : SigEnv Ξ} {ρ : Env Ξℰ Δ Γ δ} 
+                → eval* {σ = δ} Ξℰ id ρ ≡ ρ
+  wk-pres-rw    : ∀ {Ξℰ : SigEnv Ξ} {ρ : Env Ξℰ Δ (Γ ▷ A) δ} → eval* Ξℰ wk ρ ≡ ρ .fst
+  []Ty-pres-rw  : ∀ {Ξℰ : SigEnv Ξ} {ρ : Env Ξℰ Θ Δ σ}
+                → Val Ξℰ Δ (A [ δ ]Ty) Θ σ ρ t 
+                ≡ Val Ξℰ Γ A Θ (δ ⨾ σ) (eval* Ξℰ δ ρ) t
+
+  -- This is a terrible rewrite rule, because both the LHS and RHS have
+  -- operators that will basically never occur in practice...
+  -- We *could* define strengthening operators for our entire syntax, but
+  -- that seems kinda miserable?
+  []Ty⁺-pres-rw : ∀ {φ : Wk Ξ Ψ} 
+                    {ρ : Env Ξℰ (Δ [ φ ]Ctx) (Γ [ φ ]Ctx) (δ [ φ ]Tms)}
+                → Val  Ξℰ (Γ [ φ ]Ctx) (A [ φ ]Ty⁺) 
+                       (Δ [ φ ]Ctx) (δ [ φ ]Tms) ρ (t [ φ ]⁺) 
+                ≡ Val ([ φ ]𝒮ℰ⁻¹ Ξℰ) Γ A Δ δ ([_]ℰ⁻¹_ {δ = δ} φ ρ) t
+  
+{-# REWRITE id-pres-rw #-}
+{-# REWRITE wk-pres-rw #-}
+{-# REWRITE []Ty-pres-rw #-}
+{-# REWRITE []Ty⁺-pres-rw #-}
+
+SigEnv • = ⊤
+SigEnv (Ψ ▷ Γ ⇒ A if t then u else v)
+  = Σ⟨ Ξℰ ∶ SigEnv Ψ ⟩× DefVal Ξℰ (if t u v)
+
+lookup𝒮ℰ : ∀ (Ξℰ : SigEnv Ξ) (f : DefVar Ξ Γ A) → DefVal Ξℰ (lookup𝒮 Ξ f)
+
+-- _[_]𝒮ℰ {Ψ = •} tt φ = {!!}
+-- _[_]𝒮ℰ {Ψ = Ψ ▷ Γ ⇒ A if t then u else v} (Ψℰ Σ, dⱽ) φ = 
+--   Ψℰ [ wk𝒮 ⨾𝒮 φ ]𝒮ℰ
+
+-- Ψℰ [ id𝒮 ]𝒮ℰ    = Ψℰ
+-- Ψℰ [ φ ⨾𝒮 ψ ]𝒮ℰ = Ψℰ [ φ ]𝒮ℰ [ ψ ]𝒮ℰ
+-- Ψℰ [ wk𝒮 ]𝒮ℰ    = {!   !} Σ, {!!}
+
+-- defⱽ uⱽ vⱽ [ φ ]Def𝒱 
+--   = defⱽ (λ ψ ρ t~ → uⱽ (φ ⨾𝒮 ψ) ρ t~) 
+--          (λ ψ ρ t~ → vⱽ (φ ⨾𝒮 ψ) ρ t~) 
+
+
+-- We need signature environments because recursively calling, e.g.
+-- |eval (lookup𝒮 f .lhs) ρ| is not structurally recursive in |call|
+
+-- Except... we can Ford right?
+-- Obvious follow-up question: why are signatures even useful then?
+-- I think it comes down to just congruence of equality. We make sure
+-- to only evaluate the LHS or RHS after the equation holds definitionally,
+-- but this means congruence definitely is not satisfied.
+
+lookup𝒮ℰ Ξℰ (coe~ Γ~ A~ f) = {!   !}
+lookup𝒮ℰ (Ξℰ Σ, defⱽ uⱽ vⱽ) fz
+  -- = {!dⱽ!}
+  = defⱽ (λ ρ t~ → {!uⱽ ([ wk𝒮 ]ℰ⁻¹ ρ) _!}) {!!}
+lookup𝒮ℰ (Ξℰ Σ, dⱽ) (fs f) 
+  using defⱽ uⱽ vⱽ ← lookup𝒮ℰ Ξℰ f
+  = defⱽ {!!} {!!} 
 
 Val Ξℰ Γ (coe~ Γ~ A) Δ δ ρ t 
   = {!!}
@@ -171,15 +267,20 @@ eval-call f ρ (FF {Γ~ = Γ~} t~)     (defⱽ uⱽ vⱽ)
   = coe𝒱 rfl~ (sym~ (call-FF {f = f} (t~ ∙~ FF (sym~ Γ~)))) vⱽ′
   where vⱽ′ = vⱽ ρ (t~ ∙~ FF (sym~ Γ~))
 eval-call f ρ (ne A~ tᴺᵉ) (defⱽ uⱽ vⱽ) 
-  = uval _ (call {f = f} tᴺᵉ)
+  = uval _ (callNe {f = f} tᴺᵉ)
+
+eval* Ξℰ (coe~ Δ~ Γ~ δ)  ρ = {!!}
+eval* Ξℰ ε               ρ = tt
+eval* Ξℰ (δ , t)         ρ = eval* Ξℰ δ ρ Σ, eval Ξℰ t ρ
+eval* Ξℰ (δ ,eq t~)      ρ = {!!}
 
 eval Ξℰ (coe~ Γ~ A~ t) ρ = {!   !}
 eval Ξℰ (` i)          ρ = {!   !}
 eval Ξℰ (ƛ t)          ρ = {!   !}
-eval Ξℰ (t · u)        ρ = {!   !}
-eval Ξℰ TT             ρ = {!   !}
-eval Ξℰ FF             ρ = {!   !}
-eval Ξℰ (call f δ)     ρ = {!fδⱽ!}
-  where δⱽ = eval* Ξℰ δ ρ
-        fδⱽ = eval-call f δⱽ (eval Ξℰ (lookup𝒮 _ f .scrut) δⱽ) 
-                        (lookup𝒮ℰ Ξℰ f)
+eval Ξℰ (t · u)        ρ = eval Ξℰ t ρ idᵀʰ (eval Ξℰ u ρ)
+eval Ξℰ TT             ρ = TT rfl~
+eval Ξℰ FF             ρ = FF rfl~
+eval Ξℰ (call f δ)     ρ 
+  using δⱽ ← eval* Ξℰ δ ρ
+  with eval Ξℰ (lookup𝒮 _ f .scrut) δⱽ
+... | tⱽ = eval-call f δⱽ tⱽ (lookup𝒮ℰ Ξℰ f)

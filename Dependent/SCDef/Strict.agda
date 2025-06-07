@@ -137,6 +137,17 @@ data EqVar where
 
 <_> : Tm Γ A → Tms Γ (Γ ▷ A)
 
+record Def Ψ (Γ : Ctx Ψ) (A : Ty Γ) : Set where
+  constructor if
+  pattern
+  field
+    scrut : Tm Γ 𝔹
+    lhs   : Tm (Γ ▷ scrut >eq true)  (A [ wkeq ]Ty)
+    rhs   : Tm (Γ ▷ scrut >eq false) (A [ wkeq ]Ty) 
+open Def public
+
+lookup𝒮 : ∀ Ψ {Γ A} → DefVar Ψ Γ A → Def Ψ Γ A
+
 data Tm where  
   coe~ : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Tm Γ₁ A₁ → Tm Γ₂ A₂
 
@@ -147,7 +158,13 @@ data Tm where
   TT : Tm Γ 𝔹
   FF : Tm Γ 𝔹
 
-  call : DefVar Ψ Γ A → ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]Ty)
+  callℱ : ∀ (f : DefVar Ψ Γ A) {t u v} (δ : Tms Δ Γ)
+        → lookup𝒮 _ f .scrut ≡ t 
+        → lookup𝒮 _ f .lhs   ≡ u
+        → lookup𝒮 _ f .rhs   ≡ v
+        → Tm Δ (A [ δ ]Ty)
+
+pattern call {A = A} f δ = callℱ {A = A} f δ refl refl refl
 
 ⌜ true  ⌝𝔹 = TT
 ⌜ false ⌝𝔹 = FF
@@ -320,17 +337,6 @@ call f δ   [ σ ] = call f (δ ⨾ σ)
 
 <_>~ : Tm~ Γ~ A~ t₁ t₂ → Tms~ Γ~ (Γ~ ▷ A~) < t₁ > < t₂ >
 
-record Def Ψ (Γ : Ctx Ψ) (A : Ty Γ) : Set where
-  constructor if
-  pattern
-  field
-    scrut : Tm Γ 𝔹
-    lhs   : Tm (Γ ▷ scrut >eq true)  (A [ wkeq ]Ty)
-    rhs   : Tm (Γ ▷ scrut >eq false) (A [ wkeq ]Ty) 
-open Def public
-
-lookup𝒮 : ∀ Ψ {Γ A} → DefVar Ψ Γ A → Def Ψ Γ A
-
 data Tm~ where
   -- Equivalence
   rfl~ : Tm~ rfl~ rfl~ t t
@@ -350,7 +356,7 @@ data Tm~ where
   TT   : ∀ (Γ~ : Ctx~ Γ₁ Γ₂) → Tm~ Γ~ 𝔹 TT TT
   FF   : ∀ (Γ~ : Ctx~ Γ₁ Γ₂) → Tm~ Γ~ 𝔹 FF FF
 
-  call : ∀ (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) → Tm~ Γ~ A~ (call f δ₁) (call f δ₂) 
+  call~ : ∀ (δ~ : Tms~ Δ~ Γ~ δ₁ δ₂) → Tm~ Γ~ A~ (call f δ₁) (call f δ₂) 
 
   -- Equational assumptions
   eq  : EqVar Γ t b → Tm~ rfl~ rfl~ t ⌜ b ⌝𝔹
@@ -489,9 +495,11 @@ TT       [ ξ ]⁺ = TT
 FF       [ ξ ]⁺ = FF
 call f δ [ ξ ]⁺ = call (f [ ξ ]DefVar) (δ [ ξ ]Tms)
 
+_[_]Def : Def Ψ Γ A → ∀ (φ : Wk Φ Ψ) → Def Φ (Γ [ φ ]Ctx) (A [ φ ]Ty⁺)
+if t u v [ φ ]Def = if (t [ φ ]⁺) (u [ φ ]⁺) (v [ φ ]⁺)
+
 lookup𝒮 Ψ (coe~ Γ~ A~ f) = coeDef Γ~ A~ (lookup𝒮 Ψ f)
 lookup𝒮 (Ψ ▷ Γ ⇒ A if t then u else v) fz 
   = if (t [ wk𝒮 ]⁺) (u [ wk𝒮 ]⁺) (v [ wk𝒮 ]⁺)
 lookup𝒮 (Ψ ▷ Γ ⇒ A if _ then _ else _) (fs f) 
-  using if t u v ← lookup𝒮 Ψ f
-  = if (t [ wk𝒮 ]⁺) (u [ wk𝒮 ]⁺) (v [ wk𝒮 ]⁺)
+  = lookup𝒮 Ψ f [ wk𝒮 ]Def
