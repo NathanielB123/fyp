@@ -14,8 +14,6 @@ type family Motive a = r | r -> a where
   Motive Z = Maybe Tm
   Motive a = Body a ()
 
--- TODO: Maybe consider indexing by 'Sort'. Parsing is top-down, so accounting
--- for 'Sort' should actually be relatively easy!
 data Tm = Var String 
         | App Tm Tm 
         | If (Motive (S Z)) Tm Tm Tm

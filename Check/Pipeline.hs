@@ -19,7 +19,6 @@ runParser p s
   | P.Success x <- parse @String p s = Success x
   | P.Failure e <- parse @String p s = Failure e
 
-
 infer :: String -> TCM (VTy Z)
 infer t = do
   t'     <- runParser (pTm <* "\n") t
@@ -46,3 +45,7 @@ main = do
     Failure e -> putStrLn $ "Failed :(\n" <> e
 
 
+boolLemmaTy = "forall f: B -> B, b : B. Id B (f b) (f (f (f b))) \n"
+boolLemmaTm = "\\f, b. sif b then (sif (f True) then Rfl else (sif (f False) then Rfl else Rfl)) else (sif (f False) then (sif (f True) then Rfl else Rfl) else Rfl) \n"
+-- >>> check boolLemmaTm boolLemmaTy
+-- Success: ()

@@ -7,7 +7,7 @@
 {-# OPTIONS -Wall #-}
 {-# OPTIONS -Wpartial-fields #-}
 {-# OPTIONS -Wno-unrecognised-pragmas #-}
-{-# OPTIONS -Wno-missing-papTTern-synonym-signatures #-}
+{-# OPTIONS -Wno-orphans #-}
 
 module Check.Parse where
 
@@ -101,7 +101,7 @@ pSmrtIf m t u v
   = "sif" *> (SmrtIf <$> m <*> t <*> ("then" *> u) <*> ("else" *> v))
 
 pExpl :: Parsec (Motive Z) -> Parsec Tm -> Parsec Tm
-pExpl m p = "!" *> (Expl <$> m <*> p)
+pExpl m p = "explode" *> (Expl <$> m <*> p)
 
 pU :: Parsec Tm
 pU = "U" $> U
@@ -127,9 +127,8 @@ pRflAnn x = "Rfl" *> (Rfl <$> optional (braces x))
 pBot :: Parsec Tm
 pBot = ("𝟘" <|> "Empty") $> Bot
 
--- TODO: I don't like this syntax
 pAbsrd :: Parsec Tm
-pAbsrd = "!!!" $> Absrd
+pAbsrd = "!" $> Absrd
 
 pTransp :: Parsec (Motive (S Z)) -> Parsec Tm -> Parsec Tm -> Parsec Tm
 pTransp m p t = "transp" *> (Transp <$> m <*> p <*> t)
@@ -152,8 +151,7 @@ pParensTm
   <|> pCommonTm
 
 pTm :: Parsec Tm
-pTm = 
-  pSmrtIf pMotive pParensTm pParensTm pParensTm
+pTm = pSmrtIf pMotive pParensTm pParensTm pParensTm
   <|> pExpl pMotive pParensTm
   <|> pIf pMotive pParensTm pParensTm pParensTm
   <|> pTransp pMotive pParensTm pParensTm

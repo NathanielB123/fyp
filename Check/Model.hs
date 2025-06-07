@@ -291,7 +291,6 @@ runUnk f (Ex t) = f t
 instance PshThin (Unk d) where
   thin s (Ex t) = Ex $ thin s t
 
-
 instance PshThin (Body d q) where
   thin s (Inc t) = Inc $ thin (Keep s) t
   thin s (Clo t) = Clo $ t . comTh s

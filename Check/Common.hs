@@ -11,9 +11,9 @@ orThrow :: Bool -> Error -> TCM ()
 orThrow True  _ = pure ()
 orThrow False e = throw e
 
--- Temporary hack
-instance MonadFail TCM where
-  fail s = throw s
+justOrThrow :: Error -> Maybe a -> TCM a
+justOrThrow _ (Just x) = Success x
+justOrThrow e Nothing  = Failure e
 
 guardThrow :: Bool -> Error -> TCM ()
 guardThrow True  _ = pure ()

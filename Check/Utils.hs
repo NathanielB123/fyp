@@ -25,7 +25,7 @@ import Data.List.NonEmpty (NonEmpty (..), nonEmpty)
 type Pair a b = (a, b)
 type List a   = [a]
 
-data Nat = Z | S Nat
+type data Nat = Z | S Nat
 
 type family n + m where
   Z   + m = m

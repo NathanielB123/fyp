@@ -18,7 +18,6 @@ module Check.Sanity where
 import Prelude hiding (unzip)
 import Data.Bifunctor (Bifunctor(..))
 import Data.Data ((:~:) (..))
-
 import Check.Utils
 import qualified Check.Syntax as Pre
 import Check.Model

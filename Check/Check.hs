@@ -295,7 +295,7 @@ eval _ Absrd = __IMPOSSIBLE__
 
 notConvErr :: (Show a, Show b) => a -> b -> Error
 notConvErr t u = quotes (show t) <> " and " <> quotes (show u)
-              <> " are not covertible."
+              <> " are not convertible."
 
 chkConvBody :: Sing SNat g => Body Sem q g -> Body Sem r g -> TCM ()
 chkConvBody t u 
@@ -319,6 +319,20 @@ inferBody :: Sing SNat g => Ctx g -> Env g g -> VTy g -> Body Syn q g
 inferBody g r a (Inc t) 
   = infer (g :. a) (incEnv r) t
 
+isU :: (Sing SNat g, Show (Model d (Par U) g)) => Model d (Par U) g -> TCM ()
+isU U = pure ()
+isU a = throw $ expUErr a
+
+isPi :: (Sing SNat g, Show (Model d (Par U) g)) => Model d (Par U) g 
+     -> TCM (Model d (Par U) g , Body d U g)
+isPi (Pi a b) = pure (a , b)
+isPi a        = throw $ expPiErr a
+
+isId :: (Sing SNat g, Show (Model d (Par U) g)) => Model d (Par U) g 
+     -> TCM (Model d (Par U) g, Unk d g, Unk d g)
+isId (Id a x y) = pure (a, Ex x, Ex y)
+isId a          = throw $ expIdErr a
+
 infer :: Sing SNat g => Ctx g -> Env g g -> Tm q g -> TCM (VTy g)
 infer g r (Lam (Just a) t) = do
   check g r U a
@@ -331,7 +345,7 @@ infer g r (Pi a b) = do
   checkBody g r a' U b
   pure U
 infer g r (App t u) = do
-  Pi a1 (Clo b1) <- infer g r t
+  (a1, unclo -> b1) <- infer g r t >>= isPi
   a2 <- infer g r u
   chkConv a1 a2
   -- Perhaps 'infer' should return the 'eval'uated term...
@@ -346,7 +360,7 @@ infer g r (If m t u v) = do
   a1 <- infer g r u
   a2 <- infer g r v
   checkBody g r B U m
-  Clo m' <- pure $ evalBody (vals r) m
+  let m' = unclo $ evalBody (vals r) m
   let a1' = m' (idTh fill) (eqs r) TT
   let a2' = m' (idTh fill) (eqs r) FF
   chkConv a1 a1'
@@ -363,14 +377,14 @@ infer g r (SmrtIf (Just m) t u v) = do
   -- avoid this...
   checkMaybeAbsurd g rT m u
   checkMaybeAbsurd g rF m v
-  let m' = eval r m 
+  let m' = eval r m
   pure m'
 infer g r (Rfl (Just x)) = do
   a' <- infer g r x
   let x' = eval r x
   pure (Id a' x' x')
 infer g r (Id a x y) = do
-  U <- infer g r a
+  infer g r a >>= isU
   let a1' = eval r a
   a2' <- infer g r x
   chkConv a1' a2'
@@ -378,14 +392,14 @@ infer g r (Id a x y) = do
   chkConv a1' a3'
   pure U
 infer g r (Transp m p t) = do
-  Id a x y <- infer g r p
+  (a, Ex x, Ex y) <- infer g r p >>= isId
   checkBody g r a U m
   mx1' <- infer g r t
-  -- Todo can/should we eval in context extended with 'x' directly?
-  Clo m' <- pure $ evalBody (vals r) m
+  -- Todo should we eval in context extended with 'x' directly?
+  let m' = unclo $ evalBody (vals r) m
   let mx2' = m' (idTh fill) (eqs r) x
   chkConv mx1' mx2'
-  pure $ m' (idTh fill) (eqs r) y
+  pure $ m' (idTh fill) (eqs r) (unsafeCoerce y)
 infer g r (Expl (Just m) p) = do
   check g r Bot p
   check g r U m
@@ -411,11 +425,14 @@ checkErr :: (Show a, Show b) => a -> b -> Error
 checkErr t a 
   = "Checking " <> quotes (show t) <> " has type " <> quotes (show a)
 
-checkLamErr :: Show a => a -> Error
-checkLamErr a = quotes (show a) <> " is convertible to a pi-type."
+expPiErr :: Show a => a -> Error
+expPiErr a = quotes (show a) <> " is not convertible to a Pi-type."
 
-checkRflErr :: Show a => a -> Error
-checkRflErr a = quotes (show a) <> " is convertible to an Id-type."
+expIdErr :: Show a => a -> Error
+expIdErr a = quotes (show a) <> " is not convertible to an Id-type."
+
+expUErr :: Show a => a -> Error
+expUErr a = quotes (show a) <> " is not convertible to U."
 
 -- TODO: Refactor 'infer'/'check' to do proper bidir 
 -- (i.e. don't redundantly check 'a' is of type 'U' - I think the neater
@@ -427,20 +444,21 @@ check @_ @q g r a t = appendError (checkErr t a) $ case t of
     -> discard $ infer @_ @q g r (SmrtIf (Just a) t' u' v')
   Expl Nothing p       
     -> discard $ infer @_ @q g r (Expl (Just a) p)
-  Rfl Nothing -> case a of 
-    (Id _ x _) -> check g r a (Rfl (Just x))
-    _          -> throw $ checkRflErr a
-  Lam a' t' -> case (a, a') of
-    (Pi a0 (Inc b'), Nothing) -> do
-      let a0' = eval r a0
-      checkBody g r a0' b' t'
-    (Pi a0 (Inc b'), Just a1) -> do
-      check g r U a1
-      let a0' = eval r a0
-      let a1' = eval r a1
-      chkConv a0' a1'
-      checkBody g r a0' b' t'
-    _                   -> throw $ checkLamErr a 
+  Rfl Nothing -> do
+    (_, Ex x, _) <- isId a 
+    check g r a (Rfl (Just x))
+  Lam a' t' -> do
+    (a0, (uninc -> b')) <- isPi a
+    case a' of
+      Just a1 -> do
+        check g r U a1
+        let a0' = eval r a0
+        let a1' = eval r a1
+        chkConv a0' a1'
+        checkBody g r a0' b' t'
+      Nothing -> do
+        let a0' = eval r a0
+        checkBody g r a0' b' t'
   _ -> do
     a' <- infer g r t
     chkConv (eval r a) a'
