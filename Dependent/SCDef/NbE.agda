@@ -5,27 +5,22 @@ open import Utils.IdExtras
 
 open import Dependent.SCDef.Strict
 
-module Dependent.SCDef.NbE where 
-
-[][]⁺⁺₁ : ∀ {t : Tm Γ 𝔹} → t [ φ ]⁺ [ ψ ]⁺ ≡ t [ φ ⨾𝒮 ψ ]⁺
-[][]⁺⁺₁ = [][]⁺⁺
-{-# REWRITE [][]⁺⁺₁ #-}
-[][]⁺⁺₂ : ∀ {t : Tm (Γ ▷ u >eq b) (A [ wkeq ]Ty)}
-        → t [ φ ]⁺ [ ψ ]⁺ ≡ t [ φ ⨾𝒮 ψ ]⁺
-[][]⁺⁺₂ {t = t} = [][]⁺⁺ {t = t}
-{-# REWRITE [][]⁺⁺₂ #-}
+module Dependent.SCDef.NbE where
 
 data Thin {Ξ} : ∀ Δ Γ → Tms {Ξ = Ξ} Δ Γ → Set where
   coe~  : ∀ Δ~ Γ~ → Tms~ Δ~ Γ~ δ₁ δ₂ → Thin Δ₁ Γ₁ δ₁ → Thin Δ₂ Γ₂ δ₂
 
-  ε     : Thin • • ε
-  _^ᵀʰ_ : Thin Δ Γ δ → ∀ A 
-        → Thin  (Δ ▷ (A [ δ ]Ty)) (Γ ▷ A) (δ ^ A)
-  _⁺ᵀʰ_ : Thin Δ Γ δ 
-        → ∀ A → Thin (Δ ▷ A) Γ (δ ⨾ wk)
+  ε         : Thin • • ε
+  _^ᵀʰ_     : Thin Δ Γ δ → ∀ A 
+            → Thin (Δ ▷ (A [ δ ]Ty)) (Γ ▷ A) (δ ^ A)
+  _^ᵀʰ_>eq_ : Thin Δ Γ δ → ∀ t b
+            → Thin (Δ ▷ t [ δ ] >eq b) (Γ ▷ t >eq b) (δ ^ t >eq b)
+  _⁺ᵀʰ_     : Thin Δ Γ δ 
+            → ∀ A → Thin (Δ ▷ A) Γ (δ ⨾ wk)
 
-idᵀʰ : Thin Γ Γ id
-_⨾ᵀʰ_ : Thin Δ Γ δ → Thin Θ Δ σ → Thin Θ Γ (δ ⨾ σ)
+idᵀʰ   : Thin Γ Γ id
+_⨾ᵀʰ_  : Thin Δ Γ δ → Thin Θ Δ σ → Thin Θ Γ (δ ⨾ σ)
+wkᵀʰ   : Thin (Γ ▷ A) Γ wk
 
 Ne : ∀ Γ A → Tm {Ξ = Ξ} Γ A → Set
 data PreNe : ∀ Γ A → Tm {Ξ = Ξ} Γ A → Set
@@ -74,18 +69,23 @@ data TRS (Γ : Ctx Ψ) : Set where
   _▷_>rw_ : TRS Γ → PreNe Γ 𝔹 t → Bool → TRS Γ
 
 variable
-  Γᶜ : TRS Γ
+  Γᵀᴿ : TRS Γ
 
 data RwVar : TRS Γ → PreNe Γ 𝔹 t → Bool → Set where
-  rz : RwVar (Γᶜ ▷ tᴾᴺᵉ >rw b) tᴾᴺᵉ b
-  rs : RwVar Γᶜ tᴾᴺᵉ b₁ → RwVar (Γᶜ ▷ uᴾᴺᵉ >rw b₂) tᴾᴺᵉ b₁
-  
--- TODO: Is this enough for confluence? I don't think so?
+  rz : RwVar (Γᵀᴿ ▷ tᴾᴺᵉ >rw b) tᴾᴺᵉ b
+  rs : RwVar Γᵀᴿ tᴾᴺᵉ b₁ → RwVar (Γᵀᴿ ▷ uᴾᴺᵉ >rw b₂) tᴾᴺᵉ b₁
+
 record ValidTRS (Γ : Ctx Ψ) : Set where
   field
     trs    : TRS Γ
     sound  : RwVar {t = t} trs tᴾᴺᵉ b → Tm~ rfl~ rfl~ t ⌜ b ⌝𝔹
     compl  : EqVar Γ t b → ∀ (tᴾᴺᵉ : PreNe Γ 𝔹 t) → RwVar trs tᴾᴺᵉ b
+open ValidTRS using (trs) renaming (sound to soundTR; compl to complTR)
+
+variable
+  Γᶜ Δᶜ Θᶜ : ValidTRS Γ
+
+_[_]TRS : ValidTRS Γ → Thin Δ Γ δ → ValidTRS Δ
 
 def-incon : Ctx Ψ → Prop
 def-incon Γ = Tm~ (rfl~ {Γ = Γ}) rfl~ TT FF
@@ -94,193 +94,189 @@ data ComplTRS (Γ : Ctx Ψ) : Set where
   compl  : ValidTRS Γ → ComplTRS Γ
   !!     : def-incon Γ → ComplTRS Γ
 
-data 𝔹Valᵗᶠ : ∀ (Γ : Ctx Ψ) {A} → Tm Γ A → Set where
-  TT : Tm~ Γ~ A~ t TT → 𝔹Valᵗᶠ Γ t
-  FF : Tm~ Γ~ B~ t FF → 𝔹Valᵗᶠ Γ t
+record 𝔹Valᵗᶠ (Γ : Ctx Ξ) {A} (t : Tm Γ A) : Set where
+  constructor closed
+  field
+    {ctx}   : Ctx Ξ
+    {bool}  : Bool
+    {ctx~}  : Ctx~ Γ ctx
+    {ty~}   : Ty~ ctx~ A 𝔹
+    tm~     : Tm~ ctx~ ty~ t ⌜ bool ⌝𝔹
 
 data 𝔹Val : ∀ (Γ : Ctx Ψ) {A} → Tm Γ A → Set where
   TT : Tm~ Γ~ A~ t TT → 𝔹Val Γ t
-  FF : Tm~ Γ~ B~ t FF → 𝔹Val Γ t
+  FF : Tm~ Γ~ A~ t FF → 𝔹Val Γ t
   ne : Ty~ Γ~ A 𝔹 → Ne Γ A t → 𝔹Val Γ t
 
-checkrw : TRS Γ → PreNe Γ A t → Ne Γ A t × 𝔹Valᵗᶠ Γ t
+_[_]Nf     : Nf Γ A t → Thin Δ Γ δ → Nf Δ (A [ δ ]Ty) (t [ δ ])
+_[_]Ne     : Ne Γ A t → Thin Δ Γ δ → Ne Δ (A [ δ ]Ty) (t [ δ ])
+_[_]PreNe  : PreNe Γ A t → Thin Δ Γ δ → PreNe Δ (A [ δ ]Ty) (t [ δ ])
+_[_]𝔹Val   : 𝔹Val Γ t → Thin Δ Γ δ → 𝔹Val Δ (t [ δ ])
 
-SigEnv : Sig → Set
-Env    : SigEnv Ξ → ∀ Δ Γ → Tms {Ξ = Ξ} Δ Γ → Set
-Val    : ∀ (Ξℰ : SigEnv Ξ) Γ A Δ δ → Env Ξℰ Δ Γ δ → Tm Δ (A [ δ ]Ty) → Set
-eval   : ∀ (Ξℰ : SigEnv Ξ) (t : Tm Γ A) (ρ : Env Ξℰ Δ Γ δ) 
-       → Val Ξℰ Γ A Δ δ ρ (t [ δ ])
-eval*  : ∀ (Ξℰ : SigEnv Ξ) δ (ρ : Env Ξℰ Θ Δ σ) → Env Ξℰ Θ Γ (δ ⨾ σ)
+data CheckRwResult (Γᶜ : TRS Γ) (tᴾᴺᵉ : PreNe Γ A t) : Set where
+  rw   : RwVar Γᶜ (coe~ rfl~ A~ coh tᴾᴺᵉ) b → CheckRwResult Γᶜ tᴾᴺᵉ
+  stk  : (∀ A~ b → ¬ RwVar Γᶜ (coe~ rfl~ A~ coh tᴾᴺᵉ) b) 
+       → CheckRwResult Γᶜ tᴾᴺᵉ
+
+checkrw : ∀ (Γᶜ : TRS Γ) (tᴺᵉ : PreNe Γ A t) 
+         → CheckRwResult Γᶜ tᴾᴺᵉ
+
+rwVal : ValidTRS Γ → PreNe Γ A t → Box (predNe Γ A t) ⊎ 𝔹Valᵗᶠ Γ t
+
+Env    : ∀ Ξ Δ Γ → ValidTRS Δ → Tms {Ξ = Ξ} Δ Γ → Set
+Val    : ∀ Γ A Δ Δᶜ δ
+       → Env Ξ Δ Γ Δᶜ δ → Tm Δ (A [ δ ]Ty) → Set
+eval   : ∀ Δᶜ (t : Tm Γ A) (ρ : Env Ξ Δ Γ Δᶜ δ) 
+       → Val Γ A Δ Δᶜ δ ρ (t [ δ ])
+eval*  : ∀ Θᶜ δ (ρ : Env Ξ Θ Δ Θᶜ σ) → Env Ξ Θ Γ Θᶜ (δ ⨾ σ)
 
 variable
-  Ξℰ Ψℰ : SigEnv Ξ
-  ρ : Env Ξℰ Δ Γ δ
+  ρ : Env Ξ Δ Γ Δᶜ δ
 
-uval : ∀ A {t} → PreNe Δ (A [ δ ]Ty) t → Val Ξℰ Γ A Δ δ ρ t
+uvalpre  : ∀ A {t} → PreNe Δ (A [ δ ]Ty) t → Val Γ A Δ Δᶜ δ ρ t
+uval     : ∀ A {t} → Ne Δ (A [ δ ]Ty) t → Val Γ A Δ Δᶜ δ ρ t
+qval     : ∀ A {t} → Val Γ A Δ Δᶜ δ ρ t → Nf Δ (A [ δ ]Ty) t
 
--- _[_]𝒮ℰ   : SigEnv Ψ → Wk Φ Ψ → SigEnv Φ
+postulate
+  coe𝒱 : ∀ {ρ : Env Ξ Δ Γ Δᶜ δ} (A~ : Ty~ rfl~ A₁ A₂)
+        → Tm~ Δ~ (A~ [ rfl~ ]Ty~) t₁ t₂
+       → Val Γ A₁ Δ Δᶜ δ ρ t₁ → Val Γ A₂ Δ Δᶜ δ ρ t₂
 
-record DefVal (Ψℰ : SigEnv Ψ) (d : Def Ψ Γ A) : Set where
-  constructor defⱽ
-  pattern
-  field
-    lhsⱽ  : ∀  (ρ : Env Ψℰ Δ Γ δ) 
-               (t~ : Tm~ rfl~ rfl~ (d .scrut [ δ ]) TT)
-          → Val  Ψℰ Γ A Δ δ ρ 
-                 (d .lhs [ δ ,eq t~ ])
-    rhsⱽ  : ∀  (ρ : Env Ψℰ Δ Γ δ) 
-               (t~ : Tm~ rfl~ rfl~ (d .scrut [ δ ]) FF)
-          → Val  Ψℰ Γ A Δ δ ρ 
-                 (d .rhs [ δ ,eq t~ ])
-    -- lhsⱽ  : ∀  (φ : Wk Φ Ψ) {δ} (ρ : Env (Ψℰ [ φ ]𝒮ℰ) Δ (Γ [ φ ]Ctx) δ) 
-    --            (t~ : Tm~ rfl~ rfl~ (d .scrut [ φ ]⁺ [ δ ]) TT)
-    --       → Val  (Ψℰ [ φ ]𝒮ℰ) (Γ [ φ ]Ctx) (A [ φ ]Ty⁺) Δ δ ρ 
-    --              (d .lhs [ φ ]⁺ [ δ ,eq t~ ])
-    -- rhsⱽ  : ∀  (φ : Wk Φ Ψ) {δ} (ρ : Env (Ψℰ [ φ ]𝒮ℰ) Δ (Γ [ φ ]Ctx) δ) 
-    --            (t~ : Tm~ rfl~ rfl~ (d .scrut [ φ ]⁺ [ δ ]) FF)
-    --       → Val  (Ψℰ [ φ ]𝒮ℰ) (Γ [ φ ]Ctx) (A [ φ ]Ty⁺) Δ δ ρ 
-    --              (d .rhs [ φ ]⁺ [ δ ,eq t~ ])
+_[_]ℰ    : Env Ξ Δ Γ Δᶜ δ → ∀ (σᵀʰ : Thin Θ Δ σ) 
+         → Env Ξ Θ Γ (Δᶜ [ σᵀʰ ]TRS) (δ ⨾ σ)
 
--- _[_]Def𝒱  : ∀ {d : Def Ψ Γ A}
---           → DefVal Ψℰ d → ∀ (φ : Wk Φ Ψ) → DefVal (Ψℰ [ φ ]𝒮ℰ) (d [ φ ]Def)
+variable
+  δᵀʰ σᵀʰ : Thin Δ Γ δ
 
--- _[_]Wkℰ  : Env Ψℰ Δ Γ δ → ∀ (φ : Wk Φ Ψ) 
---          → Env (Ψℰ [ φ ]𝒮ℰ) (Δ [ φ ]Ctx) (Γ [ φ ]Ctx) (δ [ φ ]Tms) 
-_[_]ℰ    : Env {Ξ = Ξ} Ξℰ Δ Γ δ → Thin Θ Δ σ → Env Ξℰ Θ Γ (δ ⨾ σ)
+postulate
+  [id]TRS : Γᶜ [ idᵀʰ ]TRS ≡ Γᶜ
+  [][]TRS : Γᶜ [ δᵀʰ ]TRS [ σᵀʰ ]TRS ≡ Γᶜ [ δᵀʰ ⨾ᵀʰ σᵀʰ ]TRS
+{-# REWRITE [id]TRS [][]TRS #-}
 
-postulate 
-  -- [id]𝒮ℰ : Ξℰ [ id𝒮 ]𝒮ℰ ≡ Ξℰ
-  [id]ℰ  : ∀ {ρ : Env Ξℰ Δ Γ δ} → ρ [ idᵀʰ ]ℰ ≡ ρ
-  [][]ℰ  : ∀ {ρ : Env Ξℰ Δ Γ δ} 
-             {σᵀʰ : Thin Θ Δ σ} {γᵀʰ : Thin _ Θ γ}
+variable
+  Τ : Ctx Ξ
+
+postulate
+  [id]ℰ  : ∀ {ρ : Env Ξ Δ Γ Δᶜ δ} → ρ [ idᵀʰ ]ℰ ≡ ρ
+  [][]ℰ  : ∀ {ρ : Env Ξ Δ Γ Δᶜ δ} 
+             {σᵀʰ : Thin Θ Δ σ} {γᵀʰ : Thin Τ Θ γ}
          → ρ [ σᵀʰ ]ℰ [ γᵀʰ ]ℰ ≡ ρ [ σᵀʰ ⨾ᵀʰ γᵀʰ ]ℰ
--- {-# REWRITE [id]𝒮ℰ #-}
 {-# REWRITE [id]ℰ #-}
 {-# REWRITE [][]ℰ #-}
 
-postulate
-  coe𝒱 : ∀ {ρ : Env {Ξ = Ξ} Ξℰ Δ Γ δ} (A~ : Ty~ rfl~ A₁ A₂)
-        → Tm~ Δ~ (A~ [ rfl~ ]Ty~) t₁ t₂
-        → Val Ξℰ Γ A₁ Δ δ ρ t₁ → Val Ξℰ Γ A₂ Δ δ ρ t₂
+Env Ξ Δ •       Δᶜ δ = ⊤
+Env Ξ Δ (Γ ▷ A) Δᶜ δ = Σ (Env Ξ Δ Γ Δᶜ (π₁ δ))
+                        λ ρ → Val Γ A Δ Δᶜ (π₁ δ) ρ (π₂ δ)
+Env Ξ Δ (Γ ▷ t >eq b) Δᶜ δ
+  = Env Ξ Δ Γ Δᶜ (π₁eq δ)
 
-Env Ξℰ Δ •       δ = ⊤
-Env Ξℰ Δ (Γ ▷ A) δ = Σ (Env Ξℰ Δ Γ (π₁ δ))
-                   λ ρ → Val Ξℰ Γ A Δ (π₁ δ) ρ (π₂ δ)
--- I am going to leave this as a hole until I reach a point in the NbE code
--- when it is necessary. In the standard model, we interpreted convertibility
--- assumptions as propositional equalities. In this NbE algorithm, TRS is
--- already kinda dealing with the rewrites, so I'm not sure what would be
--- useful to put here (equations between values seem weird to me, but maybe
--- that is the way to go)
-Env Ξℰ Δ (Γ ▷ t >eq b) δ 
-  = {!!}
-
--- TODO: Is this the neatest approach?
--- Strengthening feels inherently a bit ugly to me...
--- One possible idea: could we parameterise over signature environments?
--- Oh lol this is literally the idea behind Env
--- So I guess we could set |SigEnv Ξ = SigEnv′ Ξ Ξ|
--- Weakening can then take us from |SigEnv′ Φ Ψ| to |SigEnv′ (Φ ▷ ...) Ψ|
-
-[_]𝒮ℰ⁻¹ : Wk Φ Ψ → SigEnv Φ → SigEnv Ψ
-
-[_]ℰ⁻¹_ : ∀ (φ : Wk Φ Ψ) → Env Ξℰ (Δ [ φ ]Ctx) (Γ [ φ ]Ctx) (δ [ φ ]Tms) 
-        → Env ([ φ ]𝒮ℰ⁻¹ Ξℰ) Δ Γ δ
+idℰ : Env Ξ Γ Γ Γᶜ id
 
 postulate
-  id-pres-rw    : ∀ {Ξℰ : SigEnv Ξ} {ρ : Env Ξℰ Δ Γ δ} 
-                → eval* {σ = δ} Ξℰ id ρ ≡ ρ
-  wk-pres-rw    : ∀ {Ξℰ : SigEnv Ξ} {ρ : Env Ξℰ Δ (Γ ▷ A) δ} → eval* Ξℰ wk ρ ≡ ρ .fst
-  []Ty-pres-rw  : ∀ {Ξℰ : SigEnv Ξ} {ρ : Env Ξℰ Θ Δ σ}
-                → Val Ξℰ Δ (A [ δ ]Ty) Θ σ ρ t 
-                ≡ Val Ξℰ Γ A Θ (δ ⨾ σ) (eval* Ξℰ δ ρ) t
+  id-pres-rw    : ∀ {ρ : Env Ξ Δ Γ Δᶜ δ} 
+                → eval* {σ = δ} Δᶜ id ρ ≡ ρ
+  wk-pres-rw    : ∀ {ρ : Env Ξ Δ (Γ ▷ A) Δᶜ δ} 
+                → eval* Δᶜ wk ρ ≡ ρ .fst
 
-  -- This is a terrible rewrite rule, because both the LHS and RHS have
-  -- operators that will basically never occur in practice...
-  -- We *could* define strengthening operators for our entire syntax, but
-  -- that seems kinda miserable?
-  []Ty⁺-pres-rw : ∀ {φ : Wk Ξ Ψ} 
-                    {ρ : Env Ξℰ (Δ [ φ ]Ctx) (Γ [ φ ]Ctx) (δ [ φ ]Tms)}
-                → Val  Ξℰ (Γ [ φ ]Ctx) (A [ φ ]Ty⁺) 
-                       (Δ [ φ ]Ctx) (δ [ φ ]Tms) ρ (t [ φ ]⁺) 
-                ≡ Val ([ φ ]𝒮ℰ⁻¹ Ξℰ) Γ A Δ δ ([_]ℰ⁻¹_ {δ = δ} φ ρ) t
-  
+  wkeq-pres-rw  : ∀ {ρ : Env Ξ Δ (Γ ▷ t >eq b) Δᶜ δ} 
+                → eval* {σ = δ} Δᶜ (wkeq {t = t} {b = b}) ρ ≡ ρ
+  []Ty-pres-rw  : ∀ {ρ : Env Ξ Θ Δ Θᶜ σ}
+                → Val Δ (A [ δ ]Ty) Θ Θᶜ σ ρ t 
+                ≡ Val Γ A Θ Θᶜ (δ ⨾ σ) (eval* {σ = σ} Θᶜ δ ρ) t
+
 {-# REWRITE id-pres-rw #-}
 {-# REWRITE wk-pres-rw #-}
+{-# REWRITE wkeq-pres-rw #-}
 {-# REWRITE []Ty-pres-rw #-}
-{-# REWRITE []Ty⁺-pres-rw #-}
 
-SigEnv • = ⊤
-SigEnv (Ψ ▷ Γ ⇒ A if t ≔ u ∣ v)
-  = Σ⟨ Ξℰ ∶ SigEnv Ψ ⟩× DefVal Ξℰ (if t u v)
-
-lookup𝒮ℰ : ∀ (Ξℰ : SigEnv Ξ) (f : DefVar Ξ Γ A) → DefVal Ξℰ (lookup𝒮 Ξ f)
-
--- _[_]𝒮ℰ {Ψ = •} tt φ = {!!}
--- _[_]𝒮ℰ {Ψ = Ψ ▷ Γ ⇒ A if t then u else v} (Ψℰ Σ, dⱽ) φ = 
---   Ψℰ [ wk𝒮 ⨾𝒮 φ ]𝒮ℰ
-
--- Ψℰ [ id𝒮 ]𝒮ℰ    = Ψℰ
--- Ψℰ [ φ ⨾𝒮 ψ ]𝒮ℰ = Ψℰ [ φ ]𝒮ℰ [ ψ ]𝒮ℰ
--- Ψℰ [ wk𝒮 ]𝒮ℰ    = {!   !} Σ, {!!}
-
--- defⱽ uⱽ vⱽ [ φ ]Def𝒱 
---   = defⱽ (λ ψ ρ t~ → uⱽ (φ ⨾𝒮 ψ) ρ t~) 
---          (λ ψ ρ t~ → vⱽ (φ ⨾𝒮 ψ) ρ t~) 
-
-
--- We need signature environments because recursively calling, e.g.
--- |eval (lookup𝒮 f .lhs) ρ| is not structurally recursive in |call|
-
--- Except... we can Ford right?
--- Obvious follow-up question: why are signatures even useful then?
--- I think it comes down to just congruence of equality. We make sure
--- to only evaluate the LHS or RHS after the equation holds definitionally,
--- but this means congruence definitely is not satisfied.
-
-lookup𝒮ℰ Ξℰ (coe~ Γ~ A~ f) = {!   !}
-lookup𝒮ℰ (Ξℰ Σ, defⱽ uⱽ vⱽ) fz
-  -- = {!dⱽ!}
-  = defⱽ (λ ρ t~ → {!uⱽ ([ wk𝒮 ]ℰ⁻¹ ρ) _!}) {!!}
-lookup𝒮ℰ (Ξℰ Σ, dⱽ) (fs f) 
-  using defⱽ uⱽ vⱽ ← lookup𝒮ℰ Ξℰ f
-  = defⱽ {!!} {!!} 
-
-Val Ξℰ Γ (coe~ Γ~ A) Δ δ ρ t 
+Val Γ (coe~ Γ~ A) Δ Δᶜ δ ρ t 
   = {!!}
-Val Ξℰ Γ 𝔹          Δ δ ρ t = 𝔹Val Δ t
-Val Ξℰ Γ (IF b A B) Δ δ ρ t = {!if-Val Γ A B Δ δ ρ t (eval b ρ)!}
-Val {Ξ = Ξ} Ξℰ Γ (Π A B)    Δ δ ρ t 
+Val Γ 𝔹          Δ Δᶜ δ ρ t = 𝔹Val Δ t
+Val Γ (IF b A B) Δ Δᶜ δ ρ t = {!if-Val Γ A B Δ δ ρ t (eval b ρ)!}
+Val Γ (Π A B)    Δ Δᶜ δ ρ t 
   = ∀ {Θ γ} (γᵀʰ : Thin Θ Δ γ) {u}
-      (uⱽ : Val Ξℰ Γ A Θ (δ ⨾ γ) (_[_]ℰ {Γ = Γ} ρ γᵀʰ) u)
-  → Val Ξℰ (Γ ▷ A) B Θ ((δ ⨾ γ) , u) ((_[_]ℰ {Γ = Γ} ρ γᵀʰ) Σ, uⱽ) 
-        ((t [ γ ]) · u)
+      (uⱽ : Val Γ A Θ (Δᶜ [ γᵀʰ ]TRS) (δ ⨾ γ) (_[_]ℰ {Γ = Γ} ρ γᵀʰ) u)
+  → Val (Γ ▷ A) B Θ (Δᶜ [ γᵀʰ ]TRS) ((δ ⨾ γ) , u) 
+        ((_[_]ℰ {Γ = Γ} ρ γᵀʰ) Σ, uⱽ) ((t [ γ ]) · u)
 
-eval-call : (f : DefVar Ξ Γ A) (ρ : Env Ξℰ Δ Γ δ)
-            (tⱽ : Val Ξℰ Γ 𝔹 Δ δ ρ (lookup𝒮 Ξ f .scrut [ δ ])) 
-          → DefVal Ξℰ (lookup𝒮 Ξ f)
-          → Val Ξℰ Γ A Δ δ ρ (call f δ)
-eval-call f ρ (TT {Γ~ = Γ~} t~)     (defⱽ uⱽ vⱽ) 
-  = coe𝒱 rfl~ (sym~ (call-TT {f = f} (t~ ∙~ TT (sym~ Γ~)))) uⱽ′
-  where uⱽ′ = uⱽ ρ (t~ ∙~ TT (sym~ Γ~))
-eval-call f ρ (FF {Γ~ = Γ~} t~)     (defⱽ uⱽ vⱽ) 
-  = coe𝒱 rfl~ (sym~ (call-FF {f = f} (t~ ∙~ FF (sym~ Γ~)))) vⱽ′
-  where vⱽ′ = vⱽ ρ (t~ ∙~ FF (sym~ Γ~))
-eval-call f ρ (ne A~ tᴺᵉ) (defⱽ uⱽ vⱽ) 
-  = uval _ (callNe {f = f} tᴺᵉ)
 
-eval* Ξℰ (coe~ Δ~ Γ~ δ)  ρ = {!!}
-eval* Ξℰ ε               ρ = tt
-eval* Ξℰ (δ , t)         ρ = eval* Ξℰ δ ρ Σ, eval Ξℰ t ρ
-eval* Ξℰ (δ ,eq t~)      ρ = {!!}
+eval* Δᶜ (coe~ Δ~ Γ~ δ)  ρ = {!!}
+eval* Δᶜ ε               ρ = tt
+eval* Δᶜ (δ , t)         ρ = eval* Δᶜ δ ρ Σ, eval Δᶜ t ρ
+eval* Δᶜ (δ ,eq t~)      ρ = eval* Δᶜ δ ρ
 
-eval Ξℰ (coe~ Γ~ A~ t) ρ = {!   !}
-eval Ξℰ (` i)          ρ = {!   !}
-eval Ξℰ (ƛ t)          ρ = {!   !}
-eval Ξℰ (t · u)        ρ = eval Ξℰ t ρ idᵀʰ (eval Ξℰ u ρ)
-eval Ξℰ TT             ρ = TT rfl~
-eval Ξℰ FF             ρ = FF rfl~
-eval Ξℰ (call f δ)     ρ 
-  using δⱽ ← eval* Ξℰ δ ρ
-  with eval Ξℰ (lookup𝒮 _ f .scrut) δⱽ
-... | tⱽ = eval-call f δⱽ tⱽ (lookup𝒮ℰ Ξℰ f)
+eval-call  : ∀  {f : DefVar Ξ Γ A} (ρ : Env Ξ Δ Γ Δᶜ δ)
+                (tⱽ : 𝔹Val Δ (lookup𝒮 Ξ f .scrut [ δ ])) 
+           → (∀ t~ → Val Γ A Δ Δᶜ δ ρ (lookup𝒮 Ξ f .lhs [ δ ,eq t~ ]))
+           → (∀ t~ → Val Γ A Δ Δᶜ δ ρ (lookup𝒮 Ξ f .rhs [ δ ,eq t~ ]))
+           → Val Γ A Δ Δᶜ δ ρ (call f δ)
+eval-call {f = f} ρ (TT {Γ~ = Γ~} t~)      uⱽ vⱽ 
+  = coe𝒱 {ρ = ρ} rfl~ (sym~ (call-TT {f = f} (t~ ∙~ TT (sym~ Γ~)))) uⱽ′
+  where uⱽ′ = uⱽ (t~ ∙~ TT (sym~ Γ~))
+eval-call {f = f} ρ (FF {Γ~ = Γ~} t~)      uⱽ vⱽ
+  = coe𝒱 {ρ = ρ} rfl~ (sym~ (call-FF {f = f} (t~ ∙~ FF (sym~ Γ~)))) vⱽ′
+  where vⱽ′ = vⱽ (t~ ∙~ FF (sym~ Γ~))
+-- Interesting: Because |call| only recurses into the definition 
+-- when the equation is satisfied, we don't have any dependence on quoting
+-- here.
+eval-call {f = f} ρ (ne A~ tᴺᵉ) uⱽ vⱽ 
+  = uvalpre _ (callNe {f = f} tᴺᵉ)
+
+eval Δᶜ (coe~ Γ~ A~ t) ρ = {!   !}
+eval Δᶜ (` i)          ρ = {!   !}
+eval {δ = δ} Δᶜ (ƛ t) ρ {γ = γ} γᵀʰ {u = u} uⱽ 
+  = coe𝒱 rfl~ (sym~ (Πβ {t = t [ (_ ⨾ _) ^ _ ]} {u = u}))
+         (eval {δ = (_ ⨾ _) , u} (Δᶜ [ γᵀʰ ]TRS) t 
+               ((_[_]ℰ {δ = δ} ρ γᵀʰ) Σ, uⱽ))
+eval Δᶜ (t · u)        ρ = eval Δᶜ t ρ idᵀʰ (eval Δᶜ u ρ)
+eval Δᶜ TT             ρ = TT rfl~
+eval Δᶜ FF             ρ = FF rfl~
+eval {δ = σ} Δᶜ (call f δ) ρ 
+  using δⱽ ← eval* Δᶜ δ ρ
+  with eval Δᶜ (lookup𝒮 _ f .scrut) δⱽ 
+  | (λ t~ →  eval {δ = (δ ⨾ σ) ,eq t~} Δᶜ (lookup𝒮 _ f .lhs) δⱽ)
+  | (λ t~ →  eval {δ = (δ ⨾ σ) ,eq t~} Δᶜ (lookup𝒮 _ f .rhs) δⱽ)
+... | tⱽ | uⱽ | vⱽ = eval-call {f = f} δⱽ tⱽ uⱽ vⱽ
+
+∥_∥⊥ : ⊥ → ∥⊥∥
+∥_∥⊥ ()
+
+-- This should be provable by introducing small-step reduction
+-- i.e. no reductions are applicable to a |PreNe| except for rewriting,
+-- so if we can map from declarative to algorithmic conversion, then we
+-- can extract out the |RwVar|
+inv-lemma : PreNe Γ A t → Tm~ Γ~ A~ t ⌜ b ⌝𝔹 → EqVar Γ (coe~ Γ~ A~ t) b
+
+⌜⌝𝔹~ : Tm~ Γ~ 𝔹 ⌜ b ⌝𝔹 ⌜ b ⌝𝔹
+
+rwVal Γᶜ tᴾᴺᵉ with checkrw (Γᶜ .trs) tᴾᴺᵉ
+... | rw {b = b} r 
+  = inr (closed (coh ∙~ Γᶜ .soundTR r))
+... | stk ¬r 
+  = inl  (box λ b Γ~ A~ t~ → ∥ ¬r _ _
+         (Γᶜ .complTR (inv-lemma tᴾᴺᵉ (t~ ∙~ ⌜⌝𝔹~ {Γ~ = sym~ Γ~})) 
+         (coe~ _ _ coh tᴾᴺᵉ)) ∥⊥)
+
+uvalpre {Δᶜ = Δᶜ} A tᴾᴺᵉ with rwVal Δᶜ tᴾᴺᵉ 
+... | inl tᴾ          = uval A (tᴾᴺᵉ Σ, tᴾ)
+-- We need a |coe𝒱| that takes a context equation to make this work properly
+... | inr (closed {bool = true}   t~) = {!!}
+... | inr (closed {bool = false}  t~) = {!!}
+
+uval (coe~ Γ~ A) tᴺᵉ = {!   !}
+uval 𝔹 tᴺᵉ = ne rfl~ tᴺᵉ
+uval (Π A B) {t = t}     tᴺᵉ γᵀʰ {u} uⱽ 
+  = uvalpre B (PreNe._·_ {t = t [ _ ]} (tᴺᵉ  [ γᵀʰ ]Ne) (qval A uⱽ))
+uval (IF t A B) tᴺᵉ = {!   !}
+
+q𝔹Val : 𝔹Val Γ t → Nf Γ 𝔹 t
+q𝔹Val (TT t~)     = coe~ _ _ (sym~ t~) TT
+q𝔹Val (FF t~)     = coe~ _ _ (sym~ t~) FF
+q𝔹Val (ne A~ tᴺᵉ) = coe~ _ _ rfl~ (ne𝔹 tᴺᵉ)
+
+qval (coe~ Γ~ A)     tⱽ = {!!}
+qval 𝔹               tⱽ = q𝔹Val tⱽ
+qval (Π A B)         tⱽ = coe~ rfl~ rfl~ (sym~ Πη) tᴺᶠ′
+  where vzⱽ = uvalpre {δ = _ ⨾ wk {A = (A [ _ ]Ty)}} A (` vz)
+        tᴺᶠ′ = ƛ qval B (tⱽ wkᵀʰ vzⱽ)
+qval (IF b A B)      tⱽ = {!!}
