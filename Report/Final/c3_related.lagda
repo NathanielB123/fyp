@@ -151,7 +151,7 @@ how extending the set of equational assumptions (called
 "constraint sets") with new equations requires renormalising all equations
 with respect to each other. For example:
 
-\begin{example}[Coverage Checking in the Presense of Smart Case] \phantom{a}
+\begin{example}[Coverage Checking in the Presence of Smart Case] \phantom{a}
 
 \labexample{coverage}
 Consider the program (in a dependent type theory with Smart Case).
@@ -360,13 +360,13 @@ equations than these works, taking advantage of the ground-ness of equations.
 
 A principled and increasingly popular way to design and implement
 programming languages
-\sidecite{eisenberg2015system, brady2024yaflle, ullrich2023extensible}
+\sidecite{eisenberg2015system, brady2024yaffle, ullrich2023extensible}
 is by "elaboration" into a minimal core syntax. A significant benefit of
 this approach is modularity \sidecite{cockx2024core}: multiple extensions to
 the surface language can be formalised and implemented without having to worry
 about their interactions. Elaboration can also increase trust in the
 resulting system, ensuring that all extensions are ultimately
-conservative over the, perhaps more-rigorously justfied, core theory.
+conservative over the, perhaps more-rigorously justified, core theory.
 
 \pagebreak
 \sideremark{Note that implicit transporting along equivalences between
@@ -453,7 +453,7 @@ an |if| expression, with the sub-expression replaced by
 
 We can, of course, prove such a law internally (even if our theory, like Agda,
 does not implement η for such types definitionally) by induction on booleans
-(or pattern-matching), replacing explicit substitutions with function
+(or pattern matching), replacing explicit substitutions with function
 application:
 
 \begin{code}
@@ -868,7 +868,7 @@ for which there exists a closed natural number |n : ℕ| such that |t n == TT|
 and |u n == FF|, then by congruence we are in a definitionally inconsistent
 context, and self-application is type-able.
 
-\subsubsection{Indexed Pattern-matching and Forced Patterns}
+\subsubsection{Indexed Pattern matching and Forced Patterns}
 
 \subsubsection{Recovering Decidability}
 

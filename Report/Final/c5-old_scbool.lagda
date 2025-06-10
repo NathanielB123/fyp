@@ -596,7 +596,7 @@ quotient-inductive types with different trade-offs:
 Unfortunately, Cubical Agda's support for dependent pattern matching,
 especially in the presense of inductive families, still leaves a lot to
 be desired \sidecite{agda2024cubical, danielsson2019agda}.
-Specifically, transports often get stuck on pattern-matching definitions which
+Specifically, transports often get stuck on pattern matching definitions which
 rely on constructor injectivity/disjointness.
 
 Postulating quotient types on the other hand, by the very nature of the 
@@ -605,7 +605,7 @@ guardrails against defining
 possibly not-well-founded (e.g. non-strictly-positive) types and
 requires a lot of boilerplate (e.g. explicitly writing out full type of the 
 elimination principle, and always inducting on the type with that eliminator
-rather than pattern-matching).
+rather than pattern matching).
 
 Furthermore, quotiented syntax, even when well-supported by the metatheory,
 causes additional problem when studying the computational behaviour of terms.

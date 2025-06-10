@@ -786,7 +786,9 @@ and proving desirable \emph{metatheoretic}
 properties of the theory, such as normalisation. 
 Given most operations on terms ought to respect
 conversion,
-it can be quite convenient to quotient (\refsec{equivquot}) terms by the
+it can be quite convenient to quotient 
+(\hyperref[sec:equivquot]{Section 1.1 - Equivalence Relations, Quotients and Setoids}) 
+terms by the
 relation (of course, up to conversion, reduction is a somewhat ill-defined
 concept).
 

@@ -8,7 +8,7 @@ open import Dependent.SCDef.Syntax
 
 -- Like "ModelOld.agda" but without asserting termination.
 --
--- To achieve this, we use some trickery with foeqard references, with-clauses 
+-- To achieve this, we use some trickery with forward references, with-clauses 
 -- and specialising helpers, which makes unfortunately the definitions a bit 
 -- clunkier in places.
 module Dependent.SCDef.Model where
@@ -317,7 +317,7 @@ variable
 ⟦ δ ⨾ σ ⟧Tms = _ Σ, λ ρ → ⟦ δ ⟧Tms .snd (⟦ σ ⟧Tms .snd ρ)
 ⟦ wk𝒮 ⟧Tms = ⟦wk𝒮⟧′ Σ, λ ρ → ρ
 
-⟦ •                               ⟧Sig = ⊤
+⟦ •                         ⟧Sig = ⊤
 ⟦ Ψ ▷  Γ ⇒ A if t ≔ u ∣ v   ⟧Sig
   = ⟦▷𝒮⟧ ⟦ Ψ ⟧Sig ⟦ Γ ⟧Ctx ⟦ A ⟧Ty ⟦ t ⟧Tm ⟦ u ⟧Tm ⟦ v ⟧Tm
 

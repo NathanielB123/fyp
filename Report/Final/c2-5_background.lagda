@@ -15,7 +15,8 @@ module Report.Final.c2-5_background where
 \labsec{quotsetfibre}
 
 As previously mentioned 
-in \refsec{equivquot}, support for quotient types in modern proof assistants 
+in \hyperref[sec:equivquot]{Section 1.1 - Equivalence Relations, Quotients and Setoids}, 
+support for quotient types in modern proof assistants 
 is somewhat hit-or-miss. 
 \sideremark{In a two-level metatheory \sidecite[*-7]{annenkov2023two}
 it is possible to simultaneously work with quotient types up to equivalence

@@ -167,10 +167,6 @@ T[][] {t = t} = [][] {x = t}
 V[][] : i [ δ ] [ σ ] ≡ i [ δ ⨾ σ ]
 V[][] {i = i} = [][] {x = i}
 
-vz[,[]] : tm⊑ (V⊑ {q = T}) vz [ σ , (u [ δ ]) ] ≡ u [ δ ]
-vz[,[]] {σ = σ} {u = u} {δ = δ} = {!!}
-  -- vz[] {x = u [ δ ]} {δ = σ} 
-
 {-# REWRITE [][] ⁺⨾ ⨾⁺ id⨾ ⨾id [id] ⨾⨾ ⊑⨾ ⨾⊑ ⊑⁺ [⊑] [⊑,`] id⁺vs tms⊑-id 
             T[][] V[][] [id,] ⊑[] idT #-}
 \end{code}
@@ -260,11 +256,11 @@ t [ < u > ] [ δ ] == t [ δ , (u [ δ ]) ] == t [ δ ^ A ] [ < u [ δ ] > ]
 ndl   [ δ ]> = ndl
 ndr   [ δ ]> = ndr
 (ƛ p) [ δ ]> = ƛ (p [ δ ^ _ ]>)
-l· p  [ δ ]> = {!   !}
-·r p  [ δ ]> = {!   !}
-if₁ p [ δ ]> = {!   !}
-if₂ p [ δ ]> = {!   !}
-if₃ p [ δ ]> = {!   !}
+l· p  [ δ ]> = l· (p [ δ ]>)
+·r p  [ δ ]> = ·r (p [ δ ]>)
+if₁ p [ δ ]> = if₁ (p [ δ ]>)
+if₂ p [ δ ]> = if₂ (p [ δ ]>)
+if₃ p [ δ ]> = if₃ (p [ δ ]>)
 \end{code}
 %endif
 
@@ -287,9 +283,15 @@ if₃ p [ δ ]> = {!   !}
 [_]>⁻¹_ {t = t · u}     δ (·r p)
   using u′ Σ, p′ Σ, q ← [_]>⁻¹_ {t = u} δ p
   = t · u′ Σ, ·r p′ Σ, cong (_ ·_) q
-[_]>⁻¹_ {t = if t u v}  δ (if₁ p) = {!   !}
-[_]>⁻¹_ {t = if t u v}  δ (if₂ p) = {!   !}
-[_]>⁻¹_ {t = if t u v}  δ (if₃ p) = {!   !}
+[_]>⁻¹_ {t = if t u v}  δ (if₁ p) 
+  using t′ Σ, p′ Σ, q ← [_]>⁻¹_ {t = t} δ p
+  = if t′ u v Σ, if₁ p′ Σ, cong (λ □ → if □ _ _) q
+[_]>⁻¹_ {t = if t u v}  δ (if₂ p) 
+  using u′ Σ, p′ Σ, q ← [_]>⁻¹_ {t = u} δ p
+  = if t u′ v Σ, if₂ p′ Σ, cong (λ □ → if _ □ _) q
+[_]>⁻¹_ {t = if t u v}  δ (if₃ p) 
+  using v′ Σ, p′ Σ, q ← [_]>⁻¹_ {t = v} δ p
+  = if t u v′ Σ, if₃ p′ Σ, cong (λ □ → if _ _ □) q
 \end{code}
 %endif
 
@@ -305,9 +307,17 @@ _[_]SN   : SN _>nd_ t → ∀ (δ : Ren Δ Γ) → SN _>nd_ (t [ δ ])
 acc tᴬ [ δ ]SN 
   = acc λ p →  let  t′ Σ, p′ Σ, q = [ δ ]>⁻¹ p
                in   subst (SN _>nd_) q (tᴬ p′ [ δ ]SN)
+\end{code}
 
-_[_]P   : P Γ A t → ∀ (δ : Ren Δ Γ) → P Δ A (t [ δ ])
-_[_]Ps  : Ps Δ Γ δ → ∀ (σ : Ren Θ Δ) → Ps Θ Γ (δ ⨾ σ)
+%if False
+\begin{code}
+postulate
+\end{code}
+%endif
+
+\begin{code}
+  _[_]P   : P Γ A t → ∀ (δ : Ren Δ Γ) → P Δ A (t [ δ ])
+  _[_]Ps  : Ps Δ Γ δ → ∀ (σ : Ren Θ Δ) → Ps Θ Γ (δ ⨾ σ)
 \end{code}
 
 By analogous reasoning, strong normalisation is also stable under inverting
@@ -373,6 +383,9 @@ fndThm (if t u v)  ρ
 
 %if False
 \begin{code}
+lookupP vz     (ρ , uᴾ) = uᴾ
+lookupP (vs i) (ρ , uᴾ) = lookupP i ρ
+
 [_]ƛ⁻¹_ : ∀ (δ : Ren Δ Γ) → is ƛ? (t [ δ ]) → is ƛ? t
 [_]ƛ⁻¹_ {t = ƛ _} δ tt = tt
 

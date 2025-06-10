@@ -571,21 +571,21 @@ which preservation laws would hold definitionally
 (see e.g. the canonicity proof given in \sidecite{kaposi2025type}), 
 but we would still have to
 check all naturality equations, and we would lose the conciseness
-of pattern-matching. Ultimately I argue these technical
+of pattern matching. Ultimately I argue these technical
 details are not fundamental to the algorithm/proof.
 
 %TODO
 % \section{Dependent Pattern Matching}
 % \labsec{matching}
 % 
-% We have also liberally used pattern-matching in our metatheory.
+% We have also liberally used pattern matching in our metatheory.
 % 
-% In general, pattern-matching acts as syntactic sugar for elimination
+% In general, pattern matching acts as syntactic sugar for elimination
 % rules. It covers a number of conveniences, including generalising
 % induction patterns (e.g. recursing on on any subterm of a pattern,
 % lexicographic orders \sidecite{abel2002recursion}). 
 % 
-% In a non-dependent type theory, pattern-matching as syntax sugar for
+% In a non-dependent type theory, pattern matching as syntax sugar for
 % recursors is sufficient. When terms can occur in types, we also want to
 % be able to take advantage of information learnt over the course of the
 % match. For example: (go to old background section for examples...)

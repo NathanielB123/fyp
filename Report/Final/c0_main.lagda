@@ -95,6 +95,7 @@ module Report.Interim.c0_main where
 
 \newcommand{\smart}{\textsf{\textbf{smart}}\xspace}
 \newcommand{\SC}{\textsf{\textbf{smart case}}\xspace}
+\newcommand{\SIF}{\textsf{\textbf{smart if}}\xspace}
 \newcommand{\SCBool}{$\textsf{SC}^\textsc{Bool}$\xspace}
 \newcommand{\SCDef}{$\textsf{SC}^\textsc{Def}$\xspace}
 
@@ -106,7 +107,7 @@ module Report.Interim.c0_main where
 
 %%include c0-1_test.lagda
 
-
+%include c1-1_introduction.lagda
 %%include c2-1_background.lagda
 %%include c2-2_background.lagda
 %%include c2-3_background.lagda
@@ -114,14 +115,13 @@ module Report.Interim.c0_main where
 %%include c2-5_background.lagda
 %%include c2-6_background.lagda
 %%include c2-7_background.lagda
-
+%%include c3-1_related.lagda
 %%include c4-1_booleq.lagda
 %%include c4-2_booleq.lagda
 %%include c4-3_booleq.lagda
-
-%include c5-1_scbool.lagda
-%include c6-1_scdef.lagda
-%include c6-2_scdef.lagda
+%%include c5-1_scbool.lagda
+%%include c6-1_scdef.lagda
+%%include c6-2_scdef.lagda
 
 
 %% bibliography

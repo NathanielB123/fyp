@@ -114,6 +114,8 @@
 % \newunicodechar{ᴺ}{$^{N}$}
 % \newunicodechar{ⱽ}{$^{V}$}
 
+\newunicodechar{ℱ}{$\mathscr{F}$}
+
 \newunicodechar{∣}{$||$}
 \newunicodechar{∶}{$:$}
 
@@ -503,6 +505,10 @@
 %format *ℕ  = * "_{" ℕ "}"
 %format +ℕ  = + "_{" ℕ "}"
 
+%format _/ℕ_ = _ /ℕ _
+%format _*ℕ_ = _ *ℕ _
+%format _+ℕ_ = _ +ℕ _
+
 %format ᶜ  = "^{\Varid{C}}"
 
 %format Ξᶜ = Ξ ᶜ
@@ -524,10 +530,38 @@
 %format norm-pres′     = norm-pres
 %format Tms′           = Tms
 %format ε′             = ε
+%format vlookup′       = vlookup
+%format A′             = A
+%format B′             = B
+%format +ℕ′            = +ℕ 
+%format +ze′           = +ze
+%format bool-lemma′    = bool-lemma
+%format bool-lemma′′   = bool-lemma
 
-%format >eq            = "\Rrightarrow"
+%format _+ℕ′_           = _ +ℕ′ _ 
 
-%format 𝒲    = "^{" \Varid{Wk} "}"
+%format ᵀʸ       = "^{\Varid{Ty}}"
+
+%format >eq      = "\Rrightarrow"
+%format ,eq      = , "_{\Rrightarrow}"
+%format ,eq⨾     = ,⨾ "_{\Rrightarrow}"
+%format ▷eqη     = ▷η "_{\Rrightarrow}"
+%format π₁eq     = π₁ "_{\Rrightarrow}"
+%format π₂eq     = π₂ "_{\Rrightarrow}"
+%format π₁eq,    = π₁eq , 
+%format π₂eq,    = π₂eq ,
+%format wkeq     = wk "_{\Rrightarrow}"
+%format >eq      = > "_{\Rrightarrow}"
+%format wk<>eq   = wk<> "_{\Rrightarrow}"
+%format wk<>eqTy = wk<>eq ᵀʸ
+
+
+%format <_>eq   = < _ >eq
+%format _,eq_   = _ ,eq "\!" _
+%format _^_>eq_ = _^_ >eq _
+%format _▷_>eq_ = _▷_ >eq _
+
+%format 𝒲    = "^{\Varid{Wk}}"
 
 %format id𝒲  = id 𝒲
 %format ⁺𝒲   = ⁺  𝒲
@@ -546,3 +580,4 @@
 %format tᴾᴺᵉ = t ᴾᴺᵉ
 %format uᴾᴺᵉ = u ᴾᴺᵉ
 
+%format TBool = "\Varid{Bool}"

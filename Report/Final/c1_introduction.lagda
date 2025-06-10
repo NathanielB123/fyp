@@ -16,28 +16,48 @@ module Report.Final.c1_introduction where
 
 % Acknowledgements?
 
+% I would like to thank Steffen van Bakel, my supervisor, for agreeing to
+% supervise this project and trying his best to warn me about leaving writing
+% until the last minute.
+
+% I would also like to thank 
+% Thorsten Altenkirch & Philip Wadler, for giving me a massive confidence boost
+% by inviting to collaborate on ``Substitution Without Copy and Paste'',
+% after just answering a couple questions on the Agda Zulip.
+
+% I should thank pretty-much all of the type theory community for being so
+% open to sharing work in progress and answering questions across
+% StackExchange, Mastodon, Zulips, Discords, mailing lists, etc...
+
+% I honestly would like to thank every author mentioned in the bibliography.
+% but a special thanks should go to Anja Petković Komel, Loïc Pujet
+% and Théo Winterhalter for not only writing excellent PhD theses but also 
+% inspiring me to copy their use of the |kaobook| template.
+
+% András Kovács
+
 % Every author in the bibliography.
 
 % Simon Peyton-Jones, and Richard Eisenberg whose talks and papers on Haskell
 % got me into PL.
 
+% A few people have directly helped answer questions directly pertaining
+% to this project. 
+% That includes Guillaume Allais, who taught me the 
+% ``don't mash the potato'' principle, Reed Mullanix, who suggested I look
+% into extension types and
+% Raphaël Bocquet, who resolved my confusions with stabilised neutrals.
+% I very much appreciate the type theory community's willingness 
+% to answer questions and make suggestions, irrespective of how much effective 
+% I was personally able to make of them.
 
-% Steffen, for agreeing to supervise, and trying to keep me on track with
-% writing.
-
-% Raphaël Bocquet, for answering my questions on Mastodon about stabilised 
-% neutrals.
-
-% Guillaume Allais, for teaching me the "don't mash the potato" principle.
-
-% All my friends who put up with my constant ramblings about dependent types, 
-% including Daniel, Iurii, Jacob, Mila, Sophia, Robin. I want to especially
+% A massive thanks goes to all my friends who put up with my constant 
+% ramblings about dependent types over the past few years. 
+% Daniel, Iurii, Jacob, Jyry, Mila, Sophia and Robin specifically 
+% faced probably the brunt of it. I also want to especially
 % thank Alona - our late-night conversations about PL design during 2nd and 3rd 
-% year are a huge part of why I fell in love with the field.
+% year are a huge part of why I fell in love with this field.
 
-% Reed Mullanix, for suggesting to look into extension types.
-% Thorsten Altenkirch & Philip Wadler, for giving me a massive confidence boost
-% by inviting to collaborate on "Substitution Without Copy and Paste"
 
 
 \chapter{Introduction and Motivation}
@@ -86,7 +106,7 @@ typechecks successfully.
 In mainstream functional programming languages, it is common to allow pattern
 matching not just on the direct arguments of functions, but also on intermediary
 expressions (e.g. via a |case_of_| construct). Extending dependent 
-pattern-matching
+pattern matching
 accordingly would have direct utility: consider this concise proof that for
 any boolean function |f : Bool → Bool|, |f b ≡ f (f (f b))|:
 \sideremark{This example is originally from the Agda mailing list \sidecite[*2]
@@ -167,7 +187,7 @@ bool-lemma f b = bool-lemma′ f b (test (f true)) (test (f false))
 \end{code}
 \end{example}
 
-The trickyness with supporting matching on intermediary expressions is that
+The trickiness with supporting matching on intermediary expressions is that
 there
 may not exist a unique unification solution between the scrutinee and pattern.
 Dependent pattern matching must modify the typing context in the branch of a
@@ -182,7 +202,7 @@ a setting designed to enable this extended version of pattern matching.
 The idea is not novel, Altenkirch et al. first investigated such 
 a theory during the development of ΠΣ \sidecite{altenkirch2008pisigma,
 altenkirch2010pisigma}, naming this extended
-pattern-matching construct "Smart Case" \sidecite{altenkirch2011case}. 
+pattern matching construct "Smart Case" \sidecite{altenkirch2011case}. 
 However, this work
 was never published, ΠΣ eventually moved away from Smart Case,
 and both completeness and decidability (among other
@@ -190,7 +210,7 @@ metatheoretical properties) remain open.
 
 The full benefits of Smart Case are perhaps non-obvious. To motivate
 this work further, we will next elaborate on the small jump from 
-extending pattern-matching in this way to a manual version
+extending pattern matching in this way to a manual version
 of the equality reflection rule from Extensional Type Theory (ETT).
 Such a feature has
 potential to simplify a huge number of equational proofs written in modern
@@ -257,7 +277,7 @@ to turn an intensional type theory into an extensional one.
 
 If we consider propositional equality |t ≡ u| to be an 
 inductively defined type with one canonical element |refl : x ≡ x|, it
-seems reasonable to allow pattern-matching on it like other inductive types. 
+seems reasonable to allow pattern matching on it like other inductive types. 
 Eliminating equality proofs is only really \textit{useful}\remarknote{
 Assuming the user is not interested in proving equality of equality
 proofs. In fact, to prevent deriving the |K| rule, one must actively
@@ -265,10 +285,10 @@ prevent matching on |t ≡ u| when |t| and |u| are convertible \cite{cockx2017de
 RHS are not already definitionally equal 
 (|J′ : ∀ (P : A → Set) → x ≡ x → P x → P x| is just a fancy identity function).
 
-This observation motivates "indexed pattern-matching": the extension to
+This observation motivates "indexed pattern matching": the extension to
 dependent pattern matching where arbitrary expressions are admitted as 
 "forced patterns", and matching on elements of the identity type is allowed
-exactly when variables occuring in LHS/RHS are simultaneously matched with
+exactly when variables occurring in LHS/RHS are simultaneously matched with
 forced 
 patterns such that in the substituted typing context, the propositional 
 equation now holds definitionally \sidecite{cockx2017dependent}. 
@@ -318,7 +338,7 @@ problems (inferred index ≟ expected index):
   f b ≟ true
 when checking that the pattern refl has type f b ≡ true
 \end{spec}
-The conditions where indexed pattern-matching 
+The conditions where indexed pattern matching 
 fails like this are often referred to by
 dependently-typed programmers as  
 "green slime" \sidecite{mcbride2012polynomial}. While there are various
@@ -372,7 +392,7 @@ In Agda, the same proof is expressed as follows:
 \end{example}
 
 As Agda's definitional equality automatically unfolds ($\beta$-reduces) 
-pattern-matching definitions (justified by Agda only allowing
+pattern matching definitions (justified by Agda only allowing
 structurally recursive definitions, so reduction must terminate), we 
 do not need to explicitly appeal to the definition of |_+_|.
 

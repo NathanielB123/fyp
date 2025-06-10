@@ -19,9 +19,11 @@ module Report.Final.c6-1_scdef where
 
 \section{A New Core Language}
 
-To recap, locally introduced equations caused two main issues
+To recap the findings of the previous chapter, 
+locally-introduced equations caused two main issues
 \begin{itemize}
-\item Any restrictions on equations (enforced to retain decidability) must
+\item Any restrictions on equations (enforced in order to retain decidability) 
+      must
       be stable under substitution (to support introducing equations
       under λ-abstractions without losing subject reduction).
 \item Any proofs by induction on the syntax must account for weakening
@@ -29,18 +31,124 @@ To recap, locally introduced equations caused two main issues
       proofs, because neutral terms are not stable under introducing equations.
 \end{itemize}
 
-We solve both of these by pivoting to a new language, which relegates reflection
-to global definitions, which we call \SCDef. We then simulate
-local equality reflection via \emph{elaboration}.
+The latter of these issues is, in principle, solved if we give up
+congruence of conversion over \SIF (or in general, whatever piece of syntax
+happens to introduce equations). Specifically, if we give up
+
+%if False
+\begin{code}
+module Cooked where
+  open import Dependent.SCBool.Syntax hiding (if[]; 𝔹β₁; 𝔹β₂)
+
+  wkeq : Tms (Γ ▷ t >eq b) Γ
+  wkeq = π₁eq id
+
+  wkeq~ :  ∀ (t~ : Tm~ Γ~ 𝔹 t₁ t₂) 
+        →  Tms~ (Γ~ ▷ t~ >eq) Γ~ (wkeq {b = b}) wkeq
+  wkeq~ t~ = π₁eq t~ id
+\end{code}
+%endif
+
+\begin{code}
+  if~  : ∀ (t~ : Tm~ Γ~ 𝔹 t₁ t₂) 
+       → Tm~ (Γ~ ▷ t~ >eq) (A~ [ wkeq~ t~ ]) u₁ u₂
+       → Tm~ (Γ~ ▷ t~ >eq) (A~ [ wkeq~ t~ ]) v₁ v₂
+       → Tm~ Γ~ A~ (if t₁ u₁ v₁) (if t₂ u₂ v₂)
+\end{code}
+
+then normalisation no longer needs to recurse into the LHS/RHS branches of
+|if| expressions until the scrutinee actually reduces to |TT| or |FF|.
+
+The first issue can also be fixed by carefully relaxing the substitution law
+for |if|, |if[]|.
+
+\begin{code}
+  if[]  : Tm~ rfl~ rfl~  (if t u v [ δ ]) 
+                         (if (coe~ rfl~ 𝔹[] (t [ δ ])) 
+                         (coe~ rfl~ wk^eq (u [ δ ^eq t ])) 
+                         (coe~ rfl~ wk^eq (v [ δ ^eq t ])))
+\end{code}
+
+Intuitively, we want substitutions to apply recursively to the scrutinee
+(so we check if it reduces to |TT| or |FF|), but stack up on the LHS/RHS 
+(so we do not invalidate the equation in each branch). One way we can achieve
+this is by outright throwing away |if[]|, and generalising the
+β-laws |𝔹β₁| and |𝔹β₂|
+
+\begin{code}
+  wk,Ty : Ty~ rfl~ (A [ δ ]) (A [ wkeq ] [ δ ,eq t~ ])
+
+  𝔹β₁  : ∀ (t~ : Tm~ rfl~ 𝔹[] (t [ δ ]) TT)
+       → Tm~ rfl~ wk,Ty (if t u v [ δ ]) (u [ δ ,eq t~ ])
+  𝔹β₂  : ∀ (t~ : Tm~ rfl~ 𝔹[] (t [ δ ]) FF)
+       → Tm~ rfl~ wk,Ty (if t u v [ δ ]) (v [ δ ,eq t~ ])
+\end{code}
+
+Using these new laws, the equational theory for |if| somewhat resembles
+that of
+a weak-head reduction strategy. That is, normalisation may halt as soon as
+it hits a stuck |if| expression, instead of recursing into the branches.
+
+This seems like an exciting route forwards: in practice, losing 
+congruence of definitional equality
+over case splits is not a huge deal, as the proof in question can always just
+repeat the same case split, proving the desired equation in each 
+branch separately. 
+Unfortunately, from a metatheoretical standpoint,
+non-congruent conversion is somewhat hard to justify. QIIT and GAT signatures,
+for example,
+bake-in congruence of the equational theory (we used an 
+explicit conversion relation, |Tm~|, above for a reason).
+
+The key insight in solving this comes in the form of
+\emph{lambda lifting}.
+For context, Agda's core language only supports pattern-matching at the
+level of definitions, but it can still support
+|with|-abstractions \sidecite{agda2024with} and 
+pattern-matching lambdas \sidecite{agda2024data} via elaboration:
+new top-level definitions are created for ``local'' every pattern-match.
+Because definitions are \emph{generative}, from the perspective of the surface
+language, Agda also loses congruence of conversion (actually, even
+reflexivity of conversion) for pattern-matching
+lambdas. For example, consider the equation between these two
+seemingly-equal implementations of Boolean negation.
+
+\begin{code}
+not-eq : _≡_ {A = Bool → Bool}
+             (λ where  true   → false 
+                       false  → true) 
+             (λ where  true   → false 
+                       false  → true) 
+\end{code}
+
+Attempting to prove |not-eq| with reflexivity (|refl|) returns the error:
+
+\begin{spec}
+(λ { true → false ; false → true }) x !=
+(λ { true → false ; false → true }) x of type Bool
+Because they are distinct extended lambdas: one is defined at
+   /home/nathaniel/agda/fyp/Report/Final/c6-1_scdef.lagda:110.15-111.37
+and the other at
+   /home/nathaniel/agda/fyp/Report/Final/c6-1_scdef.lagda:112.15-113.37,
+so they have different internal representations.
+\end{spec}
+
+This provides a natural strategy for our use-case also. We can rigorously study
+a core type theory which introduces equations via top-level definitions
+(proving e.g. soundness and normalisation), and then describe an elaboration
+algorithm to take a surface language with an \SC-like construct, and
+compile it into the core (by lifting \smart case-splits into
+top-level definitions).
+We call this new core type theory \SCDef. 
 
 \subsection{Syntax}
 
-To support global definitions, we introduce a sort \emph{signatures}.
-Signatures are similar to contexts in that they store lists
+To support global definitions, we introduce an additional 
+sort: \emph{signatures} (|Sig|).
+Signatures are similar to contexts in that they effectively store lists
 of terms that we can reuse, but unlike contexts, signatures also store the
-concrete implementation of every definition, and do not allow
+concrete implementation of every definition, and do not allow for
 arbitrary substitution.
-
 
 %if False
 \begin{code}
@@ -53,10 +161,13 @@ postulate
   Ctx  : Sig → Set
 \end{code}
 
-Instead, we associate with |Sig|, the set of morphisms |Wk|, forming a
+We associate with |Sig| a set of morphisms, |Wk|, forming a
 category of signature weakenings. |Ctx| is a presheaf on this category,and substitutions (|Tms|) are 
 appropriately generalised to map between contexts paired with their signature
 (we will embed signature weakenings into |Tms|).
+
+We consider all signature weakenings to be equal (i.e. every morphism is
+unique).
 
 %if False
 \begin{code}
@@ -82,47 +193,59 @@ variable
   δ σ γ δ₁ δ₂ δ₃ σ₁ σ₂ : Tms Δ Γ
   b b₁ b₂ : Bool
 
+Ty≡ : Γ₁ ≡ Γ₂ → Ty Γ₁ ≡ Ty Γ₂
+Ty≡ = cong Ty
+
+Tm≡ : ∀ Γ≡ → A₁ ≡[ Ty≡ Γ≡ ]≡ A₂ → Tm Γ₁ A₁ ≡ Tm Γ₂ A₂ 
+Tm≡ = dcong₂ Tm
+
 postulate
 \end{code}
 %endif
 
-Similarly to \SCDef, we allow extending contexts with equations, and provide
-the same substitution combinators.
+Similarly to \SCBool, we allow extending contexts with equations, and include
+the relevant substitution combinators (we elide projections and equations
+for brevity).
 
-We consider all signature weakenings to be equal
 
 \begin{code}
   id𝒲   : Wk Ψ Ψ
   _⨾𝒲_  : Wk Φ Ψ → Wk Ξ Φ → Wk Ξ Ψ
 
-  id   : Tms {Ψ = Ψ} Γ Γ
+  id   : Tms Γ Γ
   _⨾_  : Tms Δ Γ → Tms Θ Δ → Tms Θ Γ
   
-  _[_]Ctx : Ctx Ψ → Wk Φ Ψ → Ctx Φ
-  _[_]Ty  : Ty Γ → Tms Δ Γ → Ty Δ
-
-
+  _[_]Ctx  : Ctx Ψ → Wk Φ Ψ → Ctx Φ
+  _[_]Ty   : Ty Γ → Tms Δ Γ → Ty Δ
+  _[_]     : Tm Γ A → ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]Ty)
 
   •       : Ctx Ξ
   _▷_     : ∀ (Γ : Ctx Ξ) → Ty Γ → Ctx Ξ
   _▷_~_   : ∀ (Γ : Ctx Ξ) {A} → Tm Γ A → Tm Γ A → Ctx Ξ
 
-  π₁   : Tms Δ (Γ ▷ A) → Tms Δ Γ
-  π₁eq : Tms Δ (Γ ▷ t₁ ~ t₂) → Tms Δ Γ
+  ε      : Tms Δ (• {Ξ = Ξ}) 
+  _,_    : ∀ (δ : Tms Δ Γ) → Tm Δ (A [ δ ]Ty) → Tms Δ (Γ ▷ A) 
+  _,eq_  : ∀ (δ : Tms Δ Γ) → t₁ [ δ ] ≡ t₂ [ δ ]
+         → Tms Δ (Γ ▷ t₁ ~ t₂)
 
-
-wkeq : Tms (Γ ▷ t₁ ~ t₂) Γ
-wkeq = π₁eq id
 \end{code}
 
 %if False
 \begin{code}
+  π₁     : Tms Δ (Γ ▷ A) → Tms Δ Γ
+  π₁eq   : Tms Δ (Γ ▷ t₁ ~ t₂) → Tms Δ Γ
+
+wkeq : Tms (Γ ▷ t₁ ~ t₂) Γ
+wkeq = π₁eq id
+
 postulate
 \end{code}
 %endif
 
 Signatures are lists of definitions. Our first approximation for these 
-definitions is a bundle of an argument telescope |Γ : Ctx Ψ|, a return 
+definitions is a bundle of a \emph{telescope} of
+argument types |Γ : Ctx Ξ| (recall that without local equations, 
+a context is really just a list of types), a return 
 type |A : Ty Γ|, and a body |Tm Γ A|.
 
 \begin{code}
@@ -132,16 +255,22 @@ type |A : Ty Γ|, and a body |Tm Γ A|.
 
 Intuitively, to call a definition with argument
 telescope |Γ| while in a context |Δ|, we must provide an appropriate list of
-arguments, specifically a list |Δ|-terms matching each type in |Γ|,
-or |Tms Δ Γ|.
+arguments, specifically a list |Δ|-terms matching each type in |Γ|.
+This is exactly |Tms Δ Γ|.
 
-With contexts also able to contain equational assumptions, and corresponding 
-substitutions holding evidence of convertibility, this immediately gives
+Of course, our 
+contexts also able to contain equational assumptions, and corresponding 
+substitutions hold convertibility evidence.
+Rather than shying away, and defining specific argument
+telescope/argument list types, we commit to our extended notions of
+context and substitution, and take full advantage of this flexibility.
+
+Specifically, placing equations in argument telescopes gives
 us a way to preserve definitional equalities across definition-boundaries.
 Intuitively, to call a definition that asks for a definitional equality
 between |t₁| and |t₂| (i.e. its argument telescope contains |t₁ ~ t₂|),
-{|t₁ [ δ ] == t₂ [ δ ]|} must hold definitionally at the call site
-(where |δ| is the list of arguments up until the equations). In other words,
+we provide evidence that {|t₁ [ δ ] == t₂ [ δ ]|}
+(where |δ| is the list of arguments prior to the equation). In other words,
 to call a function that asks for a definitional equality, that equation
 must also hold definitionally at the call-site.
 
@@ -167,8 +296,13 @@ this by letting each definition explicitly block on a propositional equality.
 
 Note that the return type of the definition, |A|, must still be valid without
 the equational assumption, and therefore weakened when typing the body. 
-If this were not the case, it would be impossible to call the definition
-in a type-correct way without the blocking equational also holding at
+If this were not the case, the result of calling definitions could
+be ill-typed
+
+it would be impossible to call the definition
+in a type-correct way 
+
+without the blocking equational also holding at
 call-site, essentially making the point of reflection redundant.
 
 

@@ -1,14 +1,15 @@
 %if False
 \begin{code}
-{-# OPTIONS --prop --rewriting #-}
+{-# OPTIONS --prop --rewriting --allow-unsolved-metas #-}
 
 open import Utils hiding (Bool-split)
 open import Utils.IdExtras
 
+module Report.Final.c5-1_scbool where
+
 open import Report.Final.c2-4_background 
   hiding (if; if[]; 𝔹β₁; 𝔹β₂; funext; sound)
-
-module Report.Final.c5-1_scbool where
+  public
 
 \end{code}
 %endif
@@ -39,7 +40,7 @@ definitional equations (expanding conversion).
 \labsec{scboolsyntax}
 
 We build upon our quotiented, explicit-substitution syntax 
-laid out in \refsec{deplc}. Again, we have four sorts:
+laid out in \refsec{dtlc}. Again, we have four sorts:
 
 \begin{spec}
   Ctx  : Set
@@ -98,6 +99,7 @@ Boolean equations which we expect to hold definitionally.
   _▷_>eq_  : ∀ Γ → Tm Γ 𝔹 → Bool → Ctx
 \end{code}
 
+% TODO: Huh???
 We actually recover 
 
 \begin{code}
@@ -105,16 +107,15 @@ We actually recover
            → Tms Δ (Γ ▷ t >eq b)
   ,eq⨾  : ∀  {δ : Tms Δ Γ} {σ : Tms Θ Δ} {t≡} 
         →    (δ ,eq t≡) ⨾ σ 
-        ≡    (δ ⨾ σ) 
-        ,eq  (subst (Tm Θ) 𝔹[] (t [ δ ⨾ σ ]) 
-             ≡⟨ cong (subst (Tm Θ) 𝔹[]) (sym [][]) ⟩≡ 
-             subst (Tm Θ) 𝔹[] (subst (Tm Θ) [][]Ty (t [ δ ] [ σ ]))
-             ≡⟨ coh[][] {p = 𝔹[]} ⟩≡
-             subst (Tm Θ) 𝔹[] (subst (Tm Δ) 𝔹[] (t [ δ ]) [ σ ])
-             ≡⟨ cong (subst (Tm Θ) 𝔹[]) (cong (_[ σ ]) t≡) ⟩≡ 
-             subst (Tm Θ) 𝔹[] (⌜ b ⌝𝔹 [ σ ])
-             ≡⟨ ⌜⌝𝔹[] ⟩≡ 
-             ⌜ b ⌝𝔹 ∎)
+        ≡    (δ ⨾ σ) ,eq  (subst (Tm Θ) 𝔹[] (t [ δ ⨾ σ ]) 
+                          ≡⟨ cong (subst (Tm Θ) 𝔹[]) (sym [][]) ⟩≡ 
+                          subst (Tm Θ) 𝔹[] (subst (Tm Θ) [][]Ty (t [ δ ] [ σ ]))
+                          ≡⟨ coh[][] {p = 𝔹[]} ⟩≡
+                          subst (Tm Θ) 𝔹[] (subst (Tm Δ) 𝔹[] (t [ δ ]) [ σ ])
+                          ≡⟨ cong (subst (Tm Θ) 𝔹[]) (cong (_[ σ ]) t≡) ⟩≡ 
+                          subst (Tm Θ) 𝔹[] (⌜ b ⌝𝔹 [ σ ])
+                          ≡⟨ ⌜⌝𝔹[] ⟩≡ 
+                          ⌜ b ⌝𝔹 ∎)
   π₁eq   : Tms Δ (Γ ▷ t >eq b) → Tms Δ Γ
   π₂eq   : ∀ (δ : Tms Δ (Γ ▷ t >eq b)) 
          → t [ π₁eq δ ] ≡[ Tm≡ refl 𝔹[] ]≡ ⌜ b ⌝𝔹
@@ -197,6 +198,9 @@ abstract
   wk^Ty = [][]Ty ∙ refl [ wk^ ]Ty≡ ∙ sym [][]Ty
 
   wk<>eqTy {t≡ = t≡} = [][]Ty ∙ refl [ wk<>eq {t≡ = t≡} ]Ty≡ ∙ [id]Ty
+
+  wk<>eq = {!!}
+  wk<>eqTm = {!!}
 postulate
 \end{code}
 %endif
@@ -238,6 +242,8 @@ incon Γ = _≡_ {A = Tm Γ 𝔹} TT FF
 % (in)consistency of contexts relies on at least normalisation (really, 
 % completion) and so pre-conditions relating to such a principle in the syntax
 % are likely to cause issues. 
+
+% TODO Have now moved this earlier. Let's just ref (maybe remind in the margin?)
 
 \begin{definition}[Equality collapse]\phantom{a}
 
@@ -563,13 +569,18 @@ Specifically, we can define restricted weakenings which only
 append types (never equations) to the context, then replace the 
 terminal substitution |ε : Tms Δ •| with an embedding of these weakenings.
 \nocodeindent
+%if False
 \begin{code}
-Wk : Ctx → Ctx → Set
-id𝒲   : Wk Γ Γ
-_⁺𝒲_  : Wk Δ Γ → Wk (Δ ▷ A) Γ 
+postulate
+\end{code}
+%endif
+\begin{code}
+  Wk : Ctx → Ctx → Set
+  id𝒲   : Wk Γ Γ
+  _⁺𝒲_  : Wk Δ Γ → Wk (Δ ▷ A) Γ 
 
-Tms′  : Ctx → Ctx → Set
-ε′    : Wk Δ Γ → Tms′ Δ Γ
+  Tms′  : Ctx → Ctx → Set
+  ε′    : Wk Δ Γ → Tms′ Δ Γ
 \end{code}
 \resetcodeindent
 We also should change |_,eq_|, |π₁eq| and |π₂eq|. General substitutions

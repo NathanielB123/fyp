@@ -15,6 +15,7 @@ module Report.Final.c2-1_background where
 \labch{background}
 
 \section{Agda-as-a-Metatheory}
+\labsec{agdameta}
 
 In this report, the ambient metatheory in which we will define languages and 
 write proofs will itself be a type theory (Agda 
@@ -67,7 +68,7 @@ consider such strings to be valid terms.}, called the type of |t|.
 We denote this relationship between types and terms with the ``|∶|'' operator,
 so ``||t|| has type ||A||'' is written {|t ∶ A|}.
 
-\subsection{Variables and Binding}
+\subsubsection{Variables and Binding}
 
 % David Davies suggests giving an example from maths, e.g. an integral
 Central to intuitive notation for type theory are the notions of 
@@ -108,7 +109,7 @@ the action of substitution postfix, with the substitution itself enclosed in
 ``|[]|''s, i.e. {|t [ u / x ]|}
 denotes the result of replacing all |x|s in |t| with |u|.
 
-\subsection{Functions}
+\subsubsection{Functions}
 
 % David Davies suggests introducing non-dependent functions first
 Aside from variables, terms and types are made up of
@@ -317,8 +318,8 @@ idVec′ : Vec n → Vec n
 idVec′ xs = xs
 \end{code}
 
-
-\subsection{Computation and Uniqueness} 
+\subsubsection{Computation and Uniqueness}
+\labsec{compuniq}
 
 Critical to type theory is the notion of 
 computation. Elimination
@@ -341,7 +342,23 @@ applying it to |t|
 t == λ x → t x
 \end{spec}
 
-\subsection{Universes}
+Some η-rules are a lot trickier to decide than others. A general rule-of-thumb
+is that η-laws for \emph{negative} type formers (e.g. functions (|Π|),
+pairs (|Σ|), unit (|⊤|)) are easier to work with\remarknote{Specifically,
+we can delay checking of these η laws until after β-reduction, or 
+alternatively can deal with them directly via NbE (\refsec{nbe}) by specialising
+unquoting appropriately.\\
+Note that if term-equivalence is not type-directed
+(e.g. in efficient implementations, or some formalisations), η-rules for 
+negative type formers can still cause trouble 
+\sidecite[*2]{lennon2022eta, kovacs2025eta})}.
+η-laws for \emph{positive} type formers on the other
+hand (e.g. Booleans (|𝔹|), coproducts (|_+_|), 
+natural numbers (|ℕ|), propositional equality (|_≡_|)) are more subtle, either
+requiring significantly more complicated normalisation algorithms
+\sidecite{altenkirch2001normalization} or being outright undecidable.
+
+\subsubsection{Universes}
 
 In Agda, types are also \emph{first-class} (types are themselves
 embedded in the syntax of terms)\remarknote{Note that first-class types are not 
@@ -372,7 +389,7 @@ needs type, but |Type ∶ Type| is unsound \sidecite{hurkens1995simplification})
 We refer to the Agda documentation \sidecite{agda2024universe} for details of 
 how their implementation of universes works.
 
-\subsection{Equality}
+\subsubsection{Equality}
 
 % TODO: Steffen wants me to explicitly indicate that conversion is
 % bi-directional
@@ -450,7 +467,7 @@ are generalised to isomorphisms (technically, \emph{equivalences}).}.
 
 % TODO : Discuss |Prop| (maybe after inductive types?)
 
-\subsection{Inductive Types}
+\subsubsection{Inductive Types}
 
 Agda also contains a scheme for defining types inductively. We declare new
 inductive type formers with the |data| keyword, and then inside a |where|
@@ -504,7 +521,7 @@ proof assistants like Lean \sidecite{moura2021lean} or
 Rocq \sidecite{rocq2024}), Agda does not actually build-in these elimination 
 principles as
 primitive. Instead, Agda's basic notion to eliminate inductive datatypes is
-pattern-matching, which is syntactically restricted to the left-hand-side
+pattern matching, which is syntactically restricted to the left-hand-side
 of function definitions.
 
 \begin{code}
@@ -513,14 +530,14 @@ not TT  = FF
 not FF  = TT
 \end{code}
 
-Note that traditional eliminators can be defined in terms of pattern-matching.
+Note that traditional eliminators can be defined in terms of pattern matching.
 
 \begin{code}
 𝔹-elim P Ptt Pff TT   = Ptt
 𝔹-elim P Ptt Pff FF  = Pff 
 \end{code}
 
-\subsection{Equivalence Relations, Quotients and Setoids}
+\subsubsection{Equivalence Relations, Quotients and Setoids}
 \labsec{equivquot}
 
 Many types have some associated notions of equivalence
@@ -614,9 +631,9 @@ data Qℤ : Set where
   supr  : su (pr x) ≡ x
 \end{spec}
 
-When pattern-matching on quotient types, we are forced to mutually show that our
+When pattern matching on quotient types, we are forced to mutually show that our
 definition is \emph{sound} (i.e. it preserves congruence of propositional
-equality). Syntactically, each pattern-matching definition |f| defined on
+equality). Syntactically, each pattern matching definition |f| defined on
 |Qℤ| must include cases
 for each propositional equation |p : x ≡ y| 
 (in the case of |Qℤ|, |prsu| and |supr|), returning a proof of |f x ≡ f y|.
@@ -652,7 +669,7 @@ For technical reasons\remarknote{In short: Agda currently only supports
 quotient types as a special cases of higher-inductive type (HIT)s
 when using the |cubical| extension, which is incompatible with 
 UIP and lacks some
-useful pattern-matching automation.\\\\
+useful pattern matching automation.\\\\
 Furthermore, sometimes it is actually useful to be able to temporarily 
 reason about the
 syntactic structure of objects, even if all operations we might define should
@@ -681,7 +698,7 @@ data _~ℤ_ : ℤ → ℤ → Set where
 \end{code}
 
 Using this relation, we can implement operations on |ℤ|, such as doubling,
-as ordinary pattern-matching definitions, and
+as ordinary pattern matching definitions, and
 separately write proofs that they respect the equivalence.
 
 \begin{code}
