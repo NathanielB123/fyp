@@ -13,7 +13,7 @@ module Report.Final.c2-2_background where
 \refsec{stlc}
 
 Having established our metatheory informally, it is time to start studying type
-theory more rigorously. As a warm-up, we begin by covering the theory of
+theory rigorously. As a warm-up, we begin by covering the theory of
 simply-typed lambda calculus (STLC), and then will later cover the extensions
 necessary to support dependent types.
 
@@ -33,12 +33,12 @@ well-typed terms can be constructed.
 \begin{remark}[Syntax-Directed Typing] \phantom{a}
 
 Intrinsic typing enforces a one-to-one correspondence between term formers and 
-typing rules (i.e. in the language of separate syntax and typing judgements, our
+typing rules (in the language of separate syntax and typing judgements, our
 inference rules must all be \emph{syntax-directed}). However, features that 
 appear 
 in conflict with this restriction (such as subtyping
 or implicit coercions) can still be formalised via \emph{elaboration}: 
-i.e. in the core type theory, all coercions must be explicit, but this
+that is, in the core type theory, all coercions must be explicit, but this
 does not prevent defining also an untyped surface language without coercions 
 along with a partial mapping into core terms (the \emph{elaborator}).
 \end{remark}
@@ -635,7 +635,7 @@ proceeds under λ-abstractions, we call this property
 because we can define an algorithm which takes a term |t| and,
 by induction on the well-founded order, produces
 an equivalent (w.r.t. algorithmic conversion) but irreducible term |tᴺᶠ|,
-|t|'s \emph{normal form}\remarknote[][*-10]{Technically, if reduction is not 
+|t|'s \emph{normal form}\remarknote[][*-14]{Technically, if reduction is not 
 confluent, it might be possible to reduce a term |t| to multiple distinct
 normal forms. In principle, we can still explore all 
 possible reduction
@@ -650,10 +650,11 @@ are equal syntactically).
 
 \sideremark{Note that we do not enforce that normal forms are subset of
 the original type, which is sometimes
-useful flexibility - see e.g. \sidecite[*9.5]{altenkirch2001normalization}.\\\\
+useful flexibility - see e.g. \cite{altenkirch2001normalization}.\\\\
 If we do have an embedding |⌜_⌝ : Nfᴬ → A|, then completeness is equivalent to
 the property |⌜ norm x ⌝ ≡ x|: if we assume |norm x ≡ norm y|, then
-by congruence |⌜ norm x ⌝ ≡ ⌜ norm y ⌝|, which simplifies to |x ≡ y|.}
+by congruence |⌜ norm x ⌝ ≡ ⌜ norm y ⌝|, which simplifies to 
+|x ≡ y|.}\sideblankcite{altenkirch2001normalization}
 
 \begin{definition}[Normalisation] \phantom{a}
 \labdef{norm}

@@ -110,10 +110,10 @@ pB :: Parsec Tm
 pB = "B" $> B
 
 pTT :: Parsec Tm
-pTT = "True" $> TT
+pTT = ("TT" <|> "True") $> TT
 
 pFF :: Parsec Tm
-pFF = "False" $> FF
+pFF = ("FF" <|> "False") $> FF
 
 pId :: Parsec Tm -> Parsec Tm -> Parsec Tm -> Parsec Tm
 pId a x y = "Id" *> (Id <$> a <*> x <*> y)

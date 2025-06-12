@@ -61,9 +61,8 @@ This all means that NbE is useful both as a technique to prove normalisation
 for type theory, and as an algorithm in typechecker implementations for
 deciding convertibility of types. We will use NbE for both purposes in this
 project, and will discuss the shortcuts we can take when implementing NbE
-%TODO reference section
 in a partial programming language (specifically Haskell) in 
-(TODO SECTION REFERENCE HERE).
+(\refsec{typecheckingsc}).
 
 % For the application on NbE in this project, only the last of these points is
 % truly relevant. Specifically, we do not plan to directly prove
@@ -219,8 +218,13 @@ the accessibility of typed terms w.r.t. interleaved structural ordering, |_>s_|,
 and β-reduction, but luckily obtaining this from traditional
 strong normalisation is not too difficult \sidecite[*21]{zulip2024combining}. 
 Note that |_>β_| commutes with
-|_>s_| in the sense that |t >s u → u >β v → ∃[ w ] t >β w × w >s v|, or as a 
-diagram:
+|_>s_| in the sense that
+
+\begin{spec}
+|t >s u → u >β v → Σ⟨ w ∶ Tm Γ ⟩× t >β w × w >s v|
+\end{spec}
+
+or as a diagram:
 
 \begin{tikzcd}[scaleedge cd=1.25, sep=huge]
 |t| \arrow[r, "|_>s_|"] \arrow[d, swap, dashrightarrow, "|_>β_|"]
@@ -330,10 +334,10 @@ reduction).
 \subsubsection{From the Standard Model to Presheaves}
 
 To derive a structurally-recursive normalisation algorithm,
-our focus should be the case for application.
-I.e. when aiming to produce |Nf Γ A|s directly by recursion on our syntax,
-we failed to derive a structurally recursive algorithm because there is no
-analogue of |_·_ : Tm Γ (A ⇒ B) → Tm Γ A → Tm Γ B| on normal forms.
+our attention be focussed on the case for application.
+Recall that when aiming to produce |Nf Γ A|s directly by recursion on our 
+syntax, we failed to derive a structurally recursive algorithm because there is 
+no analogue of \mbox{|_·_ : Tm Γ (A ⇒ B) → Tm Γ A → Tm Γ B|} on normal forms.
 
 For inspiration on how to solve this, we recall the definition of the standard
 model. There, we were able to write a structurally-recursive interpreter
@@ -371,17 +375,17 @@ followed by \textit{quoting} is exactly normalisation by evaluation.
 \subsection{The Presheaf Model}
 
 Central to the presheaf model (perhaps unsurprisingly) is the concept of a
-presheaf: contravariant functors into |Set| \refdef{presheaf}.
+presheaf: contravariant functors into |Set| (\refdef{presheaf}).
 We actually have a choice about which category to take presheaves
 over, with the key restrictions being that it must be a subset of
 substitutions, normal/neutral forms must be stable w.r.t. it and it must
 include the single-weakening |wk : Tms (Γ ▷ A) Γ| (we will see why these
 latter two restrictions are important later).
-The two standard choices are renamings |Ren Δ Γ|, which we have seen already
-and thinnings |Thin Δ Γ|. We will use thinnings (also known as
+The two standard choices are renamings |Ren Δ Γ|, which we have seen already,
+and thinnings, |Thin Δ Γ|. We will use thinnings (also known as
 order-preserving embeddings) because type
 theories we will consider later in this report will actually not feature
-renaming-stable normal/neutral forms.
+renaming-stable normal/neutral forms (\refremark{scdefneutstab}).
 
 We define thinnings concretely as
 \begin{code}
@@ -425,13 +429,13 @@ into renamings.
 \end{code}
 
 The standard model can be seen as interpreting object-level types into
-the corresponding objects in the category |Set| (i.e. where |Set|s are 
-objects and functions are morphisms). In the presheaf model, we instead
-interpret into corresponding objects in the category of presheaves (a
-category where objects are presheaves, and morphisms are natural 
+the corresponding objects in the category |Set| (where the objects are |Set|s 
+and the morphisms are functions). In the presheaf model, we instead
+interpret into corresponding objects in the category of presheaves 
+(where the objects are presheaves, and the morphisms are natural 
 transformations).
 
-For example, the unit presheaf (i.e. the terminal object in the category of 
+For example, the unit presheaf (that is, the terminal object in the category of 
 presheaves) is simply |𝟙ᴾˢʰ = λ Γ → ⊤|. Similarly, the products in the
 category of presheaves can be constructed as |F ×ᴾˢʰ G = λ Γ → F Γ × G Γ|.
 

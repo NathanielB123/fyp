@@ -46,6 +46,12 @@ main = do
 
 
 boolLemmaTy = "forall f: B -> B, b : B. Id B (f b) (f (f (f b))) \n"
-boolLemmaTm = "\\f, b. sif b then (sif (f True) then Rfl else (sif (f False) then Rfl else Rfl)) else (sif (f False) then (sif (f True) then Rfl else Rfl) else Rfl) \n"
+boolLemmaTm = "\\f, b. sif b then (sif (f TT) then Rfl else (sif (f FF) then Rfl else Rfl)) else (sif (f FF) then (sif (f TT) then Rfl else Rfl) else Rfl) \n"
 -- >>> check boolLemmaTm boolLemmaTy
 -- Success: ()
+
+boolLemmaSpecTy = "forall f: B -> B. Id B (f TT) (f (f (f TT))) \n"
+boolLemmaSpecTm = "\\f. sif (f TT) then Rfl else (sif (f FF) then Rfl else Rfl) \n"
+-- >>> check boolLemmaSpecTm boolLemmaSpecTy
+-- Success: ()
+

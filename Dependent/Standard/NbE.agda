@@ -358,7 +358,7 @@ eval (coe~ Γ~ A~ t) ρ
   = coe𝒱 A~ (sym~ coh) (coh [ sym~ coh ]~)
          (eval t (coeℰ rfl~ (sym~ Γ~) coh ρ))
 eval (` i)          ρ = lookupℰ i ρ
-eval (ƛ t) ρ {γ = γ} γᵀʰ {u = u} uⱽ 
+eval (ƛ t) ρ γᵀʰ {u = u} uⱽ 
   = coe𝒱 rfl~ rfl~ (sym~ (Πβ {t = t [ (_ ⨾ _) ^ _ ]} {u = u}))
          (eval {δ = (_ ⨾ _) , _} t ((ρ [ γᵀʰ ]ℰ) Σ, uⱽ))
 eval (t · u)    ρ = eval t ρ idᵀʰ (eval u (ρ [ idᵀʰ ]ℰ))

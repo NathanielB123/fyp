@@ -399,7 +399,7 @@ _[_]¬ƛ {t = if t u v} p δ = tt
 \end{code}
 %endif
 
-Proving the fundamental theorem in the case of |ƛ|-abstractions and |if|
+Proving the fundamental theorem in the case of |ƛ|-abstractions and ``|if|''
 expressions is a little more complicated. We repeatedly appeal to 
 |P<| to step along the chain of reductions, and rely on |SN| of subterms to 
 induct w.r.t. reduction order in the cases where a subterm

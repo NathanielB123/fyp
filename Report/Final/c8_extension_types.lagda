@@ -27,7 +27,7 @@ if : ∀ (A : Type) (b : Bool)
 Let's revisit our classic example using this typing rule:
 
 %TODO: This doesn't actually work!!
-%|f TT ≢ FF| in the false branch of the outer |if|!
+%|f TT ≢ FF| in the false branch of the outer ``|if|''!
 \begin{spec}
 f3 : ∀ (f : 𝔹 → 𝔹) b → f b ≡ f (f (f b))
 f3 f TT 

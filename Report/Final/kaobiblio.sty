@@ -220,13 +220,13 @@
 	}{%
 	}%
 	\IfNoValueOrEmptyTF{#2}%
-	{\def\@tempa{\phantom{\cite{#4}\kaobiblio@sideblankcite{#4}}}}%
+	{\def\@tempa{\kaobiblio@sideblankcite{#4}}}%
 	{\IfNoValueOrEmptyTF{#3}%
 		{\IfNoValueTF{#3}%
-			{\def\@tempa{\phantom{\cite[#2]{#4}\kaobiblio@sideblankcite{#4}}}}%
-			{\def\@tempa{\phantom{\cite[#2][]{#4}\kaobiblio@sideblankcite{#4}}}}% postnote is empty, so pass empty postnote
+			{\def\@tempa{\kaobiblio@sideblankcite{#4}}}%
+			{\def\@tempa{\kaobiblio@sideblankcite{#4}}}% postnote is empty, so pass empty postnote
 		}%
-		{\def\@tempa{\phantom{\cite[#2][#3]{#4}\kaobiblio@sideblankcite{#4}}}}%
+		{\def\@tempa{\kaobiblio@sideblankcite{#4}}}%
 	}%
 	\ifkaobiblio@addspace%
 		\unskip~\@tempa%

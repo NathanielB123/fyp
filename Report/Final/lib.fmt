@@ -52,6 +52,8 @@
 \newunicodechar{Ψ}{$\Psi$}
 \newunicodechar{Ω}{$\Omega$}
 \newunicodechar{φ}{$\phi$}
+\newunicodechar{ψ}{$\psi$}
+\newunicodechar{χ}{$\chi$}
 
 \newunicodechar{∀}{$\forall$}
 \newunicodechar{∃}{$\exists$}
@@ -153,6 +155,8 @@
 %format FF[]  = FF []
 %format IF-TT = IF- TT
 %format IF-FF = IF- FF
+%format call-TT = call- TT
+%format call-FF = call- FF
 
 %format ƛ⁻¹  = ƛ ⁻¹
 
@@ -174,6 +178,10 @@
 %format ⇒η  = ⇒ "\!" η
 %format ⟦⇒β⟧ = ⟦ ⇒β ⟧ 
 %format ⟦⇒η⟧ = ⟦ ⇒η ⟧ 
+
+%format _▷_⇒_≔_         = _▷ _⇒_ ≔_
+%format _▷_⇒_reflects_≔_ = _▷ _⇒_ reflects_≔_
+%format _▷_⇒_if_≔_∣_    = _▷ _⇒_ if_≔_∣_
 
 %format ,   = ","
 %format _,_ = _ , _
@@ -366,6 +374,12 @@
 %format xᴺᶠ     = x ᴺᶠ
 %format yᴺᶠ     = y ᴺᶠ
 %format vᴺᶠ     = v ᴺᶠ
+%format Aᴺᶠ     = A ᴺᶠ
+%format Bᴺᶠ     = B ᴺᶠ
+
+%format tᴺᵉ′    = tᴺᵉ ′
+%format tᴺᶠ′    = tᴺᶠ ′
+%format tᴺᶠ~    = tᴺᶠ ~
 
 %format ≡?   = ≡ ?
 %format _≡?_ = _ ≡? _
@@ -375,8 +389,11 @@
 %format Σ,_ = Σ, _
 %format _Σ,_ = _ Σ, _
 
-%format .fst = . "\!\bm{\pi}_1"
-%format .snd = . "\!\bm{\pi}_2"
+%format fst = "\bm{\pi}_1"
+%format snd = "\bm{\pi}_2"
+
+%format .fst = . "\!" fst
+%format .snd = . "\!" snd
 
 %format inl  = "\Keyword{in}_1"
 %format inr  = "\Keyword{in}_2"
@@ -405,6 +422,7 @@
 %format _[_]Val = _[_] 𝒱
 %format ]Val    = ] 𝒱
 
+%format coe𝒱′   = coe𝒱 ′
 
 %format Nfᴬ = Nf "^{\Varid{A}}"
 
@@ -430,11 +448,17 @@
 %format wkᵀʰ  = wk ᵀʰ 
 %format wkᵀʰ  = wk ᵀʰ 
 
+%format _^ᵀʰ_>eq_ = _ ^ᵀʰ _ >eq _
+
 %format ⱽ   = "^{\Varid{V}}"
 %format tⱽ  = t ⱽ 
 %format uⱽ  = u ⱽ
 %format vⱽ  = v ⱽ
 %format vzⱽ = vz ⱽ
+
+%format δⱽ  = δ ⱽ
+%format uⱽ′ = uⱽ ′
+%format vⱽ′ = vⱽ ′
 
 %format ᴾ       = "^{\Varid{P}}"
 %format Γᴾ      = Γ ᴾ
@@ -461,12 +485,13 @@
 %format ]ƛ       = ] ƛ
 %format ƛ?       = ƛ ?
 
-%format >nd = > "_{N.D.}"
-%format >!  = > "_{!}"
-%format >𝔹  = > "_{" 𝔹 "}"
-%format >β  = > "_{" β "}"
-%format >β! = > "_{" β! "}"
+%format >nd  = > "_{" N.D. "}"
+%format >!   = > "_{!}"
+%format >𝔹   = > "_{" 𝔹 "}"
+%format >β   = > "_{" β "}"
+%format >β!  = > "_{" β! "}"
 %format >nd! = > "_{" N.D.! "}"
+%format >rw  = > "_{" Rw "}"
 
 %format >nd*  = >nd  "\Varid{*}"
 %format >!*   = >!   "\Varid{*}"
@@ -485,6 +510,8 @@
 %format _>β*_   = _ >β* _
 %format _>β!*_  = _ >β!* _
 %format _>nd!*_ = _ >nd!* _
+
+%format _▷_>rw_ = _▷_ >rw _
 
 %format ᴬ    = "^{\Varid{Acc}}"
 %format ndᴬ  = N.D. ᴬ
@@ -511,8 +538,15 @@
 
 %format ᶜ  = "^{\Varid{C}}"
 
-%format Ξᶜ = Ξ ᶜ
-%format Γᶜ = Γ ᶜ 
+%format Ξᶜ   = Ξ ᶜ
+%format Γᶜ   = Γ ᶜ 
+%format Δᶜ   = Δ ᶜ
+%format Θᶜ   = Θ ᶜ
+%format Γttᶜ = Γtt ᶜ
+%format Γffᶜ = Γff ᶜ
+
+%format _[_]ᶜ = _[_ ]ᶜ
+%format Γᶜ′   = Γᶜ ′
 
 %format _⊢_>′_ = _⊢_>_
 %format >′     = >
@@ -523,36 +557,41 @@
 %format Eqs~ = ~ "^{\Varid{Eqs}}"
 %format _Eqs~_ = _ Eqs~ _
 
-%format norm′          = norm 
-%format norm-sound′    = norm-sound
-%format norm-complete′ = norm-complete
-%format pres>′         = pres>
-%format norm-pres′     = norm-pres
-%format Tms′           = Tms
-%format ε′             = ε
-%format vlookup′       = vlookup
-%format A′             = A
-%format B′             = B
-%format +ℕ′            = +ℕ 
-%format +ze′           = +ze
-%format bool-lemma′    = bool-lemma
-%format bool-lemma′′   = bool-lemma
+%format norm′           = norm 
+%format norm-sound′     = norm-sound
+%format norm-compl′     = norm-compl
+%format pres>′          = pres>
+%format norm-pres′      = norm-pres
+%format Tms′            = Tms
+%format ε′              = ε
+%format vlookup′        = vlookup
+%format A′              = A
+%format B′              = B
+%format +ℕ′             = +ℕ 
+%format +ze′            = +ze
+%format bool-lemma′     = bool-lemma
+%format bool-lemma′′    = bool-lemma
+%format predNe′         = predNe
+%format complete′       = complete
+%format complete-pres′  = complete-pres
+%format complete-compl′ = complete-compl
+%format ,eq′            = ,eq
 
 %format _+ℕ′_           = _ +ℕ′ _ 
+%format _,eq′_          = _ ,eq′ _
 
 %format ᵀʸ       = "^{\Varid{Ty}}"
 
-%format >eq      = "\Rrightarrow"
-%format ,eq      = , "_{\Rrightarrow}"
-%format ,eq⨾     = ,⨾ "_{\Rrightarrow}"
-%format ▷eqη     = ▷η "_{\Rrightarrow}"
-%format π₁eq     = π₁ "_{\Rrightarrow}"
-%format π₂eq     = π₂ "_{\Rrightarrow}"
+%format >eq      = "\leadsto"
+%format ,eq      = , "_{\leadsto}"
+%format ,eq⨾     = ,⨾ "_{\leadsto}"
+%format ▷eqη     = ▷η "_{\leadsto}"
+%format π₁eq     = π₁ "_{\leadsto}"
+%format π₂eq     = π₂ "_{\leadsto}"
 %format π₁eq,    = π₁eq , 
 %format π₂eq,    = π₂eq ,
-%format wkeq     = wk "_{\Rrightarrow}"
-%format >eq      = > "_{\Rrightarrow}"
-%format wk<>eq   = wk<> "_{\Rrightarrow}"
+%format wkeq     = wk "_{\leadsto}"
+%format wk<>eq   = wk<> "_{\leadsto}"
 %format wk<>eqTy = wk<>eq ᵀʸ
 
 
@@ -563,21 +602,56 @@
 
 %format 𝒲    = "^{\Varid{Wk}}"
 
-%format id𝒲  = id 𝒲
-%format ⁺𝒲   = ⁺  𝒲
-%format ⨾𝒲   = ⨾  𝒲
-%format wk𝒲  = wk 𝒲
+%format ]Ctx  = ] "_{\Varid{Ctx}}"
+%format ]Ty   = ] "_{\Varid{Ty}}"
+%format ]Tms  = ] "_{\Varid{Tms}}"
+%format ]ᶜ    = ] "_{\Varid{C}}"
+%format ]TRS  = ] "_{\Varid{TRS}}"
+
+%format _[_]Ctx = _[_ ]Ctx
+%format _[_]Ty  = _[_ ]Ty 
+%format _[_]ᶜ   = _[_ ]ᶜ  
+%format _[_]Ctx = _[_ ]Ctx
+%format _[_]TRS = _[_ ]TRS
+
+%format ⟦[]Ctx⟧ = ⟦[ ]Ctx ⟧ 
+
+%format id𝒲   = id   𝒲
+%format ⁺𝒲    = ⁺    𝒲
+%format ⨾𝒲    = ⨾    𝒲
+%format wk𝒲   = wk   𝒲
+%format ⌝𝒲    = ⌝    𝒲
+%format ]𝒲Ctx = ]Ctx 𝒲
+%format ]𝒲Ty  = ]Ty  𝒲
+%format ]𝒲    = ]    𝒲
+%format ]𝒲ᶜ   = ]ᶜ   𝒲
 
 %format _⁺𝒲_ = _ ⁺𝒲 _
 %format _⨾𝒲_ = _ ⨾𝒲 _
+%format ⌜_⌝𝒲 = ⌜_ ⌝𝒲
+%format _[_]𝒲Ctx = _[_ ]𝒲Ctx
+%format _[_]𝒲Ty  = _[_ ]𝒲Ty
+%format _[_]𝒲    = _[_ ]𝒲
+%format _[_]𝒲ᶜ   = _[_ ]𝒲ᶜ
 
 %format 𝒮 = "^{\Varid{Sig}}"
 
 %format lookup𝒮 = lookup 𝒮
 %format •𝒮      = • 𝒮
+%format wk𝒮     = wk 𝒮
+
+%format wk𝒮⨾Tm   = wk 𝒮 ⨾Tm
+%format wkeq𝒮,Ty = wk "\!" >eq 𝒮 "\!" ,Ty
 
 %format ᴾᴺᵉ = "^{\Varid{PreNe}}"
 %format tᴾᴺᵉ = t ᴾᴺᵉ
 %format uᴾᴺᵉ = u ᴾᴺᵉ
 
 %format TBool = "\Varid{Bool}"
+
+%format ᵀᴿ    = "^{\Varid{TRS}}"
+%format Γᵀᴿ   = Γ ᵀᴿ
+
+%format nd-step = N.D.-step
+
+%format map⊎ = map+

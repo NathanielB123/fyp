@@ -330,9 +330,9 @@ variable
 ⟦ TT      ⟧Tm = λ χ ρ          → true
 ⟦ FF      ⟧Tm = λ χ ρ          → false
 ⟦ t [ δ ] ⟧Tm = ⟦[]t⟧ ⟦ t ⟧Tm ⟦ δ ⟧Tms
-⟦ π₂ δ  ⟧Tm = λ χ ρ → ⟦ δ ⟧Tms .snd ρ .snd
-⟦ call {A = A} ⟧Tm (χ Σ, f) ρ 
-  = f .fst ρ
+⟦ π₂ δ    ⟧Tm = λ χ ρ → ⟦ δ ⟧Tms .snd ρ .snd
+⟦ call    ⟧Tm (χ Σ, f Σ, _ Σ, _) ρ 
+  = f ρ
 
 ⟦,eq⟧′ {b = b} δ χ ρ t≡ = ⟦ δ ⟧Tms .snd ρ Σ, box t≡
 

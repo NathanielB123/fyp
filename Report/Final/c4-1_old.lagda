@@ -188,7 +188,7 @@ both sides, we are left with |TT >! TT|, which is explicitly not allowed
 to ensure |TT| stays in normal form.
 
 We therefore consider yet another reduction relation: Non-Deterministic
-Reduction. The idea is to allow any |if|-expression to immediately reduce
+Reduction. The idea is to allow any ``|if|''-expression to immediately reduce
 to the left or right branch (irrespective of the scrutinee).
 
 \begin{code}
@@ -245,7 +245,7 @@ of distinct neutral Boolean subterms.
 
 But is not quite what we want: |_⊢_~_| should not only identify
 terms modulo a fixed set of Boolean equations. We should be introducing
-new equations in the branches of each |if| expression, i.e.
+new equations in the branches of each ``|if|'' expression, i.e.
 
 \begin{spec}
   if  : Ξ ⊢ t₁ ~ t₂ → Ξ ▷ t₁ >eq true ⊢ u₁ ~ u₂ → Ξ ▷ t₁ >eq false ⊢ v₁ ~ v₂

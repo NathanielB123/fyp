@@ -148,7 +148,7 @@ _⁺eq_ : Tms Δ Γ → ∀ t → Tms (Δ ▷ t >eq b) Γ
 _^_ : ∀ (δ : Tms Δ Γ) A → Tms (Δ ▷ (A [ δ ])) (Γ ▷ A)
 
 -- Substitutions embed signature weakenings
-⌜_⌝𝒮 : ∀ (δ : Wk Φ Ψ) → Tms (Γ [ δ ]) Γ
+⌜_⌝𝒮 : ∀ (φ : Wk Φ Ψ) → Tms (Γ [ φ ]) Γ
 
 data Ctx~ where
   -- Equivalence
@@ -179,7 +179,7 @@ pattern ▷[] = ▷[]ℱ refl
 rflCtx′ = rfl~
 
 ⌜ id    ⌝𝒮 = coe~ (sym~ [id]) rfl~ id
-⌜ δ ⨾ σ ⌝𝒮 = coe~ [][] rfl~ (⌜ δ ⌝𝒮 ⨾ ⌜ σ ⌝𝒮)
+⌜ φ ⨾ ψ ⌝𝒮 = coe~ [][] rfl~ (⌜ φ ⌝𝒮 ⨾ ⌜ ψ ⌝𝒮)
 ⌜ wk𝒮   ⌝𝒮 = wk𝒮
 
 data Ty~ where

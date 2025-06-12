@@ -13,6 +13,7 @@ module Report.Final.c3-1_related where
 \labch{related}
 
 \section{Dependent Pattern Matching}
+\labsec{deppatmatch}
 
 Pattern matching in simply-typed languages (assuming a structural restriction
 on recursive calls) can be viewed as syntax sugar for
@@ -249,7 +250,7 @@ contains definitions that match on individual variables).
 
 Unfortunately, the one-off nature of |with|-abstraction rewrites limits
 their applicability. If we re-attempt the |f true ≡ f (f (f true))| proof from
-(TODO REF HERE), taking advantage of this feature, the goal only gets
+the introduction, taking advantage of this feature, the goal only gets
 partially simplified:
 
 \begin{spec}
@@ -267,10 +268,12 @@ match).
 
 For
 \sideremark{This feature can also be simulated without special syntax
-via the "inspect" idiom \sidecite[*2]{2024propositional}.}
+via the "inspect" idiom 
+\cite{2024propositional}.}\sideblankcite{2024propositional}
 scenarios like this, |with|-abstractions in Agda are extended with an
 additional piece of syntax: following a |with|-abstraction with |in p| binds
-evidence of the match (a proof of propositional equality) to the new variable
+evidence of the match (a proof of propositional equality between the scrutinee
+and pattern) to the new variable
 |p|.
 
 \begin{code}
@@ -377,7 +380,7 @@ types, and contributes to the well-known problem of ``green slime''
 neutral expressions, like {|n +ℕ m|} as above).
 
 \section{Local Equational Assumptions}
-\labsec{loceqreflect}
+\labsec{loceqs}
 
 As mentioned in the introduction, this work is largely inspired by Altenkirch
 et al.'s work on \SC \sidecite{altenkirch2011case}. This work
@@ -408,7 +411,7 @@ module EqReflect where
       → Tm Γ A′
 \end{code}
 
-We explore a type theory using essentially this typing rule for |if| in
+We explore a type theory using essentially this typing rule for ``|if|'' in
 \refch{scbool}. To give a small taste of what makes this theory tricky
 metatheoretically, we introduce the notion of \emph{equality collapse}.
 
@@ -459,10 +462,10 @@ of typechecking is lost.
 
 In \SCBool, collapsing the definitional equality is easy. We can just
 case split on a closed Boolean (or some term that is convertible to a
-closed Boolean). Then, one of the contexts of one of the |if| branches
+closed Boolean). Then, one of the contexts of one of the ``|if|'' branches
 most contain the definitionally-inconsistent assumption |TT ~ FF| (or reversed).
 
-Normalising the scrutinee before checking the branches of |if| (to see if it
+Normalising the scrutinee before checking the branches of ``|if|'' (to see if it
 reduces to a closed Boolean) is not enough to detect definitional inconsistency.
 For example, consider the program (in a context where |b ∶ 𝔹| and
 |not = ƛ b. if b FF TT|)
@@ -471,7 +474,7 @@ For example, consider the program (in a context where |b ∶ 𝔹| and
 if (not b) (if b ?0 ?1) ?2
 \end{spec}
 
-When checking the inner |if| expression, the scrutinee, |b| is is normal form
+When checking the inner ``|if|'' expression, the scrutinee, |b| is is normal form
 (the assumption |not b ~ TT| is not enough to derive |b == FF| by pure
 equational reasoning). However, in |?0|, the context becomes definitionally
 inconsistent (|b ~ TT| and the β-rule for Booleans 
@@ -490,6 +493,7 @@ A more direct use of local equational assumptions is
 \emph{local equality reflection}.
 
 \subsection{Local Equality Reflection}
+\labsec{locreflect}
 
 Recall the equality reflection rule from ETT
 
@@ -753,7 +757,7 @@ ultimately required
 to map between distinct types.}.
 
 \section{Strict η for Coproducts}
-\labsec{strict}
+\labsec{coprodeta}
 
 Another use-case for tracking equational assumptions is to decide conversion
 in the presence strict η for Booleans or, more generally, coproducts.
@@ -793,7 +797,7 @@ module BoolEta where
 In words: every term
 containing a boolean-typed sub-expression, {|t ∶ Tm Γ 𝔹|}, can be expanded
 into
-an |if| expression, with |t| replaced by 
+an ``|if|'' expression, with |t| replaced by 
 |TT| in the
 |TT| branch and |FF| in the |FF| branch.
 
@@ -941,12 +945,13 @@ they do have some downsides.
   Normalisation for dependent type theory with boolean η remains open (though
   some progress on this front has been made recently
   \sidecite{maillard2024splitting}).
-  \item Second, efficient implementation seems challenging. 
+  \item Second, efficient implementation appears challenging. 
   Algorithms such as \cite{altenkirch2001normalization} aggressively
-  introduce case-splits on all neutral subterms of coproduct-type and lift the
+  introduce case-splits on all neutral subterms of coproduct-type and lifts the
   splits
   as high as possible, in an effort to prevent the build-up of stuck
-  terms. 
+  terms. In the worst-case, this requires re-normalising 
+  twice for every distinct coproduct-typed neutral subterm.
   \cite{maillard2024splitting} proposes an similar algorithm for
   typechecking dependent types with strict boolean η, using a monadic
   interpreter with an effectful splitting operation.

@@ -371,7 +371,7 @@ to be smaller than |Π A B|s).
 
 \sideremark{In a type theory with a hierarchy of universes, 
 we could implement dependent and large elimination with the same
-primitive by generalising the motive of |if| to a type of any universe level.}
+primitive by generalising the motive of ``|if|'' to a type of any universe level.}
 
 For the type theories that form the basis of modern proof assistants
 (e.g. Agda), this
@@ -382,7 +382,7 @@ among other things).
 To ensure our proofs generalise to such theories, we therefore
 add a primitive 
 large elimination
-rule for Booleans - i.e. type-level |if| expressions.
+rule for Booleans - i.e. type-level ``|if|'' expressions.
 
 \begin{code}
   IF     :  Tm Γ 𝔹 → Ty Γ → Ty Γ → Ty Γ
@@ -541,13 +541,13 @@ While ITT is the foundation of many modern proof assistants/dependently
 typed PLs, including Rocq \sidecite{rocq2024}, 
 Lean \sidecite{moura2021lean} and Idris \sidecite{brady2021idris} as well
 \sideremark{It is perhaps interesting to note that equality reflection
-is exactly converse of the introduction rule for |Id| (up to |_≡_|):
+is exactly the converse of the introduction rule for |Id| (up to |_≡_|):
 \begin{code}
 rfl′ : t₁ ≡ t₂ → Tm Γ (Id A t₁ t₂)
 rfl′ refl = rfl
 \end{code}
-So, both of these rules together make propositional and definitional equality
-equivalent.}
+So, both of these rules together have the effect of making propositional
+and definitional equality equivalent.}
 as Agda, it is not the only option. Our type theory can be turned into an
 extensional type theory (ETT) by adding the \emph{equality reflection} rule:
 
@@ -562,13 +562,13 @@ postulate
 \end{code}
 
 ETT loses decidable typechecking, but practical proof
-assistants can still in theory be built upon them by allowing the user
+assistants can still in theory be built upon it by allowing the user
 to explicitly write out typing/conversion derivations.
 
 On the other end of the spectrum is weak type theory (WTT)
-\sidecite[*6]{winterhalter2020formalisation}, where
+\sidecite{winterhalter2020formalisation}, where
 definitional equality is left as pure syntactic equality and |β|/|η| laws
-are instead built-in as propositional equalities.
+are dealt with via primitive operations returning propositional equalities.
 
 %TODO citations
 Even within ITT, there is still quite a large design-space in how to treat
@@ -576,7 +576,7 @@ equality. For example:
 \begin{itemize}
   \item Whether definitional equality only encompasses
   |β| laws or if certain |η| laws are admitted also 
-  \sidecite[*1]{maillard2024splitting, kovacs2025eta}.
+  \sidecite{maillard2024splitting, kovacs2025eta}.
   \item Whether propositional uniqueness-of-identity-proofs (UIP) holds
   \begin{code}
   uip : ∀ (p : Tm Γ (Id A t t)) → Tm Γ (Id (Id A t t) p rfl)
@@ -723,7 +723,7 @@ postulate
 \end{code}
 
 Note that for type-level (large) |IF|, we can use |Bool|'s recursor, while
-for term-level (dependent) |if|, we need to use the dependent eliminator.
+for term-level (dependent) ``|if|'', we need to use the dependent eliminator.
 
 \begin{spec}
 ⟦ •      ⟧Ctx = ⊤

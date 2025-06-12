@@ -388,7 +388,7 @@ incompatible with type theories that feature proof-relevant equality
 Theory).
 
 \subsection{Coproducts with Strict η}
-\labsec{strict}
+\labsec{coprodeta}
 
 η-equations on type introduction/elimination forms express 
 uniqueness principles and can be seen as
@@ -447,7 +447,7 @@ module BoolEta where
 \end{spec}
 In words: every term containing a boolean-typed sub-expression can be expanded
 into
-an |if| expression, with the sub-expression replaced by 
+an ``|if|'' expression, with the sub-expression replaced by 
 |TT| in the
 |TT| branch and |FF| in the |FF| branch.
 

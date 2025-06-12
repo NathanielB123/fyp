@@ -18,8 +18,8 @@ As previously mentioned
 in \hyperref[sec:equivquot]{Section 1.1 - Equivalence Relations, Quotients and Setoids}, 
 support for quotient types in modern proof assistants 
 is somewhat hit-or-miss. 
-\sideremark{In a two-level metatheory \sidecite[*-7]{annenkov2023two}
-it is possible to simultaneously work with quotient types up to equivalence
+\sideremark{In a two-level metatheory \cite{annenkov2023two}
+it is possible to simultaneously work with quotients up to equivalence
 when convenient and then go down to a 
 raw syntactic level when required. The key idea behind 2LTT 
 is to have both an
@@ -27,19 +27,19 @@ is to have both an
 their degrees of extensionality.
 Indeed some exploration has been done
 on using this framework to formalise \emph{elaboration} 
-\sidecite[*-16]{kovacs2024elab}, a somewhat inherently syntactic 
+\cite{kovacs2024elab}, a somewhat inherently syntactic 
 algorithm.\\\\
 2LTT also comes with some restrictions
 on eliminators mapping between the two levels though, which I expect to be
 problematic in proving e.g. strong normalisation.
 A pertinent question arises here: why not just scrap intrinsically-typed
 syntax and use inductive typing relations on untyped terms? Perhaps
-if our \textit{only} aim was proving e.g. strong normalisation, this would 
-be a sensible course of action.}
+if our \textit{only} aim was proving strong normalisation, this would 
+be a sensible course of action.}\sideblankcite{annenkov2023two, kovacs2024elab}
 Quotienting by conversion also prevents us
 from performing more
 fine-grained ``intensional'' analysis on terms 
-\sidecite[*-2.5]{kovacs2022staged} or using more ``syntactic''
+\sidecite{kovacs2022staged} or using more ``syntactic''
 proof techniques such as reduction. 
 Therefore, when mechanising in Agda, we prefer to work
 with setoids rather than QIITs directly.
@@ -190,7 +190,7 @@ of substitutions
 <>-commTy : B [ δ ^ A ]Ty [ < t [ δ ] > ]Ty ≡ B [ < t > ]Ty [ δ ]Ty
 \end{spec}
 which does not hold by mere computation. If somehow this law were made
-strict as well, we could write the substitution law for |if| as
+strict as well, we could write the substitution law for ``|if|'' as
 \begin{spec}
 if[]  :  if A t u v [ δ ] 
       ≡  if (A [ δ ^ 𝔹 ]Ty) (t [ δ ]) (u [ δ ])) (v [ δ ])) 

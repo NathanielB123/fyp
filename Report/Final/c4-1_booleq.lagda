@@ -27,17 +27,17 @@ infixr 4 _∙~_
 \section{STLC with Boolean Equations}
 \labsec{simplebooleq}
 
-We begin our exploration of \SC or local equality reflection by
+We begin our exploration of \SC/local equality reflection by
 studying convertibility of STLC terms modulo equations.
-We will start with an extremely restricted set of equations, being only
-those of the form |t == b| where |t| is a |𝔹|-typed term and |b| is a closed
+We will focus on equations of an extremely restricted form:
+|t == b|, where |t| is a |𝔹|-typed term and |b| is a closed
 Boolean.
 
-We will use an intrinsically-typed syntax
+We use an intrinsically-typed syntax
 with recursive substitutions following \refsec{stlcrec}, containing
 |⇒| and |𝔹| type formers, with their standard introduction and elimination
 rules.
-Note that simply-typed |if|-expressions require the left and right branches to 
+Note that simply-typed ``|if|''-expressions require the left and right branches to 
 have exactly the same type.
 
 \begin{spec}
@@ -147,10 +147,10 @@ data _~_ : Tm Γ A → Tm Γ A → Set where
   𝔹β₂  : if FF  u v ~ v
 \end{code}
 
-We will package the set of equations we decide conversion modulo into
-``equational contexts''. For our restricted set of equations, these take
+We will package the set of equations with which we decide conversion modulo into
+\emph{equational contexts}. For our restricted class of equations, these take
 the form of lists of pairs of |𝔹|-typed terms
-and closed Booleans. Substitutions on equational contexts folds
+and closed Booleans. Substituting equational contexts folds
 substitution over the LHS terms.
 
 \begin{code}
@@ -200,7 +200,7 @@ data _⊢_~_ (Ξ : Eqs Γ) : Tm Γ A → Tm Γ A → Set where
        → Ξ ⊢ if t₁ u₁ v₁ ~ if t₂ u₂ v₂
 \end{code}
 
-Note that the rule for |if| here is not ``smart'' in the sense of \SC: we
+Note that the rule for ``|if|'' here is not \smart in the sense of \SC: we
 do not introduce equations on the scrutinee in the branches.
 
 \begin{spec}
@@ -208,8 +208,8 @@ do not introduce equations on the scrutinee in the branches.
       → Ξ ⊢ if t₁ u₁ v₁ ~ if t₂ u₂ v₂
 \end{spec}
 
-We will study the effect of locally introducing equations with this rule later
-in section \refsec{localext}.
+We will study the effect of locally introducing equations with rules like this 
+later in section \refsec{localext}.
 
 % Setoid reasoning combinators
 
@@ -229,17 +229,15 @@ Before moving on, we give a couple important definitions.
 \labdef{defincon}
 
 We define definitionally inconsistent equational contexts
-% I don't think we have a definition of this yet - should probably go
-% in preliminaries
-identically to the dependently typed setting (TODO REF HERE)
+identically to the dependently typed setting (\refremark{eqcollapse}).
+That is, contexts in which |TT| and |FF| are convertible.
 
 \begin{code}
 def-incon : Eqs Γ → Set
 def-incon Ξ = Ξ ⊢ TT ~ FF
 \end{code}
 
-Again, under definitionally-inconsistent contexts, all terms are convertible
-(``equality collapse'' \sidecite{conor2010wtypes}).
+Again, under definitionally-inconsistent contexts, all terms are convertible.
 
 \begin{code}
 collapse : def-incon Ξ → Ξ ⊢ u ~ v
@@ -252,6 +250,12 @@ collapse {u = u} {v = v} tf~ =
   ~⟨ 𝔹β₂ ⟩~
   v ∎~
 \end{code}
+
+However, because of the lack of computation at the level of types in
+STLC (that is, the absence of large elimination), we do not get a 
+type-level equality collapse. Definitional inconsistency is therefore a bit less
+dangerous in the setting of STLC, but we must still keep the consequences it in 
+mind when deciding conversion.
 \end{definition}
 
 \begin{definition}[Equational Context Equivalence] \phantom{a}
@@ -324,7 +328,7 @@ postulate
 \end{code}
 %endif
 
-we do at least stay conservative over conversion
+while we do at least stay conservative over conversion
 
 \begin{code}
   pres>′ : Ξ ⊢ t₁ >′ t₂ → Ξ ⊢ t₁ ~ t₂
@@ -338,7 +342,12 @@ in the equational context |• ▷ if TT TT v >eq false|, we can derive
 
 \begin{code}
 ex1 : • ▷ if TT TT v >eq false ⊢ TT ~ FF
-ex1 = sym~ 𝔹β₁ ∙~ eq ez
+ex1 {v = v} =
+  TT
+  ~⟨ sym~ 𝔹β₁ ⟩~
+  if TT TT v
+  ~⟨ eq ez ⟩~
+  FF ∎~
 
 ex2 : ¬ • ▷ if TT FF v >eq true ⊢ TT >′* FF
 ex2 (rw (es ()) ∶> _)
@@ -354,7 +363,7 @@ term |if TT u v|. We can either reduce with |β𝔹₁| directly and get
 |if TT u v > u| or we can apply the rewrite and follow up with |β𝔹₂|,
 obtaining |if TT u v > if FF u v > v|.}.
 
-We can slightly improve the situation by explicitly preventing rewriting
+The situation is slightly improved by explicitly preventing rewriting
 of terms that are syntactically equal to closed Booleans:
 
 \begin{code}
@@ -371,7 +380,6 @@ data _⊢_>_ (Ξ : Eqs Γ) : Tm Γ A → Tm Γ A → Set where
   ⇒β   : Ξ ⊢ (ƛ t) · u  > t [ < u > ]
   𝔹β₁  : Ξ ⊢ if TT u v  > u 
   𝔹β₂  : Ξ ⊢ if FF u v  > v
-  
 
   -- Monotonicity
   ƛ_   : Ξ [ wk ]Eq  ⊢ t₁  > t₂  → Ξ ⊢ ƛ t₁       > ƛ t₂ 
@@ -400,7 +408,7 @@ postulate pres>* : Ξ ⊢ t₁ >* t₂ → Ξ ⊢ t₁ ~ t₂
 as it turns out, it is strongly normalising! More significantly, we will
 show that this reduction stays strongly normalising 
 even without the |EqVar Ξ t b| pre-condition on |rw|\sideremark{Removing this
-pre-condition is equivalent to being allowed to ``swap out'' the equational
+pre-condition is equivalent to being allowed to ``swap'' the equational
 context after every reduction.
 \nocodeindent
 \begin{code}
@@ -419,12 +427,14 @@ to a closed Boolean with |rw| must terminate at that point, but of course
 replacing subterms in some large expression with |TT| or |FF| can unlock new
 reductions, so well-foundedness is not completely trivial.
 
+\pagebreak
 \section{Normalisation via Completion}
 \labsec{simplenormcompl}
 
 In the prior section, we ended by gesturing at a reduction relation similar to
-|_⊢_>_|, but without a pre-condition on rewriting. We will now make this
-notion concrete, and name it ``spontaneous reduction'' (|𝔹|-typed terms may
+|_⊢_>_|, but without a pre-condition on Boolean rewriting (beyond the LHS not 
+already being a closed Boolean). We will now make this
+notion concrete, and name it \emph{spontaneous reduction} (|𝔹|-typed terms may
 ``spontaneously'' collapse to |TT| or |FF|).
 
 \begin{code}
@@ -451,31 +461,28 @@ we dive into that proof though, we will show how to derive a normalisation
 algorithm using this result.
 
 % TODO: Cite Knuth-Bendix somewhere?
-The key idea here will be ``completion''. We call equational contexts for
-which every LHS is irreducible w.r.t. all other equations 
-``complete''\remarknote{Slightly confusingly, equational contexts being 
-``complete'' is required to prove \textit{soundness}
-of normalisation (i.e. to ensure we appropriately identify
-all convertible terms and not miss any reductions),
+The key idea here will be \emph{completion}. We call equational contexts where
+every LHS is irreducible w.r.t. all other equations 
+\emph{complete}\remarknote{Slightly confusingly, equational contexts being 
+\emph{complete} is required to prove \emph{soundness}
+of normalisation (to ensure we appropriately identify
+all convertible terms and do not miss any reductions),
 rather than completeness (which will ultimately be provable by 
-|Ξ ⊢_>*_| being contained in |Ξ ⊢_~_|). 
-I think this is ultimately just down to
-terminology arising from slightly different fields happening to conflict.}.
+|Ξ ⊢_>_| being contained in |Ξ ⊢_~_|).}.
 
 \begin{code}
 Stk : Eqs Γ → Tm Γ A → Set
 Stk Ξ t = ∀ u → ¬ Ξ ⊢ t > u 
 
 _-_ : ∀ (Ξ : Eqs Γ) → EqVar Ξ t b → Eqs Γ
-(Ξ ▷ t >eq b)  - ez   = Ξ
-(Ξ ▷ u >eq b′) - es e = (Ξ - e) ▷ u >eq b′
+(Ξ ▷ t >eq b)   - ez    = Ξ
+(Ξ ▷ u >eq b′)  - es e  = (Ξ - e) ▷ u >eq b′
 
 data AllStk (Ξ : Eqs Γ) : Eqs Γ → Set where
-  •   : AllStk Ξ •
-  _▷_ : AllStk Ξ Ψ 
-      → ∀ (e : EqVar Ξ t b) 
-      → ¬is 𝔹? t
-      → Stk (Ξ - e) t → AllStk Ξ (Ψ ▷ t >eq b)
+  •    : AllStk Ξ •
+  _▷_  : AllStk Ξ Ψ 
+       → ∀ (e : EqVar Ξ t b) → ¬is 𝔹? t
+       → Stk (Ξ - e) t → AllStk Ξ (Ψ ▷ t >eq b)
 
 Complete : Eqs Γ → Set
 Complete Ξ = AllStk Ξ Ξ
@@ -488,15 +495,16 @@ postulate
 \end{code} 
 %endif
 
-Under complete equational contexts, there are no critical pairs (terms do not
-overlap), so we can prove that reduction is confluent (ordinary
+Under complete equational contexts |Ξ|, there are no critical pairs
+w.r.t. |Ξ ⊢_>_| (LHSs cannot overlap), so we can prove that reduction is 
+confluent (ordinary
 β-reduction cases are dealt with by switching to parallel reduction
 \sidecite{takahashi1995parallel} - we know the new |rw| case can only apply if 
 the term is otherwise irreducible from |Stk (Ξ - e) t|).
 
 \begin{code}
   compl-confl  : Complete Ξ → Ξ ⊢ t >* u → Ξ ⊢ t >* v
-              → Σ⟨ w ∶ Tm Γ A ⟩× (Ξ ⊢ u >* w × Ξ ⊢ v >* w)
+               → Σ⟨ w ∶ Tm Γ A ⟩× (Ξ ⊢ u >* w × Ξ ⊢ v >* w)
 \end{code} 
 
 Therefore, we can define algorithmic conversion and prove that declarative
@@ -600,12 +608,13 @@ postulate
 \end{code}
 %endif
 
-\sideremark{Decidability of normal forms (terms which are |Stk| w.r.t.
-|Complete| equational environments) follows from decidability of syntactic
+\sideremark{Decidability of convertibility normal forms (terms which are |Stk| 
+w.r.t. |Complete| equational contexts) follows from decidability of syntactic
 equality on first-order datatypes.}
 
+\sideremark{|reduce| fully reduces terms w.r.t. |_⊢_>_|.}
+
 \begin{code}
-  -- |reduce| fully reduces terms w.r.t. |_⊢_>_|
   reduce          : Eqs Γ → Tm Γ A → Tm Γ A
   reduce-reduces  : Ξ ⊢ t >* reduce Ξ t 
   reduce-Stk      : Stk Ξ (reduce Ξ t)
@@ -686,8 +695,8 @@ inconsistent contexts, all terms are convertible, so our normal forms
 be characterised by the unit type.
 
 
-\remark{Note that these normal forms do not cleanly embed back into
-the terms syntax (all information about the structure of the term is lost
+\sideremark{Note that these normal forms do not cleanly embed back into
+the STLC terms (all information about the structure of the term is lost
 in the case of inconsistent contexts) but we can still decide equality
 by first completing the context, and then either syntactically comparing
 stuck terms (the |Stk| part is proof-irrelevant and so can be ignored)
@@ -725,7 +734,7 @@ conditions. Given well-foundedness of |_>!_|, |reduce| can be defined
 very similarly to naive normalisation as in \refsec{naive} (recurse
 over the term, contracting redexes where possible, now additionally checking
 for rewrites by syntactically comparing subterms to LHSs in the equational
-context). |complete| then can be implemented by repeatedly reducing terms,
+context). |complete| then can be implemented by repeatedly reducing LHS terms,
 with termination justified by extending |_>!_| lexicographically over the
 % TODO: We have written some of the Agda for this, might be worth adding
 equational context.

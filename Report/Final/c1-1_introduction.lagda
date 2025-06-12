@@ -26,13 +26,13 @@ can be unambiguously checked by a computer implementation.
 
 A significant boon of type-theory-based proof assistants
 is their generality, being capable of scaling to
-cutting edge mathematics
-\sidecite[*-6]{escardo2025topology, buzzard2025flt}, and metamathematics,
+modern mathematics
+\sidecite{escardo2025topology, buzzard2025flt}, and metamathematics,
 including the study of new type theories
-\sidecite[*-5.25]{pujet2022observational, abel2023graded}. However, this 
+\sidecite{pujet2022observational, abel2023graded}. However, this 
 generality
 comes with a curse: using proof assistants often entails a significant
-amount of tedium and boilerplate \sidecite[*-3]{shi2025qed}.
+amount of tedium and boilerplate \sidecite{shi2025qed}.
 
 
 % As proof assistants/dependently-typed programming languages increase
@@ -45,7 +45,7 @@ amount of tedium and boilerplate \sidecite[*-3]{shi2025qed}.
 % is quite limited.
 
 One significant pain-point in proof assistants is having to do
-equational reasoning manually\remarknote[][*-5.5]{This gets especially egregious 
+equational reasoning manually\remarknote{This gets especially egregious 
 when proving properties of functions which themselves
 rely on manual equational reasoning. In such situations (often referred to as
 ``transport hell''), we must employ
@@ -53,23 +53,24 @@ rely on manual equational reasoning. In such situations (often referred to as
 unrelated to the underlying function we actually care about e.g. 
 showing that coercions (or \emph{transports}) 
 can be pushed under function applications
-\sidecite[*1.5]{saffrich2024intrinsically, kaposi2025type}.}.
+\cite{saffrich2024intrinsically, kaposi2025type}.}
+\sideblankcite{saffrich2024intrinsically, kaposi2025type}.
 With a rich literature of techniques
 designed to automatically decide equational theories (the \emph{word problem}),
-including term rewriting \sidecite[*11.5]{baader1998term}, 
-and E-Graphs \sidecite[*12.25]{nelson1980techniques, willsey2021egg}, it is 
+including term rewriting \sidecite{baader1998term}, 
+and E-Graphs \sidecite{nelson1980techniques, willsey2021egg}, it is 
 perhaps
 surprising that the capabilities of many proof assistants are
 quite limited in
 this area. For example, Agda and Rocq only have only recently gained global
-rewrite rules \sidecite[*13.5]{cockx2020type, leray2024rewster}. One possible
+rewrite rules \sidecite{cockx2020type, leray2024rewster}. One possible
 underlying reason for this state of affairs 
 is that modern proof assistants based specifically on
 intensional type theory (ITT) rely on the built-in 
 (\emph{definitional}) equality obeying some quite strong
 properties, including decidability (so it can actually be
 automated), transitivity and congruence. 
-Extending definitional equality losing any of these properties is
+Extending definitional equality without losing any of these properties is
 challenging.
 
 %if False
@@ -81,11 +82,10 @@ variable A : Set
 For an example of where equational reasoning ``by hand'' gets tedious, 
 consider the
 below proof by cases that for any Boolean function, {|f ∶ Bool → Bool|},
-\linebreak
 \mbox{|f true ≡ f (f (f true))|} (we can of course also prove
-{|f false ≡ f (f (f false))|, by analagous argument).
-\sideremark[*8]{This example is originally from the Agda mailing list 
-\sidecite[*1.5]{altenkirch2009smart}.}
+{|f false ≡ f (f (f false))|, by an analagous argument).
+\sideremark{This example is originally from the Agda mailing list 
+\cite{altenkirch2009smart}.}\sideblankcite{altenkirch2009smart}
 \begin{code}
 Bool-split : ∀ b → (b ≡ true → A) → (b ≡ false → A) → A
 
@@ -108,12 +108,13 @@ bool-lemma f
                f (f (f true)) ∎)
 \end{code}
 \pagebreak
-\sideremark{We could shorten the proof here
+\sideremark{We could shorten the Agda proof here
 by ``code golfing''. For example, we could swap the readable (but verbose)
 equational reasoning combinators provided by the Agda standard library
-\sidecite[*5.5]{2024eqreasoning}, for direct appeals to transitivity of equality
-(|_∙_|). For example, this final case could be written as
-|p ∙ sym (cong f (cong f p ∙ q) ∙ q)| - still pretty convoluted!}
+\cite{2024eqreasoning}, for direct appeals to transitivity of equality
+(|_∙_|). Specifically, this final case could be written as
+|p ∙ sym (cong f (cong f p ∙ q) ∙ q)| - still pretty convoluted!
+}\sideblankcite{2024eqreasoning}
 \begin{code}
        -- |f false ≡ false|
        (λ q →  f true
@@ -162,10 +163,10 @@ metatheoretical properties) remain open.
 This project then, can be seen as an attempt at continuing this work. 
 At risk of spoiling the conclusion early: our 
 final type theory, \SCDef, will actually move away from truly local equations,
-showing that we can recover most of the \emph{expressivity} of \SC by only
+showing that we can recover most of the \emph{expressivity} of \SC while only
 introducing new equations at the level of \emph{definitions}, and most of
-the \emph{convenience} through \emph{elaboration}. We argue that \SCDef
-has potential to serve as a solid basis for an implementation of \SC in 
+the \emph{convenience} via \emph{elaboration}. We argue that \SCDef
+has potential to serve as a basis for an implementation of \SC in 
 e.g. Agda.
 
 \begin{widepar}

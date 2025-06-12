@@ -32,7 +32,7 @@ axioms), and then look at how to model type theories
 mathematically.
 
 Readers already familiar with (dependent) type theory and Agda
-syntax\remarknote[][*12]{For the benefit of
+syntax\remarknote[][*13]{For the benefit of
 readers who
 \textit{are} Agda-proficient, we also note that this entire report is
 written in literate Agda, though we take some
@@ -46,7 +46,7 @@ When working inside a particular type theory, we directly write both
 \emph{terms} 
 (typically denoted with the letters |t|, |u| and |v|)
 and \emph{types} (denoted with the letters |A|, |B|, |C|, etc.).
-Under the Curry-Howard correspondence \sidecite{howard19080formulae}, 
+Under the Curry-Howard correspondence \sidecite[*21]{howard19080formulae}, 
 type theories can be seen to semantically
 represent \curry{logics} or \howard{programming languages} with
 terms as \howard{programs} or 
@@ -113,11 +113,10 @@ denotes the result of replacing all |x|s in |t| with |u|.
 
 % David Davies suggests introducing non-dependent functions first
 Aside from variables, terms and types are made up of
-so-called term and type \emph{formers}\sidecite{Sometimes, in other work, 
+so-called term and type \emph{formers}\remarknote{Sometimes, in other work, 
 these are also collectively called
-\emph{constructors}. We reserve the term \emph{constructor} only for a subset of 
-term formers,
-specifically, introduction rules associated with inductive datatypes.}.
+\emph{constructors}. We reserve the term \emph{constructor} only for 
+introduction rules associated with inductive datatypes.}.
 Arguably, the most important type former is the Π-type. {|∀ (x : A) → B|}, 
 where |x : A| is bound inside |B|. Semantically, {|∀ (x : A) → B|}
 represents \howard{functions} or \curry{implications} from |A| to |B|.
@@ -344,7 +343,7 @@ t == λ x → t x
 
 Some η-rules are a lot trickier to decide than others. A general rule-of-thumb
 is that η-laws for \emph{negative} type formers (e.g. functions (|Π|),
-pairs (|Σ|), unit (|⊤|)) are easier to work with\remarknote{Specifically,
+pairs (|Σ|), unit (|⊤|)) \remarknote[][*-4]{Specifically,
 we can delay checking of these η laws until after β-reduction, or 
 alternatively can deal with them directly via NbE (\refsec{nbe}) by specialising
 unquoting appropriately.\\
@@ -355,9 +354,11 @@ negative type formers can still cause trouble
 η-laws for \emph{positive} type formers on the other
 hand (e.g. Booleans (|𝔹|), coproducts (|_+_|), 
 natural numbers (|ℕ|), propositional equality (|_≡_|)) are more subtle, either
-requiring significantly more complicated normalisation algorithms
-\sidecite{altenkirch2001normalization} or being outright undecidable.
+requiring significantly a more complicated normalisation algorithms
+\sidecite[*9]{altenkirch2001normalization} or being outright undecidable
+(we discuss this in more detail in \refsec{coprodeta}).
 
+\pagebreak
 \subsubsection{Universes}
 
 In Agda, types are also \emph{first-class} (types are themselves
@@ -368,7 +369,7 @@ terms).
 In fact, the
 type theories we shall study in this project will not
 support first-class types, or even feature type variables, as the subtleties 
-of such systems are generally orthogonal to the problems we shall consider}. 
+of such systems are generally orthogonal to the problems we shall consider.}. 
 This means 
 that we have a ``type of types'', named |Set| and therefore can recover 
 polymorphism (á la System F
@@ -456,9 +457,9 @@ others as \howard{classes of data}. E.g. the natural numbers are a very boring
 |ze : ℕ|. Conversely, in most type theories |≡|-typed \howard{programs} 
 always return |refl| eventually, and so cannot do much meaningful
 computation\remarknote[][*-8]{Actually, computational 
-interpretations of Homotopy Type Theory (HoTT) \sidecite[*4]{hottbook}
+interpretations of Homotopy Type Theory (HoTT) \sidecite[*9]{hottbook}
 such
-as Cubical Type Theory (□TT) \sidecite[*6]{cohen2016cubical} 
+as Cubical Type Theory (□TT) \sidecite[*11]{cohen2016cubical} 
 propose an alternative perspective,
 where transporting over the identity type (renamed the \emph{path} type)
 is a non-trivial operation. For example, paths between types
@@ -496,21 +497,22 @@ types are well-founded (namely, strict-positivity) \sidecite{agda2024data}.
 
 Note we do not need to explicitly give an elimination rule. Inductive types
 (being \textit{positive} type formers) are fully characterised by their
-introduction rules (constructors). Intuitively, eliminators correspond with
+introduction rules (constructors). 
+
+Intuitively, eliminators correspond with
 induction principles, and can be derived 
 mechanically by taking the displayed algebra \sidecite{kovacs2023type}
 over the inductive 
 type\remarknote{At least for simple inductive types. When one starts
 defining inductive types mutually with each-other along with recursive
 functions, quotienting, mixing in coinduction etc... matters admittedly get more 
-complicated \sidecite[*2]{kovacs2023complex}.
-%
-}. For example, the displayed
+complicated \cite{kovacs2023complex}.}\sideblankcite{kovacs2023complex}.
+For example, the displayed
 algebra over |𝔹| is a pairing of the \textit{motive} |P : 𝔹 → Set| along 
 with \textit{methods} |P TT| and |P FF|, so the eliminator is written as
 
 \begin{code}
-𝔹-elim : ∀ (P : 𝔹 → Set) → P TT → P FF → ∀ b → P b
+𝔹-elim : ∀ (P : 𝔹 → Set) b → P TT → P FF → P b
 \end{code}
 
 % TODO: Citations here?
@@ -533,8 +535,8 @@ not FF  = TT
 Note that traditional eliminators can be defined in terms of pattern matching.
 
 \begin{code}
-𝔹-elim P Ptt Pff TT   = Ptt
-𝔹-elim P Ptt Pff FF  = Pff 
+𝔹-elim P TT  Ptt Pff = Ptt
+𝔹-elim P FF  Ptt Pff = Pff 
 \end{code}
 
 \subsubsection{Equivalence Relations, Quotients and Setoids}

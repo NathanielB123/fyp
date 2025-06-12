@@ -18,7 +18,7 @@ infix 4 _>β_ _>!_ _>𝔹*_ _>nd_ _[_]>_ _>𝔹_
 All that remains then is strong normalisation of |_>!_|. We will prove this in
 two steps, using an intermediary notion of ``non-deterministic'' reduction, 
 |_>nd_|: a slightly
-generalised version of β-reduction, where |if|-expressions can be
+generalised version of β-reduction, where ``|if|''-expressions can be
 non-deterministically collapsed to the LHS or RHS branch irrespective
 of the scrutinee.
 
@@ -39,7 +39,8 @@ spontaneous reduction.
 
 We define untyped terms indexed by the number of variables in the context
 (``intrinsically well-scoped''). Note that in this section, the symbols
-|Γ|, |Δ|, |Θ| denote natural numbers rather than lists of types.
+|Γ|, |Δ|, |Θ| denote untyped contexts (i.e. natural numbers) rather than 
+lists of types.
 
 %if False
 \begin{code}
@@ -150,7 +151,7 @@ variable
 \end{code}
 %endif
 
-Monotonic closure is functorial mappings between closed-over reduction
+Monotonic closure is functorial over mappings between the closed-over reduction
 relations.
 
 \begin{code}
@@ -171,10 +172,14 @@ _>β_ : Tm Γ → Tm Γ → Set
 _>β_ = _[ β-step ]>_
 \end{code}
 
-Spontaneous reduction in this section refers to the relation which only
+Spontaneous reduction |_>!_| in this section refers only to the relation which
 rewrites terms to closed Booleans (as long as the terms not already
-syntactically equal to |TT| or |FF|) - it does not, by default, include
-|β|-reductions as well:
+syntactically equal to |TT| or |FF|); we do not, by default, include
+|β|-reductions as well. We also do not require the LHS term to 
+have Boolean type, which we are somewhat forced into given we are working
+with untyped terms. We therefore will end up proving strong normalisation of a 
+larger relation than our concrete goal of \emph{typed} spontaneous (plus β) 
+reduction.
 
 %if False
 \begin{code}
@@ -194,7 +199,7 @@ _>!_ : Tm Γ → Tm Γ → Set
 _>!_ = _[ !-step ]>_
 \end{code}
 
-Non-deterministic reduction treats |if|-expressions like non-deterministic
+Non-deterministic reduction treats ``|if|''-expressions like non-deterministic
 choices, ignoring the scrutinee.
 
 \begin{code}
@@ -225,7 +230,7 @@ _>𝔹*_ = flip _[ flip _>𝔹_ ]*_
 
 Our overall goal is to prove that all terms which are strongly-normalising
 w.r.t. non-deterministic reduction are also strongly-normalising w.r.t.
-spontaneous reduction plus β rules.
+spontaneous reduction plus β rules, |_>β!_|.
 
 \begin{code}
 _>β!_ : Tm Γ → Tm Γ → Set
@@ -239,36 +244,43 @@ by replacements of arbitrary subterms of the LHS term with closed Booleans)
 commutes with non-deterministic reduction:
 
 \begin{code}
-𝔹*/nd-comm> : t >𝔹* u → u >nd v → ∃[ w ] t >nd w × w >𝔹* v
+𝔹*/nd-comm> : t >𝔹* u → u >nd v → Σ⟨ w ∶ Tm Γ ⟩× t >nd w × w >𝔹* v
 \end{code}
 
 Note that |_>nd_| does not commute with |_>!_| in the same way. 
-Note that |_>nd_| includes the β-rule for functions, and so we require
-reduction relations we commute with to be stable under substitution.
+|_>nd_| includes the β-rule for functions, and so any reduction
+relation which commutes with |_>nd_| must be stable under substitution.
 Spontaneous
 reduction is not stable under substitution, because e.g. we can 
 rewrite |` i >! TT|, but if we apply the substitution |FF / i| to both sides
 then we are left with |FF >! TT| which is impossible (the LHS of |_>!_| cannot
 be |TT| or |FF|).
 
-We can prove this by checking all the cases for individual |nd-step|s/single
-Boolean rewrites:
+
+Luckily, |_>𝔹*_| does not face the same issue: |TT >𝔹 FF| and |FF >𝔹 TT|
+are valid.
+We can prove |𝔹*/nd-comm>| by checking all the cases for individual 
+|nd-step|s/single Boolean rewrites (|_>𝔹_|) and then extending over the
+monotonic closure of |nd-step| and transitive closure of |_>𝔹_|.
 \begin{itemize}
-  \item When the step is a |⇒β| contraction, then the Boolean rewrite
+  \item When the |nd-step| is a |⇒β| contraction, then the Boolean rewrite
+        (|_>𝔹_|)
         must have occurred inside the lambda body or the argument, and so we can
-        instead β-reduce before the rewrite and then rewrite to get back to 
-        the same
-        term (potentially multiple times, given the argument could have 
-        been duplicated).
+        first β-reduce and then rewrite (potentially multiple times, if
+        specifically the rewrite took place inside the argument\remarknote{E.g.
+        given |u >𝔹 u′|, then we can get from |(ƛ x. f x x) u| to
+        |f u′ u′| by first β-contracting to get |f u u| and then applying the
+        rewrite twice.}) 
+        to get back to the same term.
   \item When the step is a non-deterministic choice, the Boolean
-        rewrite must have occurred inside the scrutinee, LHS or RHS of the if
+        rewrite must have occurred inside the scrutinee, LHS or RHS of the ``|if|''
         expression. We can instead perform the non-deterministic choice
         before the rewrite and then either get back to the term immediately
-        (if the rewrite applied to the scrutinee or the dropped branch of
-        the |if|) or apply the rewrite again to the retained branch.
+        (if the rewrite was inside the scrutinee or the dropped branch of
+        the ``|if|'') or apply the rewrite again to the retained branch.
 \end{itemize}
 
-\remarknote{|_[_]𝔹>*| witnesses a generalisation of |_>𝔹*_| being stable 
+\sideremark{|_[_]𝔹>*| here witnesses a generalisation of |_>𝔹*_| being stable 
 under substitution. Specifically, we allow the substitute terms to
 also be reduced via |_>𝔹*_|.}
 
@@ -279,7 +291,7 @@ data _>Tms𝔹*_ : Tms Δ Γ → Tms Δ Γ → Set where
 
 _[_]𝔹>* : t >𝔹* u → δ >Tms𝔹* σ → t [ δ ] >𝔹* u [ σ ]
 
-𝔹/nd-comm : t >𝔹 u → nd-step u v → ∃[ w ] nd-step t w × w >𝔹* v
+𝔹/nd-comm : t >𝔹 u → nd-step u v → Σ⟨ w ∶ Tm Γ ⟩× nd-step t w × w >𝔹* v
 𝔹/nd-comm (l· (ƛ p))        ⇒β  
   = _ Σ, ⇒β Σ, ⟪ p ⟫* [ refl ]𝔹>*
 𝔹/nd-comm (·r {t = ƛ t} p)  ⇒β  

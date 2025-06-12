@@ -55,7 +55,7 @@ types are defined in. We avoid considering this here only for simplicity.}
 
 We carry over all the substitution laws, the existence of context extension
 and the term/type formers associated with |Π| and |𝔹| types, except term-level
-(dependent) |if|. In \SCBool, |if| will be ``smart'' in the sense that it will
+(dependent) ``|if|''. In \SCBool, ``|if|'' will be ``smart'' in the sense that it will
 add equations to the context in the left and right branches, as opposed
 to requiring an explicit motive. 
 
@@ -306,9 +306,9 @@ We can of course also derive that definitionally inconsistent contexts
 collapse the term equality also, though dealing with the explicit substitutions
 clutters the argument somewhat.
 
-For example, the |u| and |v| inside the |if| must be weakened to account for 
+For example, the |u| and |v| inside the ``|if|'' must be weakened to account for 
 the new 
-local equation, and contracting the |if| requires explicitly instantiating this
+local equation, and contracting the ``|if|'' requires explicitly instantiating this
 equation with a substitution. Our |wk<>eq| lemma from earlier is exactly
 what we need to show that the composition of these two actions has
 no ultimate effect.
@@ -318,8 +318,8 @@ no ultimate effect.
 % of equations |t ≡ if TT then t else u ≡ if FF then t else u ≡ u|, but we must
 % take care to account for explicit substitution and weakening. 
 % 
-% E.g. The |t| and |u| inside the |if| must be weakened to account for the new 
-% rewrite, and contracting the |if| requires explicitly instantiating this
+% E.g. The |t| and |u| inside the ``|if|'' must be weakened to account for the new 
+% rewrite, and contracting the ``|if|'' requires explicitly instantiating this
 % rewrite with another substitution. Our |wk<>eq| lemma from earlier is exactly
 % what we need to show that these substitutions ultimately have no effect.
 
@@ -347,6 +347,7 @@ tm-incon-collapse Γ p A u v =
 \end{code}
 
 \section{Soundness}
+\labsec{scboolsound}
 
 We prove soundness of \SCBool by updating the standard model construction 
 given in \refsec{depsound}.
@@ -402,7 +403,7 @@ at the cost of having to repeat it).
          ⟦ FF ⟧Tm ∎) ρ
 \end{spec}
 
-To interpret ``smart'' |if|, we define an analagous operation in our metatheory
+To interpret ``smart'' ``|if|'', we define an analagous operation in our metatheory
 that takes a propositional equality instead: the Boolean ``splitter''.
 
 % TODO: This could maybe go in the preliminaries/related work...
@@ -440,7 +441,7 @@ module _ {A : Set} where
 \end{spec}
 
 Finally, to ensure soundness, we also need to show that conversion is preserved.
-The updated computation rules for |if| still hold definitionally in 
+The updated computation rules for ``|if|'' still hold definitionally in 
 the meta, but the new |π₂eq| law does not. We need to
 manually project out the propositional equality from the substituted
 environment, but to do this, we need to get our hands on an environment
@@ -527,10 +528,58 @@ checking whether the equational context can be completed before reducing
 is even more important, given under definitionally inconsistent contexts,
 terms that loop w.r.t. β-reduction can be defined 
 \refexample{definconselfapp}. 
-This means we need to be careful to only
+We need to be careful to only
 ever reduce terms after we have completed at least the set of equations that
 their typing directly depends on.
 
+\begin{example}[\SCBool Reduction W.R.T. a TRS Can Loop Even if the TRS Is Complete] \phantom{a}
+
+Consider following the \SCBool context (assuming support for neutral
+equations at |𝔹|-type\remarknote{We can avoid this assumption
+by replacing |x| and |y| with slightly more complicated 
+β-neutral terms |t| and |u| that are convertible 
+modulo a particular Boolean equation. E.g. \mbox{|t = if x TT FF|} and 
+\mbox{|u = if x TT TT|} are equal assuming |x >eq TT|.}).
+
+\begin{spec}
+Γ  = x ∶ 𝔹
+   , y : 𝔹
+   , z ∶ IF x 𝔹 (𝔹 ⇒ 𝔹)
+   , x ~ y
+   , (if x (ƛ _. TT) z) (if y z TT) >eq TT
+   , x ~ FF
+   , y ~ TT
+\end{spec}
+
+The TRS |x >rw FF, y >rw TT| is conservative over this equational context,
+and is complete at least in the sense that all LHSs are
+irreducible (with respect to the other TRS rewrite and β reduction).
+However, if (during completion of the full context) 
+we reduce \mbox{|(if x (ƛ _. TT) z) (if y z TT)|} w.r.t. this TRS, 
+we get a self-application! 
+
+\sideremark{Technically, self-application does not immediately imply the
+existence of reduction looping, but we can easily repeat this 
+constructor to obtain Ω (\refremark{eqcollapse}).}
+
+\begin{spec}
+(if x (ƛ _. TT) z) (if y z TT) 
+> (if FF (ƛ _. TT) z) (if TT z TT)
+> z z
+\end{spec}
+
+The problem here is that \mbox{|(if x (ƛ _. TT) z) (if y z TT)|} relies on the
+equation |x ~ y| to typecheck (specifically, so that in the left branch of 
+the second ``|if|''
+expression, |z ∶ 𝔹| as required). However, this equation is not
+validated by the TRS. Essentially, the context is definitionally
+inconsistent, but we failed to detect this.
+
+If we instead required |x ~ y| to be in the TRS when reducing 
+\mbox{|(if x (ƛ _. TT) z) (if y z TT)|}, then completing the TRS
+with |x ~ FF| and |y ~ TT| also included will find the definitional 
+inconsistency, so we can avoid blindly reducing.
+\end{example}
 
 % Still, in the presence of non-confluent rewrite lies trouble. |b >rw true|
 % and |b >rw false| together enables self-application without either equation
@@ -560,7 +609,7 @@ satisfy this criteria.}
 A nice first-step towards normalisation for \SCBool would be
 to attempt to prove decidability of conversion for for dependent types
 modulo a fixed (global) set of Boolean equations. We can arrive at an explicit 
-syntax for this problem by just replacing \SCBool's ``smart |if|'' with the
+syntax for this problem by just replacing \SCBool's ``smart ``|if|'''' with the
 ordinary dependent one\remarknote{Note that in such a setting, we can consider
 a vastly restricted subset of \SCBool's substitutions, where the sub-context
 up to the last equational assumption always remains constant, and no new
@@ -595,8 +644,8 @@ A natural strategy here is to make an attempt at adapting our
 simply-typed result from \refsec{simplenormcompl}. 
 Unfortunately, it seems
 impossible to reuse the same techniques. For starters,
-non-deterministic reduction on dependent |if| does not preserve typing.
-Recall that in the definition of |if|
+non-deterministic reduction on dependent ``|if|'' does not preserve typing.
+Recall that in the definition of ``|if|''
 
 \begin{spec}
 if  : ∀ (A : Ty (Γ ▷ 𝔹)) (t : Tm Γ 𝔹) 
@@ -610,7 +659,7 @@ is the scrutinee).
 
 Actually, the problem is more
 fundamental: we can construct terms in dependent type 
-theory (with just with ordinary, dependent |if|) that, after projecting out the 
+theory (with just with ordinary, dependent ``|if|'') that, after projecting out the 
 untyped term, 
 loop w.r.t. non-deterministic (or spontaneous) reduction. 
 For example (working internally, in a context where |b ∶ 𝔹| and
@@ -629,8 +678,8 @@ The untyped projection of this term is just
 ƛ y. (if b (ƛ _. x) y) (if b y x)
 \end{spec}
 
-Under non-deterministic reduction, we can collapse the first |if| the 
-right branch (|y|), and the second |if| the left branch (also, |y|) 
+Under non-deterministic reduction, we can collapse the first ``|if|'' the 
+right branch (|y|), and the second ``|if|'' the left branch (also, |y|) 
 resulting in |ƛ y. y y| (and under spontaneous
 reduction, we can do the same thing in two steps, but first collapsing the 
 scrutinee the the appropriate closed Boolean). We then just need to repeat
@@ -657,20 +706,20 @@ relation covering the steps of completion (reducing a LHS, removing
 a redundant equation, concluding definitional inconsistency from an inconsistent
 one). We could then aim to prove that 
 
-
 \subsection{Beyond Booleans}
+\labsec{depbeyondbool}
 
 A major motivating factor for my ``giving-up'' on \SCBool (on top of the
 challenges previously listed) is that going far beyond Boolean equations appears
 impossible.
 
-As covered in \refsec{screflect}, when we start generalising \SC, it is
-useful to view it from the lens of restricted equality reflection. 
-A significant issue with syntaxes that introduce equations locally,
-such as \SCBool, is that the restrictions we enforce on propositional
-equalities that may be reflected must be stable under substitution. This
+As covered in \refremark{scloceqref}, when we start generalising \SC, it is
+useful to view it through the lens of local equality reflection. 
+A significant constraint with introducing equations locally,
+as in \SCBool, is that the restrictions we enforce on reflected
+equations must be stable under substitution. This
 is a consequence of being able to introduce equations underneath λ-abstractions
-and featuring definitional β-reduction: if the equation restriction is not
+and definitional β-reduction: if the equation restriction is not
 stable under substitution, then β-reduction could take a well-typed term
 that reflects a valid equation, and reduce it to a term where the 
 reflected equation is no longer valid.
@@ -690,7 +739,7 @@ This was possible for any type |A| and term |t| that blocks on its argument,
 so for example, we could make this example more concrete by setting
 {|A = ℕ ⇒ 𝔹|} and {|t = ƛ b. if [b′. IF b′ (ℕ ⇒ 𝔹) B] b u v|}. Now,
 |t TT| β-reduces to |u|, an arbitrary |ℕ ⇒ 𝔹|-typed term.
-As mentioned in \refsec{loceqreflect}, reflecting equations higher-order-typed
+As mentioned in \refsec{locreflect}, reflecting equations higher-order-typed
 equations like this quickly leads to undecidability. Therefore, we must prevent
 |u == x|, and so to ensure stability under substitution, we must also
 reject the original |t b == x| equation. In practice, I argue this example
@@ -721,8 +770,9 @@ Boolean equations is unnacceptable!
 
 \subsubsection{Finitary Types}
 
-It is probably worth mentioning that going a little beyond our Boolean equations
-is likely achievable though. The first obvious equality-reflection-motivated 
+Going a little beyond our Boolean equations
+appears to be achievable to some extent though. 
+The first obvious equality-reflection-motivated 
 generalisation is to allow equations between |𝔹|-typed neutral terms. Assuming
 a normalisation proof of \SCBool based on completion, extending it to 
 account for neutral rewrites, oriented w.r.t. some term ordering should not be
@@ -736,8 +786,8 @@ with Boolean large elimination like so
 \begin{spec}
 A + B = Σ (b ∶ 𝔹). IF b A B
 
-in₁  t = tt  , t
-in₂  t = ff  , t
+in₁  t = TT  , t
+in₂  t = FF  , t
 \end{spec}
 Equations of the form |t == in₁ u| at type |A + B| can now be decomposed into 
 a Boolean equation |π₁ t == true| and a |A|-typed equation |π₂ t == u|. 
@@ -757,90 +807,174 @@ TODO - INFINITARY TYPES (I HAVE SOME REALLY OLD NOTES ON DISCORD USING A
 DEDICATED FIXPOINT TYPE THAT I COULD TALK ABOUT HERE)
 
 \section{Typechecking Smart Case}
+\labsec{typecheckingsc}
 
 We end this section with a description of the \SCBool typechecker implemented
 in Haskell as a component of this project. As explained previously in 
 \refsec{scboolnormfail}, I do not know how to prove normalisation of
 \SCBool, and therefore do not claim that this typechecker is complete.
-In practice though, it does appear capable of handling some of the
-\SC use-cases identified in (TODO REF HERE), including
+In practice though, it has handled the examples which I have
+thrown at it correctly, without getting stuck in loops.
+
+\sideremark{Idris2 also features |Type ∶ Type|, though there is a plan
+to eventually add universes.}
+The language we check is a slight extension of \SCBool, including a single
+impredicative universe (|Type ∶ Type|). This is technically unsound
+(\sidecite{hurkens1995simplification}), but I argue that
+programs/proofs which
+might actually abuse this inconsistency are quite rare in practice (the
+|Type ∶ Type| sledgehammer is also much simpler to implement than
+an actual universe hierarchy, and concerns with universes are pretty 
+orthogonal to the new features of \SCBool).
 
 
-\subsection{Bi-directional Typechecking}
-
-The key motivation behind bi-directional typechecking is to reduce 
-annotation-burden on programs written in the surface language.
-Its inference capabilities our ultimate more limited than
-e.g. metavariables, but its behaviour is also much more predictable.
-
-For example, Agda is capable of successfully elaborating 
-
-\begin{code}
-foo = λ x → x +ℕ 1
-\end{code}
-
-without any type annotations, while under the bi-directional discipline, 
-un-annotated |λ| abstraction cannot, in general, synthesise a type,
-so we must ask for an annotation here.
-
-Note that Agda does not successfully elaborate the un-annotated identity 
-function (instead reporting the existence of unsolved metavariables).
-
-\begin{spec}
-bar = λ x → x
-\end{spec}
-
-\subsection{Hasochism and Well-scoped Syntax}
+Other than the extensions to specifically support \SIF,
+the implementation of \SCBool is pretty standard. Following
+\sidecite{coquand1996algorithm}, it implements bidirectional typechecking
+in terms of mutually recursive |infer| and |check| functions, and
+decides convertibility of types using normalisation by evaluation (NbE).
+\sideremark{We also explicitly maintain a slightly more suspect invariant:
+that terms do not contain ``obviously ill-typed'' β-redexes. That is, 
+introduction rules in scrutinee position are always of the appropriate
+type former.\\\\Assuming a correct implementation, this invariant is
+completely reasonable (it is a subset of terms being well-typed in general),
+but alone it is definitely not necessarily preserved over operations
+such as substitution or reduction. The compromise being struck here is
+essentially that Haskell's type system is not powerful enough to model
+full intrinsically-typed syntax, so I am encoding this 
+weaker invariant and then coercing (technically unsafely) when necessary.
+It is somewhat unclear whether this is a good idea.}
+To guard against mistakes in the implementation, it also makes extensive use
+of GADTs (including singleton encodings \sidecite{lindley2013hasochism}) 
+to maintain invariants, including that
+terms are intrinsically well-scoped \sidecite{eisenberg2020stitch}
+(after we complete a scope-checking pass, turning names into 
+well-scoped de Bruijn variables) and normal/neutral forms do not contain
+β-redexes. 
 
 
 
-\subsection{Efficient Normalisation by Evaluation}
+% A slightly experimental invariant, that terms do not
+% contain ``obviously ill-typed''\remarknote{Specifically, scrutinees of
+% elimination forms cannot take the form of introduction rules associated 
+% with a different type former.} 
+% β-redexes, is also ensured by the type
+% indexing. Preserving this invariant safely during substitution and, 
+% more generally,
+% reduction, is not really possible without full dependent types, but Haskell,
+% being a partial language, does allow us to |unsafeCoerce| between arbitrary
+% types.
 
-\subsection{``Inductively''-defined Values}
+\sideremark{The optimisations I decided to make here were generally motivated
+by simplicity rather than performance. There is certainly 
+a huge amount of potential
+to optimise further, e.g. by using a more efficient variable representation
+than unary de Bruijn indices, using de Bruijn levels in values,
+switching from metalanguage closures
+to first-order ones, eliminating the overheads associated with singleton 
+encodings by |unsafeCoerce|-ing more often, using more efficient data 
+structures, unboxing etc.}
 
-TODO! The general idea is defining values as a non-positive datatype
-with e.g. constructors like |VLam : Ren → Val → Val| instead of by recursion 
-on object types (which isn't really possible in a non-dependently-typed
-setting).
+When implementing NbE in a partial language, we can take a couple shortcuts:
+\begin{itemize}
+\item Rather than defining values as a type family on object-language types,
+      and defining quoting and unquoting by recursion on types, we
+      define values directly as a non-positive inductive datatype.       
+\item Rather than always quoting before deciding conversion, we can decide
+      conversion directly on values.
+\end{itemize}
 
-\subsection{Avoiding Quotation during Evaluation}
+The novel part of the typechecker is dealing with the local equations.
+We support these by tracking a map from neutrals to values and looking up
+neutrals in the map when unquoting. To support extending the context with
+new equations, we interleave evaluation and completion, and if the
+context does end up definitionally inconsistent, we replace the term
+with a dedicated piece of syntax |Absrd| (guaranteeing convertibility
+of all such terms, and guarding against the danger of evaluating
+under definitionally inconsistent contexts. 
 
-TODO! The general idea is to define ``neutral values'', which are also
-non-positive, but by examining the algorithm we can see that the operational 
-behaviour ends up the same.
+There is some infrastructure in place for supporting a wider class of
+equations that those of the form |t ~ b|, though keeping in mind
+the problems discovered in \refsec{depbeyondbool}, I am wary about how
+feasible it is to actually support this (e.g. without losing
+desirable properties such as subject reduction).
 
-Should probably also discuss how it is possible to decide conversion on
-values directly (i.e. fusing conversion-checking and quoting).
-
-\subsection{De Bruijn Levels}
-
-TODO! General idea is to represent variables in values with de Bruijn 
-\textit{levels} rather than \textit{indices}, such that variables count the
-number of binders between their binding site and the root of the term (rather
-than their binding site and their use). This makes inserting fresh variables
-(i.e. the presheaf stuff we needed for quoting to work) no longer require
-a full traversal of the value.
-
-
-\subsection{Meta vs First-Order Closures}
-
-TODO! I don't currently plan on implementing this optimisation, but it
-is still probably worth mentioning.
-It turns out the operational behaviour of the NbE algorithm can be replicated
-without meta-language closures entirely! Closures can be represented in
-a first-order fashion by pairing un-evaluated terms and captured environments.
-This variation is no longer structurally recursive (we need to |eval| the
-closure bodies during applications, similarly to naive normalisation)
-but can be faster on than relying on meta-closures depending on implementation
-language/runtime.
-
-\subsection{Supporting Local Equations}
-
-Now we have sufficient background in NbE as implemented in the \SCBool
-typechecker. We explain the tweaks to the algorithm made to support
-local equations (arising from ``smart'' |if|).
-
-TODO! The general idea is just to track a map of neutrals to values and
-lookup neutrals in the map when necessary. Function values need to be
-parameterised by updated maps to reduce properly in contexts with new equations.
- 
+% \subsection{Bidirectional Typechecking}
+% 
+% The key motivation behind bidirectional typechecking is to reduce 
+% annotation-burden on programs written in the surface language.
+% Its inference capabilities our ultimate more limited than
+% e.g. metavariables, but its behaviour is also much more predictable.
+% 
+% For example, Agda is capable of successfully elaborating 
+% 
+% \begin{code}
+% foo = λ x → x +ℕ 1
+% \end{code}
+% 
+% without any type annotations, while under the bi-directional discipline, 
+% un-annotated |λ| abstraction cannot, in general, synthesise a type,
+% so we must ask for an annotation here.
+% 
+% Note that Agda does not successfully elaborate the un-annotated identity 
+% function (instead reporting the existence of unsolved metavariables).
+% 
+% \begin{spec}
+% bar = λ x → x
+% \end{spec}
+% 
+% \subsection{Hasochism and Well-scoped Syntax}
+% 
+% 
+% 
+% \subsection{Efficient Normalisation by Evaluation}
+% 
+% \subsection{``Inductively''-defined Values}
+% 
+% TODO! The general idea is defining values as a non-positive datatype
+% with e.g. constructors like |VLam : (Ren → Val → Val) → Val| instead of by 
+% recursion on object types (which isn't really possible in a 
+% non-dependently-typed setting).
+% 
+% \subsection{Avoiding Quotation during Evaluation}
+% 
+% TODO! The general idea is to define ``neutral values'', which are also
+% non-positive, but by examining the algorithm we can see that the operational 
+% behaviour ends up the same.
+% 
+% Should probably also discuss how it is possible to decide conversion on
+% values directly (i.e. fusing conversion-checking and quoting).
+% 
+% \subsection{De Bruijn Levels}
+% 
+% TODO! General idea is to represent variables in values with de Bruijn 
+% \textit{levels} rather than \textit{indices}, such that variables count the
+% number of binders between their binding site and the root of the term (rather
+% than their binding site and their use). This makes inserting fresh variables
+% (i.e. the presheaf stuff we needed for quoting to work) no longer require
+% a full traversal of the value.
+% 
+% 
+% \subsection{Meta vs First-Order Closures}
+% 
+% TODO! I don't currently plan on implementing this optimisation, but it
+% is still probably worth mentioning.
+% It turns out the operational behaviour of the NbE algorithm can be replicated
+% without meta-language closures entirely! Closures can be represented in
+% a first-order fashion by pairing un-evaluated terms and captured environments.
+% This variation is no longer structurally recursive (we need to |eval| the
+% closure bodies during applications, similarly to naive normalisation)
+% but can be faster on than relying on meta-closures depending on implementation
+% language/runtime.
+% 
+% \subsection{Supporting Local Equations}
+% 
+% Now we have sufficient background in NbE as implemented in the \SCBool
+% typechecker. We explain the tweaks to the algorithm made to support
+% local equations (arising from ``smart'' ``|if|'').
+% 
+% TODO! The general idea is just to track a map of neutrals to values and
+% lookup neutrals in the map when necessary. Function values need to be
+% parameterised by updated maps to reduce properly in contexts with new equations.
+%  
+% 

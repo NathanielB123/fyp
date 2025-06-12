@@ -138,7 +138,7 @@ complWrtEqs acc             r ((t, Ex u) : es)
   | Ex t' <- eval (r, es) t
   , u'    <- eval (r, es) u
   , eq    <- mkEq t' u' = do
-    acc' <- addRw eq <$> acc
+    acc'  <- addRw eq <$> acc
     complWrtEqs acc' r es  
 
 complStep :: Sing SNat g => (Vals g g, EqMap g) 

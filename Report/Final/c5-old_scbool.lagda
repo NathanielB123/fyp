@@ -149,9 +149,9 @@ dependencies as in \sidecite{geuvers1994short, barras1997coq} is impossible).
 
 \sideremark{Note that our large elimination principle for Booleans, |ifTy|, 
 does not add
-equations to the context as one might expect from a \smart-|if|. The constructor
+equations to the context as one might expect from a \smart-``|if|''. The constructor
 corresponding to term-level \SC for Booleans will come later. Making type-level
-|if| \smart in the same way should not pose many additional challenges, but 
+``|if|'' \smart in the same way should not pose many additional challenges, but 
 we retain the more standard rule for simplicity.}
 
 \begin{code}
@@ -448,7 +448,7 @@ Substitution acts on various introduction rules as one would expect.
 \end{code}
 
 It turns out the action of substitution on |ƛ⁻¹_| is derivable from |β| and |η|
-laws. Such is not the case for |if| unfortunately (we do not have an |η| law
+laws. Such is not the case for ``|if|'' unfortunately (we do not have an |η| law
 for |𝔹|), so we define this interaction explicitly.
 
 \begin{code}
@@ -536,8 +536,8 @@ Given |_≡_ {A = Tm Γ 𝔹} TT ≡ FF|, we are tasked with proving
 of equations |t ≡ if TT then t else u ≡ if FF then t else u ≡ u|, but we must
 take care to account for explicit substitution and weakening. 
 
-E.g. The |t| and |u| inside the |if| must be weakened to account for the new 
-rewrite, and contracting the |if| requires explicitly instantiating this
+E.g. The |t| and |u| inside the ``|if|'' must be weakened to account for the new 
+rewrite, and contracting the ``|if|'' requires explicitly instantiating this
 rewrite with another substitution. Our |wk<>rw| lemma from earlier is exactly
 what we need to show that these substitutions ultimately have no effect.
 

@@ -194,7 +194,7 @@ sterling2021normalization}.
 
 Such an approach was used to prove normalisation for STLC with coproducts
 obeying strict η \sidecite{altenkirch2001normalization} (which, as mentioned
-in \refsec{strict}, is more powerful than Smart Case for the same type), with 
+in \refsec{coprodeta}, is more powerful than Smart Case for the same type), with 
 the main
 innovation being to evaluate into a sheaf model rather than 
 the usual presheaf on the category of renamings.

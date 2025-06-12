@@ -269,7 +269,7 @@ uval 𝔹          _ uⱽ = acc uⱽ
 uval (Π A B)    _ uⱽ = {!!} -- Same as usual
 uval (if b A B) _ uⱽ 
   = acc (λ p → u^ p .fst)
-  -- If large |if| is not stuck, then we recurse
+  -- If large ``|if|'' is not stuck, then we recurse
   -- Note |p : t > coe ... u| here so we need that |¬lam| is stable under 
   -- coercions (hopefully unsurprising) 
   , (λ b~ → uval A _ (λ p → uⱽ p .snd)) 
@@ -286,7 +286,7 @@ qval 𝔹          tⱽ = tⱽ
 --
 -- Note |B [ wk , vz ] == B|
 qval (Π A B)    tⱽ = [ wk ]sn⁻¹ (SN>l· (qval B (tⱽ wk vz-val)))
--- First component of computability at large |if| is just SN, so this is easy
+-- First component of computability at large ``|if|'' is just SN, so this is easy
 qval (if b A B) tⱽ = tⱽ .fst 
 
 fndThm : 𝒫Sig Ψ → 𝒫Tms Δ Γ δ → ∀ t → 𝒫 Δ (A [ δ ]) (t [ δ ])

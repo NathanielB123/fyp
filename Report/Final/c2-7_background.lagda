@@ -12,6 +12,7 @@ module Report.Final.c2-7_background where
 \end{code}
 %endif
 
+\pagebreak
 \subsection{NbE for Dependent Types}
 \labsec{depnbe}
 
@@ -86,9 +87,9 @@ Val  : ∀ Γ A Δ δ → Env Δ Γ δ → Tm Δ (A [ δ ]Ty) → Set
 % |sp A| to be structurally smaller than |sp (if t A B)|, but we also need
 % to ensure conversion is preserved, i.e. |sp (if TT A B) ≡ sp A|.
 % These goals are incompatible\remarknote{Adding a new spine
-% constructor for |if|, |if : Sp → Sp → Sp| and quotienting
+% constructor for ``|if|'', |if : Sp → Sp → Sp| and quotienting
 % with |if sA sB ≡ sA|, |if sA sB ≡ sB| does not work, because after being
-% quotiented in this way, |if| is not injective, so we cannot rule out
+% quotiented in this way, ``|if|'' is not injective, so we cannot rule out
 % the spine of |if t A B| being merely |sp A|.}.
 
 Evaluating both terms and substitutions can then be specified like so:
@@ -259,7 +260,7 @@ eval (ƛ t)  ρ {γ = γ} γᵀʰ {u = u} uⱽ
           (eval {δ = (_ ⨾ _) , _} t ((ρ [ γᵀʰ ]ℰ) Σ, uⱽ))
 \end{spec}
 
-Dealing with the elimination rules (application and |if|-expressions) 
+Dealing with the elimination rules (application and ``|if|''-expressions) 
 is a bit trickier. We want evaluate |t · u| in |ρ|
 by evaluating each term independently and directly applying them with the
 identity thinning, |eval t ρ idᵀʰ (eval u ρ)| but hit two different 
@@ -412,9 +413,9 @@ eval* (δ , t)  ρ = eval* δ ρ Σ, eval t ρ
 
 Finally, we return to dealing with the eliminator cases of |eval|.
 Evaluation of application just applies the left and right-hand-side values,
-while evaluation of |if|-expressions splits on the scrutinee. In the |TT| and
+while evaluation of ``|if|''-expressions splits on the scrutinee. In the |TT| and
 |FF| cases, we just select the appropriate value, while if the scrutinee
-is a stuck neutral, we build a neutral |if| expression and embed it into
+is a stuck neutral, we build a neutral ``|if|'' expression and embed it into
 |Val| by unquoting.
 
 \begin{code}
@@ -546,8 +547,8 @@ idℰ : Env Γ Γ id
 %endif
 
 \begin{code}
-norm : ∀ t → Nf Γ A t
-norm t = qval {δ = id} _ (eval t idℰ)
+nbe : ∀ t → Nf Γ A t
+nbe t = qval {δ = id} _ (eval t idℰ)
 \end{code} 
 
 We have checked soundness throughout the development of the algorithm.
