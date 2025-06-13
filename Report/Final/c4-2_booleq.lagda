@@ -195,8 +195,8 @@ reduction.
 
 \begin{code}
 data !-step : Tm Γ → Tm Γ → Set where
-  rwTT  : ¬is 𝔹? t → !-step t TT
-  rwFF  : ¬is 𝔹? t → !-step t FF
+  !TT  : ¬is 𝔹? t → !-step t TT
+  !FF  : ¬is 𝔹? t → !-step t FF
 
 _>!_ : Tm Γ → Tm Γ → Set
 _>!_ = _[ !-step ]>_
@@ -217,7 +217,7 @@ _>nd_ = _[ nd-step ]>_
 
 We need one more monotonic relation on terms, |_>𝔹_|, where
 |t >𝔹 u| holds when |u| is syntactically equal to |t| except for replacing
-a single arbitrary subterm with |TT|/|FF|.
+a single arbitrary subterm with a closed Boolean (|TT| or |FF|).
 
 \begin{code}
 _>𝔹_ : Tm Γ → Tm Γ → Set
@@ -239,7 +239,7 @@ spontaneous reduction plus β rules, |_>β!_|.
 _>β!_ : Tm Γ → Tm Γ → Set
 _>β!_ = _[ _>β_ ∣ _>!_ ]_
 
-snnd→snβ! : SN _>nd_ t → SN _>β!_ t
+snnd-snβ! : SN _>nd_ t → SN _>β!_ t
 \end{code}
 
 The key lemma we need to show is that |_>𝔹*_| (i.e. the relation defined
@@ -326,9 +326,9 @@ w.r.t. |_>nd!_| (interleaved |_>nd_| and |_>!_|).
  
 \sideremark{Note that we generalise the
 inductive hypothesis over |_>𝔹*_| here to account for subterms
-getting rewritten to Booleans. Spontaneous reduction being included in
-|_>𝔹_|, |!𝔹>| can be easily proven by considering |!-step| cases and
-|map>|.}
+getting rewritten to Booleans. We name the lemma that spontaneous
+reduction is included in |_>𝔹_|, |!𝔹>|, and prove it by considering 
+|!-step| cases and lifting with |map>|.}
 
 \begin{code}
 _>nd!_ : Tm Γ → Tm Γ → Set
@@ -348,24 +348,24 @@ snnd!> p (acc ndᴬ)  !ᴬ        (inl q)
 snnd!> p ndᴬ        (acc !ᴬ)  (inr q) 
   = snnd! (p <∶ !𝔹> q) ndᴬ (!ᴬ q)
 
-snnd→snnd! : SN _>nd_ t → SN _>nd!_ t
-snnd→snnd! ndᴬ = snnd! rfl* ndᴬ (sn! _)
+snnd-snnd! : SN _>nd_ t → SN _>nd!_ t
+snnd-snnd! ndᴬ = snnd! rfl* ndᴬ (sn! _)
 \end{code}
 
 Finally, we recover our original goal
 
 \begin{spec}
-snnd→snβ! : SN _>nd_ t → SN _>β!_ t
+snnd-snβ! : SN _>nd_ t → SN _>β!_ t
 \end{spec}
 
 from |_>β!_| reduction being included inside |_>nd!_|.
 
 \begin{code}
-β→nd : β-step t u → nd-step t u
-β→nd ⇒β   = ⇒β
-β→nd 𝔹β₁  = ndl
-β→nd 𝔹β₂  = ndr
+β-nd : β-step t u → nd-step t u
+β-nd ⇒β   = ⇒β
+β-nd 𝔹β₁  = ndl
+β-nd 𝔹β₂  = ndr
 
-snnd→snβ! ndᴬ 
-  = accessible (map⊎ (map> β→nd) (λ p → p)) (snnd→snnd! ndᴬ)
+snnd-snβ! ndᴬ 
+  = accessible (map⊎ (map> β-nd) (λ p → p)) (snnd-snnd! ndᴬ)
 \end{code}

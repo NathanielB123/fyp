@@ -89,8 +89,8 @@ below proof by cases that for any Boolean function, {|f ∶ Bool → Bool|},
 \begin{code}
 Bool-split : ∀ b → (b ≡ true → A) → (b ≡ false → A) → A
 
-bool-lemma : ∀ (f : Bool → Bool) → f true ≡ f (f (f true)) 
-bool-lemma f 
+f3 : ∀ (f : Bool → Bool) → f true ≡ f (f (f true)) 
+f3 f 
   =  Bool-split (f true) 
      -- |f true ≡ true|
      (λ p →  f true

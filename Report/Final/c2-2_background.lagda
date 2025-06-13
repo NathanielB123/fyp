@@ -106,7 +106,6 @@ de Bruijn style. When writing such examples we will also separate binding(s) and
 body with ``.'' rather than ``|→|'' (along with a non-bolded
 |ƛ|-symbol) as to more clearly
 distinguish object-level abstraction from that of the meta.
-% TODO Citation
 
 Terms embed variables, and are otherwise comprised of the 
 standard introduction and

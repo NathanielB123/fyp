@@ -201,7 +201,8 @@
 %format ]≡' = ] ≡
 
 %format `_ = "\texttt{\textasciigrave}" _
-%format ` = "\texttt{\textasciigrave}"
+%format `  = "\texttt{\textasciigrave}"
+%format `P = ` P
 
 %format : = "\bm{:}"
 
@@ -378,6 +379,10 @@
 %format Aᴺᶠ     = A ᴺᶠ
 %format Bᴺᶠ     = B ᴺᶠ
 %format infTyᴺᶠ = infTy ᴺᶠ
+%format ⌝𝔹Nf    = ⌝𝔹 ᴺᶠ
+
+
+%format ⌜_⌝𝔹Nf  = ⌜ _ ⌝𝔹 ᴺᶠ 
 
 %format tᴺᵉ′    = tᴺᵉ ′
 %format tᴺᶠ′    = tᴺᶠ ′
@@ -413,16 +418,14 @@
 
 %format ℰ       = "^{\Varid{Env}}"
 %format idℰ     = id ℰ
-%format ]ℰ      = ] ℰ
-%format _[_]ℰ   = _[_] ℰ
+%format _[_]ℰ   = _[_ ]ℰ
 %format lookupℰ = lookup ℰ
 %format _^ℰ_    = _^ ℰ _
 %format ^ℰ      = ^ ℰ
 
 %format 𝒱       = "^{\Varid{Val}}"
 %format coe𝒱    = coe 𝒱
-%format _[_]Val = _[_] 𝒱
-%format ]Val    = ] 𝒱
+%format _[_]Val = _[_ ]Val
 
 %format coe𝒱′   = coe𝒱 ′
 
@@ -506,6 +509,8 @@
 %format _>!_    = _ >! _
 %format _>𝔹_    = _ >𝔹 _
 %format _>β_    = _ >β _
+%format _>β!_   = _ >β! _
+%format _>nd!_  = _ >nd! _
 %format _>nd*_  = _ >nd* _
 %format _>!*_   = _ >!* _
 %format _>𝔹*_   = _ >𝔹* _
@@ -513,11 +518,23 @@
 %format _>β!*_  = _ >β!* _
 %format _>nd!*_ = _ >nd!* _
 
+%format β-nd    = β-N.D.
+%format snnd    = sn "_{" N.D. "}"
+%format snnd!   = sn "_{" N.D.! "}"
+%format snβ!    = sn "_{" β! "}"
+%format snnd!>  = snnd! > 
+
+%format snnd-snnd! = snnd - snnd!
+%format snnd-snβ!  = snnd - snβ!
+
+%format 𝔹/nd-comm = 𝔹*/N.D.-comm>
+%format 𝔹/nd-comm = 𝔹/N.D.-comm
+
 %format _▷_>rw_ = _▷_ >rw _
 
 %format ᴬ    = "^{\Varid{Acc}}"
 %format ndᴬ  = N.D. ᴬ
-%format !ᴬ   = A ᴬ
+%format !ᴬ   = ! ᴬ
 %format tᴬ   = t ᴬ
 %format uᴬ   = u ᴬ
 %format vᴬ   = v ᴬ
@@ -569,8 +586,8 @@
 %format vlookup′        = vlookup
 %format +ℕ′             = +ℕ 
 %format +ze′            = +ze
-%format bool-lemma′     = bool-lemma
-%format bool-lemma′′    = bool-lemma
+%format f3′             = f3
+%format f3′′            = f3
 %format predNe′         = predNe
 %format complete′       = complete
 %format complete-pres′  = complete-pres
@@ -596,7 +613,9 @@
 %format wk<>eqTy = wk<>eq ᵀʸ
 %format wkeq^    = wk^ "_{\leadsto}"
 %format wkeq^Ty  = wkeq^ ᵀʸ
+%format out>eq   = out "\!" >eq
 
+%format _∣_>eq_  = _∣_ "\!" >eq "\!" _
 %format <_>>eq   = <_> >eq
 %format _,eq_   = _ ,eq "\!" _
 %format _^_>eq_ = _^_ >eq _
@@ -609,6 +628,8 @@
 %format ]Tms  = ] "_{\Varid{Tms}}"
 %format ]ᶜ    = ] "_{\Varid{C}}"
 %format ]TRS  = ] "_{\Varid{TRS}}"
+%format ]ℰ    = ] "_{\Varid{Env}}"
+%format ]Val  = ] "_{\Varid{Val}}"
 
 %format _[_]Ctx = _[_ ]Ctx
 %format _[_]Ty  = _[_ ]Ty 

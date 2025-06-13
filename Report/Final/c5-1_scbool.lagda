@@ -256,15 +256,6 @@ incon Γ = _≡_ {A = Tm Γ 𝔹} TT FF
 \end{code}
 \end{definition}
 
-% Importantly, note that |incon| is derivable even when all equations in the
-% context individually are not def.-inconsistent (i.e. are not
-% |TT >rw false| or |FF >rw true|). For example 
-% |Γ = (x : 𝔹) ▷ x >rw true ▷ (λ y. y) x >rw false|. Deciding definitional
-% (in)consistency of contexts relies on at least normalisation (really, 
-% completion) and so pre-conditions relating to such a principle in the syntax
-% are likely to cause issues. 
-
-% TODO Have now moved this earlier. Let's just ref (maybe remind in the margin?)
 
 Recall from \refremark{eqcollapse} that definitionally inconsistent contexts
 lead to equality collapse: are types become convertible (assuming large
@@ -394,12 +385,7 @@ at the cost of having to repeat it).
          ⟦ FF ⟧Tm ∎) ρ
 \end{spec}
 
-To interpret \smart ``|if|'', we define an analagous operation in our 
-metatheory
-that takes a propositional equality instead: the Boolean ``splitter''.
-
-% TODO: This could maybe go in the preliminaries/related work...
-% I.e. to explain why Smart Case cannot replace induction principles
+\pagebreak
 \sideremark{For all finite types |A|, the ``splitter'' and eliminator
 are equally powerful.\\To derive the splitter, splitting on
 a scrutinee {|x ∶ A|}, 
@@ -413,6 +399,12 @@ derive the eliminator from the splitter, we instead instantiate
 propositional equality in each case.\\Of course, splitters cannot induct,
 so the splitter for infinitary types like |ℕ| is weaker than the 
 associated eliminator.}
+To interpret \smart ``|if|'', we define an analagous operation in our 
+metatheory
+that takes a propositional equality instead: the Boolean ``splitter''.
+
+% TODO: This could maybe go in the preliminaries/related work...
+% I.e. to explain why Smart Case cannot replace induction principles
 
 %if False
 \begin{code}
@@ -586,7 +578,6 @@ inconsistency, so we can avoid blindly reducing.
 % is decidable, perhaps using such an approach, but do not have time in
 % this project to investigate further. 
 
-\pagebreak
 \subsection{Type Theory Modulo (Boolean) Equations}
 
 \sideremark{Note that difficulties associated with completion can in principle
@@ -928,8 +919,8 @@ in Haskell as a component of this project. As explained previously in
 In practice though, it has handled the examples which I have
 thrown at it correctly, without getting stuck in loops.
 
-\sideremark{Idris2 also features |Type ∶ Type|, though there is a plan
-to eventually add universes.}
+\sideremark{Idris2 also features |Type ∶ Type|, though there are plans
+to add a universe hierarchy eventually.}
 The language we check is a slight extension of \SCBool, including a single
 impredicative universe (|Type ∶ Type|). This is technically unsound
 (\sidecite{hurkens1995simplification}), but I argue that
@@ -942,20 +933,23 @@ orthogonal to the new features of \SCBool).
 Other than the extensions to specifically support \SIF,
 the implementation of \SCBool is pretty standard. Following
 \sidecite{coquand1996algorithm}, it implements bidirectional typechecking
-in terms of mutually recursive |infer| and |check| functions, and
+in terms of mutually recursive ``|infer|'' and ``|check|'' functions, and
 decides convertibility of types using normalisation by evaluation (NbE).
-\sideremark{We also explicitly maintain a slightly more unusual invariant:
+\sideremark{We also use GADTs
+to explicitly maintain a slightly more unusual invariant:
 that terms do not contain ``obviously ill-typed'' β-redexes. That is, 
 introduction rules in scrutinee position are always associated with
 the appropriate
-type former.\\\\Assuming a correct implementation, this invariant is
+type former.\\\\Assuming a correct implementation, this is
 completely reasonable (it is a subset of terms being well-typed in general),
-but alone it is definitely not necessarily preserved over operations
+but alone it is not necessarily preserved over operations
 such as substitution or reduction. The compromise being struck here is
 essentially that Haskell's type system is not powerful enough to model
 full intrinsically-typed syntax, so I am encoding this 
 weaker invariant and then coercing (technically unsafely) when necessary.
-It is somewhat unclear whether this was a good idea.}
+It is somewhat unclear whether this was a good idea, and for the
+code snippets in the section, we prune away the details associated with this
+aspect.}
 To guard against mistakes in the implementation, it also makes extensive use
 of GADTs (including singleton encodings \sidecite{lindley2013hasochism}) 
 to maintain invariants, including that
@@ -997,7 +991,8 @@ structures, unboxing etc.}:
 \end{itemize}
 
 The novel part of the typechecker is dealing with the local equations.
-We explain the implementation of this aspect in more detail.
+We explain the implementation of this aspect in more detail, starting
+with evaluation and then finishing with the actual typechecking.
 
 To track equations, we store a map of rewrites, |EqMap g|, 
 from neutrals to values, with the invariant that all neutral LHSs
@@ -1033,19 +1028,23 @@ appVal es (Ne t) u = lookupNe es (App t u)
 \end{spec}
 
 To support extending the context with
-new equations, we interleave evaluation and completion. Specifically, to
-evaluate \SIF, we add the relevant equation between the scrutinee
-and |TT|/|FF| to the environment in which we evaluate each branch.
+new equations, we must interleave evaluation and completion. For example, to
+evaluate \SIF, we add the relevant equation (with |addEq|) 
+between the scrutinee and |TT|/|FF| to the environment in which we evaluate 
+each branch.
 
 \begin{spec}
+evalOrAbsrd  :: Maybe (Env d g) -> Model g -> PresVal d
+eval         :: Env d g -> Tm g -> Val d
+smrtIfVal    :: Env d g -> Maybe (Val d) -> Val d 
+             -> Tm g -> Tm g 
+             -> Val d
+
 addEq  :: Env d g -> Val d -> Val d 
        -> Maybe (Env d g)
 
-smrtIfVal  :: Env g2 g1 -> Maybe (Val g2) -> Val g2 
-           -> Tm g1 -> Tm g1 
-           -> Val g2
-smrtIfVal r _ TT      u  _  = Ex (eval r u)
-smrtIfVal r _ FF      _  v  = Ex (eval r v)
+smrtIfVal r _ TT      u  _  = eval r u
+smrtIfVal r _ FF      _  v  = eval r v
 smrtIfVal r m (Ne t)  u  v
   |  rT  <- addEq r (Ne t) TT
   ,  rF  <- addEq r (Ne t) FF
@@ -1070,9 +1069,10 @@ under such
 contexts, and make the behaviour of the typechecker more predictable, 
 we introduce dedicated syntax for ``absurd'' terms in def. inconsistent
 contests (``|!|'' or |Absrd|). We regard using any term other than
-|!| in a def. inconsistent (as well as using |!| in
-\emph{consistent} contexts) to be a type error. We always check terms
-a typeable before evaluating them, so evaluation
+|!| in a def. inconsistent to be a type error\remarknote{We also
+regard usage of |!| in def. consistent contexts to be a type
+error.}. We always check
+typeability of terms before evaluating them, so evaluation
 should never encounter this case.
 
 \begin{spec}
@@ -1081,12 +1081,22 @@ evalOrAbsrd Nothing   Absrd  = Absrd
 evalOrAbsrd Nothing   _      = __IMPOSSIBLE__
 \end{spec}
 
-Adding equations to the environment calls into completion, which itself 
+Adding equations to the environment calls completion, which itself 
 operates by repeatedly
 iterating over the set of equations, evaluating LHSs w.r.t. all other equations,
 until a fixed point is reached (as mentioned in \refsec{scboolnormfail},
 we need to be careful here to not evaluate under sets of rewrites that
 might be definitionally inconsistent).
+
+\sideremark{|addRw| and |mkEq| together add the new equation |t ~ u| 
+to the set
+of rewrites, after ensuring it is not already ``obviously inconsistent''
+(that is, literally of the form |TT ~ FF| or |FF ~ TT|. We also 
+slightly optimise
+the case of equations on variables, replacing the value in the
+value environment rather than tracking an equation.
+\\|evalVals r'' vs|
+re-evaluates the value environment w.r.t. the new completed equations.}
 
 \begin{spec}
 complete :: Env g g -> Maybe (Env g g)

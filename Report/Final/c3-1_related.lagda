@@ -258,9 +258,9 @@ the goal only gets
 partially simplified:
 
 \begin{spec}
-bool-lemma : ∀ (f : Bool → Bool) → f true ≡ f (f (f true)) 
-bool-lemma f with f true
-bool-lemma f | true = ?0
+f3 : ∀ (f : Bool → Bool) → f true ≡ f (f (f true)) 
+f3 f with f true
+f3 f | true = ?0
 \end{spec}
 
 At |?0|, Agda has replaced every occurrence of |f true| in the context with
@@ -283,16 +283,16 @@ and pattern) to the new variable
 |p|.
 
 \begin{code}
-bool-lemma : ∀ (f : Bool → Bool) → f true ≡ f (f (f true)) 
-bool-lemma f  with f true in p
-bool-lemma f  | true   =  true
-                          ≡⟨ sym p ⟩≡
-                          f true
-                          ≡⟨ cong f (sym p) ⟩≡
-                          f (f true) ∎
-bool-lemma f  | false  with f false in q
-bool-lemma f  | false  | true   = sym p
-bool-lemma f  | false  | false  = sym q
+f3 : ∀ (f : Bool → Bool) → f true ≡ f (f (f true)) 
+f3 f  with f true in p
+f3 f  | true   =  true
+                  ≡⟨ sym p ⟩≡
+                  f true
+                  ≡⟨ cong f (sym p) ⟩≡
+                  f (f true) ∎
+f3 f  | false  with f false in q
+f3 f  | false  | true   = sym p
+f3 f  | false  | false  = sym q
 \end{code}
 
 We could also avoid all manual equational reasoning by
@@ -300,17 +300,17 @@ repeating previous matches, forced, by simultaneously matching on the
 propositional equality.
 
 \begin{code}
-bool-lemma′ : ∀ (f : Bool → Bool) → f true ≡ f (f (f true)) 
-bool-lemma′ f  with f true in p
-bool-lemma′ f  | true   with f true | p 
+f3′ : ∀ (f : Bool → Bool) → f true ≡ f (f (f true)) 
+f3′ f  with f true in p
+f3′ f  | true   with f true | p 
 ... | .true | refl      with f true | p 
 ... | .true | refl      = refl
 
-bool-lemma′ f  | false  with f false in q
-bool-lemma′ f  | false  | true   with f true | p
+f3′ f  | false  with f false in q
+f3′ f  | false  | true   with f true | p
 ... | .false | refl     = refl
 
-bool-lemma′ f  | false  | false  with f false | q
+f3′ f  | false  | false  with f false | q
 ... | .false | refl     = refl
 \end{code}
 
@@ -321,16 +321,16 @@ propositional equality, and applies a one-off rewrite to the context
 by implicitly |with|-abstracting over the LHS.
 
 \begin{code}
-bool-lemma′′ : ∀ (f : Bool → Bool) → f true ≡ f (f (f true)) 
-bool-lemma′′ f  with f true in p
-bool-lemma′′ f  | true   rewrite p
+f3′′ : ∀ (f : Bool → Bool) → f true ≡ f (f (f true)) 
+f3′′ f  with f true in p
+f3′′ f  | true   rewrite p
                          rewrite p
   = refl
-bool-lemma′′ f  | false  with f false in q
-bool-lemma′′ f  | false  | true   rewrite p
+f3′′ f  | false  with f false in q
+f3′′ f  | false  | true   rewrite p
   = refl
 
-bool-lemma′′ f  | false  | false  rewrite q
+f3′′ f  | false  | false  rewrite q
   = refl
 \end{code}
 
@@ -553,13 +553,27 @@ inconsistent (|b ~ TT| and the β-rule for Booleans
 implies |not b == not TT == FF|, so |not b ~ TT| enables deriving |FF == TT|). 
 
 % TODO: Maybe reference completion once we add the section??
-Possible solutions here include: applying completion to either transform the set 
-of equations into a confluent TRS (where all LHSs are irreducible) or detect
-definitional inconsistency; or placing syntactic restrictions on the
-equations which can be introduced (i.e. the scrutinees of \SIF 
-expressions) to try and stop this situation early.
-We will consider both of these possibilities in \refch{scbool} and
-\refch{scdef}.
+Possible solutions here include:
+\begin{itemize}
+  \item Iterating over the set of equations reducing LHSs\remarknote{For
+  more general equations where the RHS might be reducible, we can reduce
+  both sides, and use a
+  notion of a well-founded term ordering to orient them appropriately.}
+  w.r.t. all other equations. 
+  We repeat this until either a fixed point is reached, and we are 
+  left with a confluent term rewriting system (TRS), or
+  a definitional inconsistency is detected. This technique is named
+  \emph{completion}, and on ground first-order equations 
+  it is known to terminate \sidecite{baader1998term}.
+  \item Placing syntactic restrictions on the
+  equations which can be introduced (i.e. the scrutinees of \SIF 
+  expressions) to try and prevent situations like this early
+  (for example, perhaps we could require that all LHSs are irreducible from 
+  the start).
+\end{itemize}
+
+We will consider both of these strategies over the course of \refch{simply},
+\refch{scbool} and \refch{scdef}.
 
 A more direct use of local equational assumptions is 
 \emph{local equality reflection}.
@@ -927,6 +941,7 @@ does not implement η for such types definitionally).
 \emph{commuting conversions}.
 
 \begin{example}[Commuting Conversions] \phantom{a}
+\labexample{commconv}
 
 Commuting conversions express the principle that case-splits on inductive
 types can be lifted upwards (towards the root of the term) as long as 
@@ -1137,27 +1152,28 @@ encode terms that are convertible |u| under the assumption of |φ|.
 The introduction rule |inS| is often written as
 \nocodeindent
 \begin{code}
-    inS′  : ∀ (t : Tm Γ A) → t [ wkF ] ≡ u 
+    inS′  : ∀ (t : Tm Γ A) 
+          → t [ wkF ] ≡ u 
           → Tm Γ (A ∣ φ >eq u)
 \end{code}
-making explicit |t| needs to be convertible to |u| under the assumption |φ|.
-In a quotiented syntax, these two rules are equivalent (|inS′| is just
+making explicit that |t| needs to be convertible to |u| under the 
+assumption |φ|.
+Assuming a quotiented syntax, these two rules are equivalent (|inS′| is just
 the ``Forded'' version of |inS|).
 \resetcodeindent
 }
 
 \begin{code}
-    inS   : ∀ (t : Tm Γ A) → Tm Γ (A ∣ φ >eq (t [ wkF ]))
-    outS  : Tm Γ (A ∣ φ >eq u) → Tm Γ A
-    out▷  : ∀ {t : Tm Γ (A ∣ φ >eq u)} → outS t [ wkF ] ≡ u
-    extβ  : outS (inS {φ = φ} t) ≡ t   
+    inS     : ∀ (t : Tm Γ A) → Tm Γ (A ∣ φ >eq (t [ wkF ]))
+    outS    : Tm Γ (A ∣ φ >eq u) → Tm Γ A
+    out>eq  : ∀ {t : Tm Γ (A ∣ φ >eq u)} → outS t [ wkF ] ≡ u
+    extβ    : outS (inS {φ = φ} t) ≡ t   
 \end{code}
 
 \sideremark{In the context of Cubical type theory, extension types with
 propositions |F Γ| corresponding to interval expressions that must
 definitionally equal |i1| are are also called Cubical
 subtypes (\cite{agda2024cubical}).}\sideblankcite{agda2024cubical}
-
 Assuming a universe of types, |U|, and an 
 |F Γ| which includes |𝔹|-typed convertibility assumptions,
 we can give the following elimination rule for Booleans.
@@ -1184,26 +1200,28 @@ in context |Γ|, which could make the metatheory much easier.
 Unfortunately, this construct is more limited than we would like.
 The concise proof of |f true ≡ f (f (f true))| from the
 introduction (\refch{introduction}) cannot be replicated with |ext-if|.
-If we make an attempt (working internally for convenience)
+If we make an attempt (working internally, for convenience)
 
-\remarknote{Type inference also appears to be more difficult for |ext-if|,
+\sideremark{Type inference also appears to be trickier for |ext-if|,
 than full \SIF
-hence the explicit annotations for the LHS and RHS types.
+hence the explicitly annotated for the LHS and RHS types.
 \SIF (as defined in
 \refsec{loceqs}) can check the LHS and RHS 
 branches at the same type as the entire 
-|if| expression, |A ∶ Ty Γ|,
+|if| expression, |A ∶ Ty Γ|, only
 weakened to account for the new equation. |ext-if|, on the other hand,
 requires coming up with types in |Γ|
-for the LHS and RHS branches that just happen
-to be convertible to |A| after weakening.}
+for the LHS and RHS branches with the constraint that
+they are convertible to |A| after weakening (the choices here are not
+unique, because distinct types can be made convertible
+after introducing an equation).}
 
 \begin{spec}
-bool-lemma : Id 𝔹 (f TT) (f (f (f TT)))
-bool-lemma = ext-if  (f TT) (inS (Id 𝔹 TT TT)) (inS (Id 𝔹 FF (f (f FF))))
-                     rfl
-                     ext-if  (f FF) (inS (Id 𝔹 FF (f TT))) (inS (Id 𝔹 FF FF))
-                             ?0 rfl
+f3 : Id 𝔹 (f TT) (f (f (f TT)))
+f3 = ext-if  (f TT) (inS (Id 𝔹 TT TT)) (inS (Id 𝔹 FF (f (f FF))))
+             rfl
+             ext-if  (f FF) (inS (Id 𝔹 FF (f TT))) (inS (Id 𝔹 FF FF))
+                     ?0 rfl
 \end{spec}
 
 we get stuck in the case labelled |?0|. The problem is that, as with
@@ -1214,8 +1232,9 @@ being able to apply the equation to the type multiple times
 in the left branch of the split on |f TT|). However, in |?0|, we need to
 reuse the fact that |f TT ≡ FF|, and no longer have access to it.
 
-I therefore argue that \SC really does need to extend the context in which
-the branches of the split are typed, with the appropriate equation. 
+I therefore argue that \SC truly does need to
+type the branches of the split in a context extended
+with the appropriate equation. 
 Therefore, it appears that the existing theory of extension types is not 
 directly applicable
 to this use-case.

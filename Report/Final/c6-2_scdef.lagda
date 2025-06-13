@@ -36,8 +36,8 @@ data EqVar  : ∀ (Γ : Ctx Ξ) {A} → Tm Γ A → Bool → Set where
 
 data DefVar where
   fz  : DefVar (Ξ ▷ Γ ⇒ A if t ≔ u ∣ v) (Γ [ wk𝒲 ]𝒲Ctx) (A [ wk𝒲 ]𝒲Ty)
-  fs  : DefVar Ξ Γ A 
-      → DefVar (Ξ ▷ Δ ⇒ B if t ≔ u ∣ v) (Γ [ wk𝒲 ]𝒲Ctx) (A [ wk𝒲 ]𝒲Ty)
+  fs  : DefVar Ξ Γ A → DefVar  (Ξ ▷ Δ ⇒ B if t ≔ u ∣ v) 
+                               (Γ [ wk𝒲 ]𝒲Ctx) (A [ wk𝒲 ]𝒲Ty)
         \end{spec}
   \item |DefVar|s have an associated |lookup𝒮| operation.
         \begin{spec}
@@ -50,7 +50,7 @@ record Def Ξ (Γ : Ctx Ξ) (A : Ty Γ) : Set where
 
 lookup𝒮 : ∀ Ξ {Γ A} → DefVar Ξ Γ A → Def Ξ Γ A
         \end{spec}
-  \item |call|s are now explicitly bundled with their list of arguments.
+  \item ``|call|''s are now explicitly bundled with their list of arguments.
         \begin{spec}
 call  : ∀ (f : DefVar Ξ Γ A) (δ : Tms Δ Γ)
       → Tm Δ (A [ δ ]Ty)
@@ -68,8 +68,7 @@ call  : ∀ (f : DefVar Ξ Γ A) (δ : Tms Δ Γ)
 % of the untyped projections - equality up to coherence).
 
 When presenting NbE for dependent types in \refsec{depnbe}, we were able
-to preserve the conversion relation the whole way through the algorithm
-(every function individually preserved convertibility).
+to preserve the conversion relation at every step.
 This justified us playing quite ``fast and loose'' with details relating 
 to coercion/coherence:
 using setoids was ultimately just an implementation detail and
@@ -77,7 +76,7 @@ we could have achieved the same result using a quotiented syntax instead
 \sidecite{altenkirch2017normalisation}.
 
 In \SCDef, the situation gets a bit trickier. I do not know how to deal
-with contextual equations other than with term rewriting, but 
+with contextual equations other than via term rewriting, but 
 rewriting is an inherently very syntactic procedure.
 
 Luckily, setoids give us a framework for working with multiple distinct
@@ -85,7 +84,8 @@ equivalence relations. Indexing of the syntax itself must still be up to
 conversion in order
 to account for definitional equality, but this does not stop us from
 writing functions that e.g. project out raw untyped terms.
-Equality ``up-to-coherence'' merely refers to the smallest congruence
+I will sometimes refer to equality
+\emph{up-to-coherence} merely referring to the smallest congruence
 relation including |coh|. Applied to the syntax of type theory,
 this aligns exactly with syntactic equality of untyped projections.
 
@@ -94,21 +94,23 @@ getting too bogged-down in encoding details
 associated with these different equivalence relations,
 but it is important to keep in mind that some portions of the below
 algorithm (especially those parts which directly refer to
-term rewriting concepts) do not respect βη-conversion alone. Everything should
-at least respect equivalence ``up-to-coherence'' though.
+term rewriting concepts) do not respect conversion alone.
 
 \subsection{Normal and Neutral Forms}
 
 
-We define \SCDef normal forms as usual, assuming some definition of neutrals
-(like in |depnbe|, we will skip over cases pertaining to coercion along
-the conversion relation for a cleaner presentation).
+We define \SCDef normal forms as usual, assuming some
+appropriate definition of neutrals.
+Like in \refsec{depnbe}, normal forms form a setoid fibration on
+conversion, so the term we index by only needs to be convertible to the
+normal form.
 
 \begin{code}
 data Nf  : ∀ Γ A → Tm {Ξ = Ξ} Γ A → Set 
 Ne       : ∀ Γ A → Tm {Ξ = Ξ} Γ A → Set
 
 data Nf where
+  coe~  : ∀ Γ~ A~ → Tm~ Γ~ A~ t₁ t₂ → Nf Γ₁ A₁ t₁ → Nf Γ₂ A₂ t₂
   ne𝔹   : Ne Γ 𝔹 t → Nf Γ 𝔹 t
   neIF  : Ne Γ 𝔹 u → Ne Γ (IF u A B) t → Nf Γ (IF u A B) t
   ƛ_    : Nf (Γ ▷ A) B t → Nf Γ (Π A B) (ƛ t)
@@ -116,7 +118,12 @@ data Nf where
   FF    : Nf Γ 𝔹 FF
 \end{code}
 
-\SCDef neutrals, however, are a little more tricky. Boolean equations
+%if False
+\begin{code}
+\end{code}
+%endif 
+
+\SCDef neutrals are a little more tricky. Boolean equations
 mean we can no longer define these purely inductively, as modulo
 contextual equations, any 𝔹-typed term can in principle be convertible 
 to |TT| or |FF| (which are of course non-neutral - |TT| and |FF| do not
@@ -127,9 +134,10 @@ normal/neutral.
 
 \begin{code}
 data PreNe : ∀ Γ A → Tm {Ξ = Ξ} Γ A → Set where
-  `_   : ∀ i → PreNe Γ A (` i)
-  _·_  : Ne Γ (Π A B) t → Nf Γ A u
-       → PreNe Γ (B [ < u > ]Ty) (t · u)
+  coe~  : ∀ Γ~ A~ → Tm~ Γ~ A~ t₁ t₂ → PreNe Γ₁ A₁ t₁ → PreNe Γ₂ A₂ t₂
+  `_    : ∀ i → PreNe Γ A (` i)
+  _·_   : Ne Γ (Π A B) t → Nf Γ A u
+        → PreNe Γ (B [ < u > ]Ty) (t · u)
 
   callNe  : Ne Δ 𝔹 (lookup𝒮 Ψ f .scrut [ δ ]) 
           → PreNe Δ (A [ δ ]Ty) (call {A = A} f δ)
@@ -137,7 +145,6 @@ data PreNe : ∀ Γ A → Tm {Ξ = Ξ} Γ A → Set where
 
 %if False
 \begin{code}
-  coe~ : ∀ Γ~ A~ → Tm~ Γ~ A~ t₁ t₂ → PreNe Γ₁ A₁ t₁ → PreNe Γ₂ A₂ t₂
 \end{code}
 %endif
 
@@ -145,9 +152,9 @@ We then define the ``true'' neutrals by pairing the pre-neutral term
 with explicit evidence that it is
 not convertible to a closed Boolean.
 
-\sideremark{As conversion (|Tm~ Γ~ A~ t₁ t₂|) lies in |Prop|, we need to
-``box'' the proof to fit it into |Set|. This boxing/unboxing would be
-implicit with |Prop :< Set| subtyping.}
+\sideremark{As conversion (|Tm~ Γ~ A~ t₁ t₂|) lies in |Prop|, we normally
+would need to ``box'' the proof here. To hide these encoding details, we rely
+on cumulativity, which includes |Prop <: Set| subtyping.}
 
 \begin{code}
 predNe : ∀ Γ A → Tm {Ξ = Ξ} Γ A → Set
@@ -163,31 +170,19 @@ These neutral forms are not stable under arbitrary renamings. For example,
 in the context |Γ = x ∶ 𝔹 , y ∶ 𝔹 , x >eq true|, the variable |y| 
 is neutral. However, if we
 apply the renaming |y / x|, the context becomes 
-\mbox{|Γ [ y / x ] = y ∶ 𝔹 , y >eq true|}, and |y| is now convertible 
+\mbox{|Γ [ y / x ] == y ∶ 𝔹 , y >eq true|}, and |y| is now convertible 
 to a closed Boolean. We therefore make sure to take presheaves over the
 category of thinnings (which does not encounter this problem) when
 proving normalisation.
 \end{remark}
 
+
+\begin{remark}[Beyond Booleans] \phantom{a}
+
 This definition relies heavily on the fact that all of our equations
 are of the form |t ~ ⌜ b ⌝𝔹|. If equations e.g. between neutral terms
 were to be allowed, then these normal forms would no longer be 
-unique\remarknote{Technically, because of the setoid encoding, normal forms
-cannot be unique w.r.t. syntactic equality anyway, but they are at
-least unique \emph{up to coherence}.}.
-
-\sideremark{When I refer to β-equality/β-normality here, I am also
-implicitly including
-η for Π types. Actually, accounting for η equality in the second
-approach is a little subtle: we rely on the fact that the result of η-expanding 
-any neutral is never
-considered \emph{smaller} than the original. I argue this is a pretty
-reasonable expectation (e.g. it follows from monotonicity),
-but alternatively, we could
-just require that |tᴺᵉ| not be larger than any alternative β-neutral
-(|tᴺᵉ′ ∶ βNe Γ A t|) and combine this
-with the statement that |t| is also not convertible to a closed 
-Boolean given prior.}
+unique (up to coherence).
 
 As in \hyperref[sec:finitaryrw]{Section 5.3.2 - Finitary Types}
 I think there are at least two possible solutions to here:
@@ -204,6 +199,18 @@ I think there are at least two possible solutions to here:
         term rewriting approaches such as ground completion or E-Graphs
         (the equational theory on β-normal forms is, up to coherence, a ground
         TRS).
+\sideremark{When I refer to β-equality/β-normality here, I am also
+implicitly including
+η for Π types. Actually, accounting for η equality in the second
+approach is a little subtle: we rely on the fact that the result of η-expanding 
+any neutral is never
+considered \emph{smaller} than the original. I argue this is a pretty
+reasonable expectation (e.g. it follows from monotonicity),
+but alternatively, we could
+just require that |tᴺᵉ| not be larger than any alternative β-neutral
+(|tᴺᵉ′ ∶ βNe Γ A t|) and combine this
+with the statement that |t| is also not convertible to a closed 
+Boolean given prior.}
   \item Alternatively, we could attempt to fully normalise terms during NbE,
         by integrating ground completion directly.
         Specifically, we can define a term ordering on 
@@ -230,11 +237,13 @@ predNe′ Γ A t tᴺᵉ
         \end{code}
 \end{itemize}
 
-For the proof here, we will stick with |t ~ ⌜ b ⌝𝔹| equations for
+We will stick with |t ~ ⌜ b ⌝𝔹| equations for
 simplicity. In either of the above approaches, I suspect the 
 extra difficulties will primarily
 relate to needing to be careful with exactly which types/relations are setoid
 fibrations on either coherence or conversion.
+\end{remark}
+
 
 Note that all the definitions of normal/neutrals forms presented here
 are assuming definitionally consistent contexts. In definitionally inconsistent contexts, we can
@@ -289,29 +298,36 @@ variable
 %endif
 
 We then define TRSs to be valid (for a particular context) if rewrites
-imply convertibility and vice versa on pre-neutral terms. 
+imply convertibility and vice versa on pre-neutral terms. This is similar
+in spirit to
+the observational equivalence property of equational contexts in 
+\refsec{simplenormcompl}, but instead of between contexts,
+we define the equivalence between
+the \SCDef context (which induces a declarative notion of conversion)
+and a concrete set of rewrites (where the induced notion of
+conversion is operational).
 
+\pagebreak
 \sideremark{Technically, |RwVar|s here should be defined up 
 to coherence-equivalence.
 To account for this, we must to index by pre-neutrals of arbitrary type, |A|
-(rather than |𝔹|) and then generalise |soundTR| and
-|complTR| appropriately. 
-Note that in |soundTR| specifically, we need to specify the
+(rather than |𝔹|) and then generalise ``|from|'' and
+``|to|'' appropriately. 
+In ``|from|'' specifically, we need to specify the
 coherence equation |CohTy~ _ A 𝔹| to satisfy the indexing of |Tm~|
 (either at the declaration, or when applying it). We can either
 index |RwVar| directly by the coherence equation or project out the proof
 by recursion.}
-
 \begin{code}
 data RwVar : TRS Γ → PreNe Γ 𝔹 t → Bool → Set where
   rz : RwVar (Γᵀᴿ ▷ tᴾᴺᵉ >rw b) tᴾᴺᵉ b
   rs : RwVar Γᵀᴿ tᴾᴺᵉ b₁ → RwVar (Γᵀᴿ ▷ uᴾᴺᵉ >rw b₂) tᴾᴺᵉ b₁
 
 record ValidTRS (Γ : Ctx Ξ) : Set where field
-  trs      : TRS Γ
-  soundTR  : RwVar {t = t} trs tᴾᴺᵉ b → Tm~ rfl~ rfl~ t ⌜ b ⌝𝔹
-  complTR  : Tm~ rfl~ rfl~ t ⌜ b ⌝𝔹 → ∀ (tᴾᴺᵉ : PreNe Γ 𝔹 t) 
-           → RwVar trs tᴾᴺᵉ b
+  trs   : TRS Γ
+  to    : Tm~ rfl~ rfl~ t ⌜ b ⌝𝔹 → ∀ (tᴾᴺᵉ : PreNe Γ 𝔹 t) 
+        → RwVar trs tᴾᴺᵉ b
+  from  : RwVar {t = t} trs tᴾᴺᵉ b → Tm~ rfl~ rfl~ t ⌜ b ⌝𝔹
 
 def-incon : Ctx Ξ → Prop
 def-incon Γ = Tm~ (rfl~ {Γ = Γ}) rfl~ TT FF
@@ -329,14 +345,14 @@ collapse : def-incon Γ → Ty~ rfl~ A₁ A₂
 \end{code}
 %endif
 
-\begin{remark}[Alternative Definition of TRS Completeness] \phantom{a}
+\begin{remark}[Alternative Definition of TRS ``|to|''] \phantom{a}
 \labremark{alttrscompl}
 
-Note that the completeness condition here, |complTR|, is equivalent to
+Note that the ``|to|'' condition above is equivalent to
 
 \begin{code}
-complTR′  : ∀ (Γᵀᴿ : TRS Γ) → EqVar Γ t b 
-          → ∀ (tᴾᴺᵉ : PreNe Γ 𝔹 t) → RwVar Γᵀᴿ tᴾᴺᵉ b
+to′  : ∀ (Γᵀᴿ : TRS Γ) → EqVar Γ t b 
+     → ∀ (tᴾᴺᵉ : PreNe Γ 𝔹 t) → RwVar Γᵀᴿ tᴾᴺᵉ b
 \end{code}
 
 given the following lemma, which should be provable by introducing 
@@ -351,12 +367,18 @@ are fully neutral/normal).
 inv-lemma : PreNe Γ A t → Tm~ Γ~ A~ t ⌜ b ⌝𝔹 → EqVar Γ (coe~ Γ~ A~ t) b
 \end{code}
 
-This is a lot of work for a small and quite technical result, so we will
-not prove this in detail. Finding an easier to prove this (or avoid
+We rely on this lemma in \refsec{synrestrs}, however,
+this is a lot of work for a small and quite technical result, so we will
+not prove this in detail. Finding an easier way to prove this (or avoid
 relying on it entirely) could be interesting future work.
 \end{remark}
 
-As usual, the core of the normalisation argument will hinge on 
+\subsection{Normalisation by Evaluation}
+
+We now extend normalisation by evaluation for dependent types (as
+initially presented in \refsec{depnbe} to \SCDef.
+
+As before, the core of the normalisation argument will hinge on 
 neutral/normal forms 
 being presheaves on a category of thinnings\remarknote{We will
 also require stability of completion evidence w.r.t. thinning,
@@ -395,14 +417,17 @@ coeNf~ : ∀ Γ~ A~ → Tm~ Γ~ A~ t₁ t₂ → Nf Γ₁ A₁ t₁ → Nf Γ₂
 \end{code}
 %endif
 
-\subsection{Normalisation by Evaluation}
-
-We now extend normalisation by evaluation for dependent types (as
-initially presented in \refsec{depnbe} to \SCDef. When declaring
+When defining
 environments and values, we require a valid TRS associated with
 the target context (recall that normalisation in definitionally
 inconsistent contexts is trivial, so we focus only on the definitionally
-consistent case here).
+consistent case here). Throughout the normalisation algorithm,
+we will never add new equations to the target context, so we can
+preserve the |ValidTRS| the whole way through.
+%  A neat consequence of \SCDef normalisation
+%  never needing to recurse into the body of definitions until the calls
+%  themselves reduce is that we only need a single |ValidTRS| for the context we
+%  evaluate into (as opposed to e.g. needing to have |ValidTRS|s
 
 \begin{code}
 Env    : ∀ Ξ Δ Γ → ValidTRS Δ → Tms {Ξ = Ξ} Δ Γ → Set
@@ -416,13 +441,14 @@ eval*  : ∀ Θᶜ δ (ρ : Env Ξ Θ Δ Θᶜ σ) → Env Ξ Θ Γ Θᶜ (δ �
 Perhaps surprisingly, and unlike when constructing the standard model, 
 we do not associate an environment with the signature. We can get away
 with simply recursively evaluating definitions every time we hit
-a |call|\remarknote{This is perhaps not the most \emph{efficient} evaluation
-strategy. For example, if the same definition is called multiple times, 
-we cannot share any work. On the other hand, our approach to elaboration
-will generate a single definition for every
-case split, and call each of these
-definitions exactly once (\refsec{scdefsplitelab}), so this does not
-really matter in our use-case.}.
+a |call|.
+% \remarknote{This is perhaps not the most \emph{efficient} evaluation
+% strategy. For example, if the same definition is called multiple times, 
+% we cannot share any work. On the other hand, our approach to elaboration
+% will generate a single definition for every
+% case split, and call each of these
+% definitions exactly once (\refsec{scdefsplitelab}), so this does not
+% really matter in our use-case.}.
 
 %if False
 \begin{code}
@@ -498,10 +524,14 @@ assume functor laws for thinning completed TRSs.
 
 The definition of environments now needs to account for local equations. 
 We take inspiration from the standard model constructions for \SCBool and
-\SCDef, and interpret these equations as convertibility of normal forms
-(this is exactly equality up-to-coherence).
+\SCDef, and require environments to hold evidence of convertibility
+of the LHS and RHS values.
 
 \begin{spec}
+⌜_⌝𝔹Nf : ∀ b → Nf Γ 𝔹 ⌜ b ⌝𝔹
+⌜ true   ⌝𝔹Nf = TT
+⌜ false  ⌝𝔹Nf = FF
+
 Env Ξ Δ (Γ ▷ t >eq b) Δᶜ δ
   =  Σ⟨ ρ ∶ Env Ξ Δ Γ Δᶜ (π₁eq δ) ⟩× 
      Nf~ rfl~ rfl~ (π₂eq δ) (eval Δᶜ t ρ) ⌜ b ⌝𝔹Nf
@@ -588,9 +618,9 @@ eval-call {f = f} ρ (ne𝔹 tᴺᵉ) t~ uⱽ vⱽ
   = uvalpre _ (callNe {f = f} (coeNe~ rfl~ rfl~ t~ tᴺᵉ))
 \end{code}
 
-As opposed to evaluation of dependent ``|if|'' (|eval-if|), we
-do not have any dependence on quoting here. When producing stuck |call|s,
-we do not need the normal forms of the branches.
+Unlike evaluation of dependent ``|if|'' (|eval-if| in \refsec{depnbe}), we
+do not rely on quoting here. When producing stuck |call|s,
+we have no reason to the normalise the branches.
 
 %if False
 \begin{code}
@@ -665,12 +695,12 @@ eval-π₂eq {b = false}  δ ρ = {!eval* _ δ ρ .snd!}
 \end{code}
 %endif
 
-The core unquoting |uval| and quoting |qval| operations stay
+The core unquoting (|uval|) and quoting (|qval|) operations stay
 mostly unchanged from
 ordinary NbE for dependent types\remarknote{I say ``mostly'' because
 technically we do need to call |uvalpre| rather than |uval| in a couple of
-places where we build new stuck neutrals, but other than that, they stay
-the same.}, but we do of course need to 
+places to build new stuck neutrals, but other than that, 
+the definitions are identical.}, but we do of course need to 
 implement |uvalpre|.
 
 We first define a procedure for checking if any TRS rewrites possibly
@@ -679,7 +709,7 @@ apply to a given pre-neutral term.
 \sideremark{Note that as we are working with plain |TRS|s here, we need
 to work with terms up to coherence rather than up to conversion.
 We can prove that overall conversion is preserved using the correctness
-criteria associated with |ValidTRS|s at the end.}
+criteria associated with |ValidTRS|s after we are done.}
 
 \begin{code}
 data CheckRwResult (Γᵀᴿ : TRS Γ) : PreNe Γ A t → Set where
@@ -709,22 +739,22 @@ postulate
 
 We then implement |uvalpre| by splitting on the result of |checkrw|,
 and either returning the closed Boolean, or the stuck neutral, depending
-on the result. We need |soundTR| and |complTR| properties of our TRS here
+on the result. We need the ``|from|'' and ``|to|'' properties of our TRS here
 to translate between evidence about the existence or lack of rewrites
 and convertibility.
 
 \begin{code}
 uvalpre {Δᶜ = Δᶜ} A tᴾᴺᵉ with checkrw (Δᶜ .trs) tᴾᴺᵉ 
 ... | rw {A~ = A~} {b = b} r  
-  = coe𝒱′ (sym~ A~) (sym~ (Δᶜ .soundTR r) ∙~ sym~ coh) ⌜ b ⌝𝔹Nf
+  = coe𝒱′ (sym~ A~) (sym~ (Δᶜ .from r) ∙~ sym~ coh) ⌜ b ⌝𝔹Nf
 ... | stk ¬r        
   = uval A  (tᴾᴺᵉ Σ, λ b Γ~ A~ t~ → 
                      ¬r  (A~ ∙~ 𝔹 {Γ~ = sym~ Γ~}) b 
-                         (Δᶜ .complTR  (sym~ coh ∙~ t~ ∙~ ⌜⌝𝔹~ {Γ~ = sym~ Γ~}) 
-                                       (coe~ _ _ _ tᴾᴺᵉ)))
+                         (Δᶜ .to  (sym~ coh ∙~ t~ ∙~ ⌜⌝𝔹~ {Γ~ = sym~ Γ~}) 
+                                  (coe~ _ _ _ tᴾᴺᵉ)))
 \end{code}
 
-Soundness of |uvalpre| also follows from |soundTR| and |complTR|, so we are
+Soundness of |uvalpre| also follows from ``|from|'' and ``|to|'', so we are
 done!
 
 \begin{code}
@@ -784,7 +814,7 @@ reduced LHS, |t|, and:
 \end{itemize}
 
 To justify this approach is sensible, we need to actually derive the
-soundness |soundTR| and completeness |complTR| conditions associated with
+``|from|'' and ``|to|'' conditions associated with
 the |TRS| we construct. Attempting these proofs formally in Agda gets
 extremely painful, so we will give just the main ideas:
 \begin{itemize}
@@ -800,7 +830,7 @@ extremely painful, so we will give just the main ideas:
       \mbox{|PreNe (Γ ▷ >eq b) 𝔹 (t [ wkeq ])|}.
 \item[(D)] (B) and (C) are sufficient to construct the |TRS (Γ ▷ t >eq b)|,
       including a rewrite corresponding to the new equation.
-\item[(E)] |soundTR| for this new TRS can be proven by cases. If the |RwVar|
+\item[(E)] ``|from|'' for this new TRS can be proven by cases. If the |RwVar|
       is |rz| (i.e. the rewrite makes use of the last rewrite in the TRS), 
       then |eq ez| proves the required equivalence (the last rewrite
       in the TRS maps exactly from the \linebreak 
@@ -808,13 +838,13 @@ extremely painful, so we will give just the main ideas:
       to |b|).
 \item[(F)] If the |RwVar| instead is of the form |rs r|, then we know
       the LHS is some neutral that was already present in the TRS, so
-      we can reuse the existing evidence of |soundTR|.
-\item[(H)] Finally, for |complTR| we assume some way of getting our hands
+      we can reuse the existing evidence of |from|.
+\item[(H)] Finally, to prove ``|to|'', we assume some way of getting our hands
       on a concrete |EqVar| corresponding to the convertibility evidence 
-      (recall that we can obtain this, somewhat painfully,
-      via reduction \refremark{alttrscompl}).
+      (recall that we should be able obtain this, albeit painfully,
+      via introducing reduction \refremark{alttrscompl}).
       We then perform a similar case split: |ez| maps to |rz| and |es e|
-      can be dealt with using the prior |complTR| result.
+      can be dealt with using the prior ``|to|'' result.
 \end{itemize}
 
 I leave a full Agda mechanisation of this proof for future work. Most of
@@ -842,10 +872,10 @@ buildTRS  : ∀ (Γᶜ : ValidTRS Γ) (tᴺᵉ : Ne Γ 𝔹 t)
      → ValidTRS (Γ ▷ t >eq b)
 buildTRS {b = b} Γᶜ tᴺᵉ p .trs      
   = extTR (Γᶜ .trs) tᴺᵉ p ▷ extPreNe tᴺᵉ >rw b
-buildTRS Γᶜ (tᴾᴺᵉ Σ, ¬𝔹) p .soundTR rz      = eq ez
-buildTRS Γᶜ (tᴾᴺᵉ Σ, ¬𝔹) p .soundTR (rs r)  = {!!}
-buildTRS Γᶜ (tᴾᴺᵉ Σ, ¬𝔹) p .complTR u~ uᴾᴺᵉ with inv-lemma uᴾᴺᵉ u~
-... | e = {!Γᶜ .complTR _ _!}
+buildTRS Γᶜ (tᴾᴺᵉ Σ, ¬𝔹) p .from rz      = eq ez
+buildTRS Γᶜ (tᴾᴺᵉ Σ, ¬𝔹) p .from (rs r)  = {!!}
+buildTRS Γᶜ (tᴾᴺᵉ Σ, ¬𝔹) p .to u~ uᴾᴺᵉ with inv-lemma uᴾᴺᵉ u~
+... | e = {!Γᶜ .to _ _!}
 \end{code}
 %endif
 

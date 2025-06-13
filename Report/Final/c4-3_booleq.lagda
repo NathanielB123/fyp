@@ -337,8 +337,8 @@ as long as all terms in |δ| are.
 fndThm : ∀ (t : Tm Γ A) → Ps Δ Γ δ → P Δ A (t [ δ ])
 \end{code}
 
-The fundamental theorem is proved by induction on terms, similarly to
-evaluation in NbE. We require that it is possible to derive strong
+To prove the fundamental theorem, we need a couple of lemmas.
+Specifically, that it is possible to derive strong
 normalisation from computability (|P-SN|) and that if all immediate
 reducts of a term (not headed by |ƛ|-abstraction) are computable, then the 
 original term must be also (|P<|). These lemmas resemble quoting and
@@ -349,24 +349,32 @@ unquoting in NbE.
 ƛ? (ƛ _) = true
 ƛ? _     = false
 
-lookupP : ∀ (i : Var Γ A) → Ps Δ Γ δ → P Δ A (i [ δ ])
-
 P-SN  : P Γ A t → SN _>nd_ t
 P<    : ¬is ƛ? t → (∀ {t′} → t >nd t′ → P Γ A t′) → P Γ A t
+\end{code}
+
+The fundamental theorem is proved by induction on terms, similarly to
+evaluation in NbE. We use the fact that |TT|, |FF| and fresh variables are
+trivially computable (there are no reductions with these constructs
+on the LHS). The cases for λ-abstraction and ``|if|'' are more
+complicated, so we will cover these separately.
+
+\begin{code}
+lookupP : ∀ (i : Var Γ A) → Ps Δ Γ δ → P Δ A (i [ δ ])
+
+tt-sn : SN _>nd_ (TT {Γ = Γ})
+tt-sn = acc λ ()
+
+ff-sn : SN _>nd_ (FF {Γ = Γ})
+ff-sn = acc λ ()
+
+`P : P Γ A (` i)
+`P = P< tt λ ()
 
 fndThm-ƛ    : (∀ {u} → P Γ A u → P Γ B (t [ < u > ]))
             → SN _>nd_ t → P Γ A u → SN _>nd_ u → P Γ B ((ƛ t) · u)
 fndThm-if   : SN _>nd_ t → P Γ A u → SN _>nd_ u → P Γ A v → SN _>nd_ v 
             → P Γ A (if t u v)
-
-TT-sn : SN _>nd_ (TT {Γ = Γ})
-TT-sn = acc λ ()
-
-FF-sn : SN _>nd_ (FF {Γ = Γ})
-FF-sn = acc λ ()
-
-`P : P Γ A (` i)
-`P = P< tt λ ()
 
 fndThm (` i)       ρ = lookupP i ρ
 fndThm (ƛ t)       ρ 
@@ -374,8 +382,8 @@ fndThm (ƛ t)       ρ
                        (P-SN (fndThm t ((ρ [ σ ⁺ _ ]Ps) , `P))) 
                        uᴾ (P-SN uᴾ)
 fndThm (t · u)     ρ = fndThm t ρ id (fndThm u ρ)
-fndThm TT          ρ = TT-sn
-fndThm FF          ρ = FF-sn
+fndThm TT          ρ = tt-sn
+fndThm FF          ρ = ff-sn
 fndThm (if t u v)  ρ 
   = fndThm-if (fndThm t ρ) uᴾ (P-SN uᴾ) vᴾ (P-SN vᴾ)
   where  uᴾ = fndThm u ρ
@@ -400,8 +408,8 @@ _[_]¬ƛ {t = if t u v} p δ = tt
 \end{code}
 %endif
 
-Proving the fundamental theorem in the case of |ƛ|-abstractions and ``|if|''
-expressions is a little more complicated. We repeatedly appeal to 
+To prove the fundamental theorem in the case of |ƛ|-abstractions and ``|if|''
+expressions, we repeatedly appeal to 
 |P<| to step along the chain of reductions, and rely on |SN| of subterms to 
 induct w.r.t. reduction order in the cases where a subterm
 is reduced. When we finally hit |⇒β| or |ndl|/|ndr|, we return
@@ -508,7 +516,7 @@ P< {A = A ⇒ B} {t = t}   ¬ƛ tᴾ
                  uᴾ (P-SN uᴾ)
 \end{code}
 
-Now to obtain strong normalisation, we merely need to obtain computability
+Now to obtain strong normalisation, we merely need to derive computability
 of all variables in the identity substitution, so we can apply the fundamental
 theorem and follow it up with |P-SN|.
 

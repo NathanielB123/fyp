@@ -113,15 +113,15 @@ any boolean function |f : Bool → Bool|, |f b ≡ f (f (f b))|:
 {altenkirch2009smart}.}.
 
 \begin{example}[|f b ≡ f (f (f b))|, Concisely] \phantom{a}
-\labexample{bool-lemma}
+\labexample{f3}
 \begin{spec}
-bool-lemma : ∀ (f : Bool → Bool) (b : Bool) → f b ≡ f (f (f b))
-bool-lemma f true   = case f true of
+f3 : ∀ (f : Bool → Bool) (b : Bool) → f b ≡ f (f (f b))
+f3 f true   = case f true of
   true   → refl
   false  → case f false of
     true   → refl
     false  → refl
-bool-lemma f false  = case f false of
+f3 f false  = case f false of
   true   → case f true
     true   → refl
     false  → refl
@@ -146,23 +146,23 @@ the third case reduces down to |p ∙ sym (cong f (cong f p ∙ q) ∙ q)| - sti
 pretty complicated!}
 \begin{example}[|f b ≡ f (f (f b))|, Manually] \phantom{a}
 \begin{code}
-bool-lemma′  : ∀ (f : Bool → Bool) b
+f3′  : ∀ (f : Bool → Bool) b
              → f true   ≡ true ⊎ f true   ≡ false
              → f false  ≡ true ⊎ f false  ≡ false
              → f b ≡ f (f (f b))
-bool-lemma′ f true   (inl p)  q        = 
+f3′ f true   (inl p)  q        = 
   f true
   ≡⟨ sym (cong f p) ⟩≡
   f (f true)
   ≡⟨ sym (cong (f ∘ f) p) ⟩≡
   f (f (f true)) ∎
-bool-lemma′ f true   (inr p)  (inl q)  =
+f3′ f true   (inr p)  (inl q)  =
   f true
   ≡⟨ sym (cong f q) ⟩≡
   f (f false)
   ≡⟨ sym (cong (f ∘ f) p) ⟩≡
   f (f (f true)) ∎
-bool-lemma′ f true   (inr p)  (inr q)  =
+f3′ f true   (inr p)  (inr q)  =
    f true
    ≡⟨ p ⟩≡
    false
@@ -176,14 +176,14 @@ bool-lemma′ f true   (inr p)  (inr q)  =
 \end{code}
 %if False
 \begin{code}
-bool-lemma′ f false  p        (inr q)  = sym (cong f (cong f q ∙ q))
-bool-lemma′ f false  (inr p)  (inl q)  = sym (cong f (cong f q ∙ p))
-bool-lemma′ f false  (inl p)  (inl q)  = q ∙ sym (cong f (cong f q ∙ p) ∙ p)
+f3′ f false  p        (inr q)  = sym (cong f (cong f q ∙ q))
+f3′ f false  (inr p)  (inl q)  = sym (cong f (cong f q ∙ p))
+f3′ f false  (inl p)  (inl q)  = q ∙ sym (cong f (cong f q ∙ p) ∙ p)
 \end{code}
 %endif
 \begin{code}
-bool-lemma : ∀ (f : Bool → Bool) b → f b ≡ f (f (f b))
-bool-lemma f b = bool-lemma′ f b (test (f true)) (test (f false)) 
+f3 : ∀ (f : Bool → Bool) b → f b ≡ f (f (f b))
+f3 f b = f3′ f b (test (f true)) (test (f false)) 
 \end{code}
 \end{example}
 

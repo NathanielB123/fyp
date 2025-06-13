@@ -386,11 +386,17 @@ this
 % David Davies suggests explaining what a universe hierarchy is, which is
 % reasonable but also, do I have time?
 fashion often employ the 
-concept of a universe hierarchy. The term |Type| itself 
+concept of a universe hierarchy (we call types of types in general
+\emph{universes}). The term |Type| itself 
 needs type, but |Set ∶ Set| is unsound \sidecite{hurkens1995simplification}.
 Instead we have |Set ∶ Set₁|, and |Set₁ ∶ Set₂| etc...
 We refer to the Agda documentation \sidecite{agda2024universe} for details of 
 how their implementation of universes works.
+
+% TODO Explain Prop?
+% One extra universe-related detail that will be sometimes relevant is
+% the concept of a universe of ``strict'' propositions, |Prop| 
+% \sidecite{gilbert2019proof}.
 
 \subsubsection{Equality}
 
@@ -468,8 +474,6 @@ is a non-trivial operation. For example, paths between types
 are generalised to isomorphisms (technically, \emph{equivalences}).}.
 \end{remark} 
 
-% TODO : Discuss |Prop| (maybe after inductive types?)
-
 \subsubsection{Inductive Types}
 
 Agda also contains a scheme for defining types inductively. We declare new
@@ -517,7 +521,6 @@ with \textit{methods} |P TT| and |P FF|, so the eliminator is written as
 𝔹-elim : ∀ (P : 𝔹 → Set) b → P TT → P FF → P b
 \end{code}
 
-% TODO: Citations here?
 Slightly unusually (e.g. compared to more Spartan type theories like MLTT
 \sidecite{martin1975intuitionistic} or 
 CIC \sidecite{pfenning1989cic}, or even other type theories implemented by 
@@ -667,20 +670,21 @@ doubleQℤ supr    =
 \end{spec}
 
 %TODO Move cubical discussion to the remark here
-% TODO reference https://github.com/agda/agda/issues/7905 as additional
-% issues with using Cubical
 For technical reasons\remarknote{In short: Agda currently only supports
 quotient types as a special cases of higher-inductive type (HIT)s
-when using the |cubical| extension, which is incompatible with 
+when using the |cubical| extension, is incompatible with 
 UIP and lacks some
-useful pattern matching automation.\\\\
+useful pattern matching automation. Sometimes, HITs also have to be 
+made significantly more complicated to account
+for \cite{xie2025transport}.\\\\
 Furthermore, sometimes it is actually useful to be able to temporarily 
 reason about the
 syntactic structure of objects, even if all operations we might define should
 ultimately respect the equivalence. 
 For example, when working with \emph{reduction}, \refsec{redconv}.
 %
-}, in the actual Agda mechanisation for this project, we do not 
+}\sideblankcite{xie2025transport}, in the actual Agda mechanisation for 
+this project, we do not 
 use quotients. We can simulate working with quotient types (at the cost of
 significant boilerplate) by working explicit inductively-defined
 equivalence relations. E.g. for |ℤ|

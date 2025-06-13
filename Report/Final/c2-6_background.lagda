@@ -64,18 +64,6 @@ project, and will discuss the shortcuts we can take when implementing NbE
 in a partial programming language (specifically Haskell) in 
 (\refsec{typecheckingsc}).
 
-% For the application on NbE in this project, only the last of these points is
-% truly relevant. Specifically, we do not plan to directly prove
-% normalisation of type theory with local equational assumptions via NbE,
-% primarily because I am unaware of a good way to justify rewriting-to-completion
-% without going down to the level of an ordering on terms. 
-
-% Instead, following \sidecite[*7]{coquand1996algorithm}, we shall employ NbE as 
-% the algorithm to decide conversion in our prototype Haskell typechecker. 
-% On top of the efficiency benefits, NbE is also relatively simple to implement, 
-% and as we shall see, is quite compatible with \textbf{smart case} in the sense 
-% that the extensions necessary to support local equations are minimal.
-
 To introduce NbE, we will begin by deriving the algorithm for the
 the recursive substitution STLC syntax given in \refsec{stlcrec}, 
 and sketch how to prove its correctness. We
@@ -164,8 +152,9 @@ It is perhaps worth mentioning though, that if one is more careful
 with the representation of neutral spines (among other things), pushing in
 this direction can lead to another structurally recursive normalisation
 algorithm known as \emph{hereditary substitution}
-\sidecite[*4]{keller2010hereditary}. Unfortunately, it is currently 
-unclear whether this technique scales to dependent types.}
+\cite{keller2010hereditary}. Unfortunately, it is currently 
+unknown whether this technique scales to dependent 
+types.}\sideblankcite{keller2010hereditary}
 
 In a partial language, when applied to normalising terms, this definition
 is works! The single substitutions are less efficient on terms with
@@ -189,7 +178,7 @@ infix 4 _>βs⁺_
 
 Making naive normalisation total relies on a strong normalisation result: we 
 need to know that β-reduction, |_>β_|, is well-founded. 
-\sidedef[*2]{Accessibility}{
+\sidedef{Accessibility}{
 Classically, strong normalisation can be defined as there 
 existing no infinite chains of reductions. To induct w.r.t. reduction order
 constructively, we instead use accessibility predicates.
@@ -216,7 +205,7 @@ relation that proceeds underneath abstractions.
 Actually, we will make use of 
 the accessibility of typed terms w.r.t. interleaved structural ordering, |_>s_|, 
 and β-reduction, but luckily obtaining this from traditional
-strong normalisation is not too difficult \sidecite[*21]{zulip2024combining}. 
+strong normalisation is not too difficult \cite{zulip2024combining}. 
 Note that |_>β_| commutes with
 |_>s_| in the sense that
 
@@ -533,15 +522,12 @@ A final subtlety arises with the \emph{positive} type formers
 |_+_| and |𝟘|.
 E.g. While |λ Γ → ⊥| does satisfy 
 all the necessary laws of an initial object, 
-\sideremark{\sidecite[*6.5]{altenkirch2001normalization} 
+\sideremark{\cite{altenkirch2001normalization} 
 explores NbE using model based on sheaves (instead of presheaves) to fix this 
 more
 elegantly and in doing so decides |η| (as well as |β|) equivalence for sums,
-but the cost is a much less efficient
-% TODO: Maybe mention how the same trick cannot be played with ℕ, or how
-% extending the idea to dependent types is still a WIP.
-% TODO - probably we can discuss in related work and then forward ref
-algorithm.}
+We discuss the costs of doing this in in \refsec{coprodeta}.
+}\sideblankcite{altenkirch2001normalization}
 and terms of type |𝟘| can only occur inside empty contexts (i.e. contexts 
 containing |𝟘|), when it comes to evaluating a variable of type |𝟘|, we 
 cannot hope to 

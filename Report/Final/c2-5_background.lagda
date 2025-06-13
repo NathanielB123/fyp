@@ -269,8 +269,6 @@ Critically, while substitution is strict, we still deal with
 via an explicit equivalence relation, so the syntax remains
 setoid-based.
 
-% TODO: Maybe mention we will use a quotiented syntax rather than equivalence
-% relation for the report, if indeed we will...
 For presentation in the report,
 going over the entire syntax of dependent
 type theory again, switching |_≡_| signs to |_=_| is probably not a

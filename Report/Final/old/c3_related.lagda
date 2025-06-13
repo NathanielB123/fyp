@@ -35,13 +35,13 @@ contains definitions that match on individual variables).
 
 Unfortunately, the one-off nature of |with|-abstraction rewrites limits
 their applicability. If we re-attempt the |f b ≡ f (f (f b))| proof from
-\refexample{bool-lemma}, taking advantage of this feature, the goal only gets
+\refexample{f3}, taking advantage of this feature, the goal only gets
 partially simplified:
 
 \begin{spec}
-bool-lemma : ∀ (f : Bool → Bool) b → f b ≡ f (f (f b)) 
-bool-lemma f true with f true
-bool-lemma f true | true = ?0
+f3 : ∀ (f : Bool → Bool) b → f b ≡ f (f (f b)) 
+f3 f true with f true
+f3 f true | true = ?0
 \end{spec}
 
 At |?0|, Agda replaces every occurence of |f b| in the goal with |true|
@@ -61,24 +61,24 @@ evidence of the match (a proof of propositional equality) to the new variable
 \begin{example}[|f b ≡ f (f (f b))|, Using |with_in_| Syntax] \phantom{a}
 
 \begin{code}
-bool-lemma : ∀ (f : Bool → Bool) b → f b ≡ f (f (f b)) 
-bool-lemma f true   with f true in p
-bool-lemma f true   | true   = sym (cong f p ∙ p)
-bool-lemma f true   | false  with f false in q
-bool-lemma f true   | false  | true   = sym p
-bool-lemma f true   | false  | false  = sym q
-bool-lemma f false  with f false in p
-bool-lemma f false  | true   with f true in q
-bool-lemma f false  | true   | true   = sym q
-bool-lemma f false  | true   | false  = sym p
-bool-lemma f false  | false  = sym (cong f p ∙ p)
+f3 : ∀ (f : Bool → Bool) b → f b ≡ f (f (f b)) 
+f3 f true   with f true in p
+f3 f true   | true   = sym (cong f p ∙ p)
+f3 f true   | false  with f false in q
+f3 f true   | false  | true   = sym p
+f3 f true   | false  | false  = sym q
+f3 f false  with f false in p
+f3 f false  | true   with f true in q
+f3 f false  | true   | true   = sym q
+f3 f false  | true   | false  = sym p
+f3 f false  | false  = sym (cong f p ∙ p)
 \end{code}
 We can also avoid the manual equality reasoning by repeating earlier pattern
 matches, but this gets very verbose, even when using Agda's |...| syntax for
 repeating above matches. E.g. the first case turns into:
 \begin{spec}
-bool-lemma′ : ∀ (f : Bool → Bool) b → f b ≡ f (f (f b)) 
-bool-lemma′ f true  with f true in p
+f3′ : ∀ (f : Bool → Bool) b → f b ≡ f (f (f b)) 
+f3′ f true  with f true in p
 ... | true          with f true | p
 ... | true | refl   with f true | p
 ... | true | refl   = refl
@@ -89,8 +89,8 @@ propositional equality and applies a one-off
 rewrite to the
 context (similarly to |with|-abstractions).
 \begin{spec}
-bool-lemma′′ : ∀ (f : Bool → Bool) b → f b ≡ f (f (f b)) 
-bool-lemma′′ f true  with f true in p
+f3′′ : ∀ (f : Bool → Bool) b → f b ≡ f (f (f b)) 
+f3′′ f true  with f true in p
 ... | true           rewrite p 
                      rewrite p = refl
 \end{spec}
@@ -237,7 +237,7 @@ as |undefined|. Manual inspection is required to check totality/ termination.
 \sidecite[*12.5]{kiss2019higher}. We simulate such a feature here using a 
 concrete type family with no cases, but of course this cannot be instantiated
 with a "real" type-level function on booleans later.} 
-the |f b ≡ f (f (f b))| example from the introduction (\refexample{bool-lemma}).
+the |f b ≡ f (f (f b))| example from the introduction (\refexample{f3}).
 
 \begin{example}[|f b ≡ f (f (f b))|, in Haskell] \phantom{a}
 \begin{spec}

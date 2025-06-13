@@ -57,9 +57,10 @@ like dependent \SC does, but it does still expand our notion of convertibility
 to somewhere between pure β-equivalence and adding in full η-equality of
 Booleans.
 
-For example, in the empty equational context, we have |if t t t ~ if t TT FF|
-but we cannot simplify further to just |t|. We also cannot derive commuting
-conversions.
+For example, in the empty equational context, we can
+now obtain |if t t t ~ if t TT FF|, but unlike
+Boolean η, we cannot simplify further to just |t|. We also cannot derive 
+commuting conversions (\refexample{commconv}).
 We argue that this more limited notion of conversion can be advantageous
 though. As mentioned in \refsec{coprodeta}, known algorithms which can decide 
 η-equality for positive types are quite inefficient (e.g. 
@@ -85,7 +86,7 @@ the termination metric here is non-obvious (if indeed this algorithm does
 actually terminate).
 
 \begin{remark}[Adding One Equation to a Complete Equational Context 
-Triggers an Arbitrary Number of Completion Iterations] \phantom{a}
+can Trigger an Arbitrary Number of Completion Iterations] \phantom{a}
 
 To show that we cannot meaningfully take advantage of prior completion evidence
 and the fact we only introduce one equation at a time, we construct an

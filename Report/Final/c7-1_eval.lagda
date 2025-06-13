@@ -50,21 +50,33 @@ before rushing to implement the feature in mainstream proof assistants.
 
 \subsubsection{\SCDef}
 
-At the end of this project, I feel positive about the potential for
-ideas from \SCDef to form the basis for future proof assistant development. 
-The fact that normalisation of \SCDef terms
-does not need to interleaved with completion gives a huge amount of
-flexibility. Another nice advantage of the theory
-is that fits nicely with the design of existing proof assistants,
+I feel positive about the potential for
+ideas from \SCDef to form the basis for future proof assistant development.
+Being able to restrict equations with properties that are not stable
+under substitution gives a huge amount of flexibility, and
+normalisation not needing to interleave
+with completion vastly simplifies the metatheory. 
+Another nice advantage of the \SCDef approach
+is that fits nicely with the design of some existing proof assistants,
 including Agda\remarknote{Agda already elaborates 
 |with|-abstractions to top-level definitions.}.
 
-This was ultimately just a side-benefit, but I think top-level definitions
-being able to ask for definitional equations between their arguments
-(approaching a form of first-class definitional equality) is also
-a quite interesting feature which could be given direct surface syntax.
+An unexpected bonus feature of \SCDef is that is suggests a way to
+enable preserving
+definitional equations across top-level
+definitions\remarknote{Specifically, by using full substitutions, 
+including those that
+instantiate contextual equations, as argument lists.}. In Agda, sometimes
+abstracting over a repeated argument necessitates additional transport
+boilerplate,
+because definitional equations which hold in the concrete cases can
+only be stated propositionally in the abstract setting. To
+resolve this, it could
+be interesting to explore direct surface syntax for this feature, rather than
+leaving it as a mere detail of the encoding.
 
-There is still a lot of work to do on the metatheory though.
+There is still a significant amount of remaining work on
+the metatheory of \SCDef.
 Our normalisation result only accounts for
 reflecting Boolean equations, and relies on the existence of a completed 
 term-rewriting system (TRS) associated with the set of equations
@@ -72,17 +84,18 @@ in the context. \refsec{synrestrs} describes a possible
 approach to generating these, but
 it restricts the set of
 acceptable equations in a quite significant 
-way\remarknote{Specifically, LHSs of later
+way\remarknote[][*-3]{Specifically, LHSs of later
 equations cannot occur as subterms in prior ones. In practice, this
 means that users of \SC would sometimes have to carefully order their
-case splits in order to avoid destabilising previous equations.}.
+case splits in order to avoid destabilising previous equations
+and getting an error.}.
 Leveraging completion to justify a wider set of equations could be
-exciting future work (though this would almost certainly require
+exciting future work (this would require
 proving some sort of strong normalisation result).
 
 Before integrating
 \SCDef with the core type theories of existing proof assistant,
-there also needs to be additional work on analysing 
+there also needs to be extensive work on analysing 
 the interactions between \SCDef and a myriad of
 other modern proof assistant features (e.g. global rewrite rules 
 \sidecite{cockx2020type}, cubical identity 
@@ -107,8 +120,8 @@ late into the project,
 I did not have time to write a typechecker implementation with which
 to directly demonstrate its utility.
 Beyond the elaboration of case splits (which I cover in detail in
-\emph{scdefsplitelab}), I expect a similar implementation to 
-\SCBool (tracking neutral to value mappings during NbE) should be possible.
+\refsec{scdefsplitelab}), I expect a similar implementation to 
+\SCBool (tracking neutral to value mappings during NbE) to be feasible.
 
 \subsubsection{Mechanisation and Meta-Metatheory}
 
@@ -119,12 +132,19 @@ the proof assistant Agda as our metatheory throughout.
 A hugely exciting possibility that arises from committing to this 
 approach is the potential to build
 correct-by-construction, type theory
-implementations (i.e. verified typecheckers) \sidecite{chapman2008eat}. 
-The strictified syntaxes
-defined in this project cut down massively on the transport boilerplate
-usually associated with such efforts, but of course these syntaxes
-also heavily relied on unsafe features of Agda (\refsec{strict}).
-Future work could increase the level of trust in these
+implementations (i.e. verified typecheckers) \sidecite{chapman2008eat}.
+With \refsec{scdefsplitelab}, a genuine Agda implementation
+of an \SCDef typechecker does not seem completely out of reach,
+but of course actually going the distance here would require much more
+work fleshing out the details (fleshing out all the details of the NbE
+proof, defining normalisation of types, checking equality up-to-coherence
+of normal forms, etc.)
+
+We also relied on many unsafe features to define strictified syntaxes.
+This was successful at avoiding a lot of the transport boilerplate while
+staying relatively concise (the full strictified 
+\SCDef syntax is slightly over 500 lines of
+Agda), but future work could increase the level of trust in these
 mechanised proofs by leveraging the construction of 
 \sidecite{kaposi2025type} to strictify substitution laws safely.
 
@@ -136,7 +156,7 @@ as opposed to the extrinsic approach
 (where typing relations are defined on untyped terms,
 used in e.g. \sidecite{abel2017decidability})
 was ultimately the right decision. I think the benefits of
-taking a more ``semantic'' (\cite{abel2017decidability})
+taking a more ``semantic'' \cite{kaposi2025type}
 definition of type theory are in part demonstrated by the soundness
 proofs and the presentation of normalisation by evaluation for ordinary
 dependent type theory (\refsec{depnbe}), in which semantic
@@ -148,7 +168,8 @@ messier, with the term rewriting aspects heavily relying on syntactic
 analysis of pre-neutral terms. The overall normalisation algorithm is
 still sound, but individual steps do not appear to preserve conversion.
 Making this rigorous requires
-some quite ugly and repetitive setoid reasoning.
+some quite ugly and repetitive setoid reasoning, which I have not
+gone through the full details of.
 Future work could aim to
 rectify this messiness by somehow adjusting the NbE model/algorithm
 such that conversion is fully preserved

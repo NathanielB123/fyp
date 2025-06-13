@@ -182,7 +182,8 @@ variable
 %endif
 
 Conversion relative to a set of in-scope equations can then be defined
-inductively.
+inductively. Our starting point is to copy over the definition of β-conversion
+given in \refsec{redconv} (specialised to our pair of type formers).
 
 %if False
 \begin{code}
@@ -194,31 +195,21 @@ data EqVar :  Eqs Γ → Tm Γ 𝔹 → Bool → Set where
 
 \begin{code}
 data _⊢_~_ (Ξ : Eqs Γ) : Tm Γ A → Tm Γ A → Set where
-\end{code}
-
-First |_⊢_~_| should be an equivalence relation, congruent over
-all term formers.
-
-\begin{code}
+  -- Equivalence
   rfl~ : Ξ ⊢ t ~ t
   sym~ : Ξ ⊢ t₁ ~ t₂ → Ξ ⊢ t₂ ~ t₁
   _∙~_ : Ξ ⊢ t₁ ~ t₂ → Ξ ⊢ t₂ ~ t₃ → Ξ ⊢ t₁ ~ t₃
-
+  -- Congruence
   ƛ_   : Ξ [ wk ]Eq ⊢ t₁ ~ t₂ → Ξ ⊢ ƛ t₁ ~ ƛ t₂ 
   _·_  : Ξ ⊢ t₁ ~ t₂ → Ξ ⊢ u₁ ~ u₂ → Ξ ⊢ t₁ · u₁ ~ t₂ · u₂
   if   : Ξ ⊢ t₁ ~ t₂ → Ξ ⊢ u₁ ~ u₂ → Ξ ⊢ v₁ ~ v₂
        → Ξ ⊢ if t₁ u₁ v₁ ~ if t₂ u₂ v₂
-\end{code}
-
-It should also include the standard computation rules for |⇒| and |𝔹| types.
-
-\begin{code}
+  -- Computation
   ⇒β   : Ξ ⊢ (ƛ t) · u   ~ t [ < u > ]
   𝔹β₁  : Ξ ⊢ if TT  u v  ~ u
   𝔹β₂  : Ξ ⊢ if FF  u v  ~ v
 \end{code}
 
-So far, this relation is identical to ordinary declarative β-conversion.
 We account for local equations by defining a type of evidence that 
 a particular equation, |t >eq b|, occurs in an equational
 context, |Ξ|: |EqVar Ξ t b|.

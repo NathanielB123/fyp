@@ -103,7 +103,7 @@ By quotienting by
 the substitution laws, but not |β|/|η|, we can obtain a syntax that is
 isomorphic (w.r.t. propositional equality) to the recursive substitution 
 approach (the proof of this is given in detail in 
-\sidecite[*-9]{altenkirch2025copypaste}).
+\sidecite{altenkirch2025copypaste}).
 
 %if False
 \begin{code}
@@ -161,7 +161,7 @@ Terms are a presheaf on substitutions. That is, there is a
 (contravariantly) functorial action
 that applies substitutions to terms.
 
-\sidedef[*1]{Presheaf}{
+\sidedef{Presheaf}{
 \labdef{presheaf}
 We call family of types |F : A → Set| a presheaf 
 on a category |C| (with\\|Ob = A| and a family of morphisms |Hom|)

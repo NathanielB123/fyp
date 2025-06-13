@@ -17,8 +17,15 @@ module Report.Final.c6-1_scdef where
 \chapter{Elaborating Smart Case}
 \labch{scdef}
 
-In this chapter, we describe a new type theory, named \SCDef which
+In this chapter, we define a new type theory, named \SCDef, which
 introduces equational assumptions at the level of global definitions. 
+We motivate \SCDef with the insight that the challenges presented in the 
+prior chapter (\refsec{scboolnormfail}) vanish when giving up just a
+couple conversion rules. Removing these conversion rules outright leaves us
+with a poorly behaved theory, but it turns out that
+global definitions, by remaining opaque until the scrutinee they
+block on reduces, enable us to achieve a similar effect while
+retaining e.g. congruence of conversion.
 We prove normalisation (by evaluation), and describe
 an elaboration algorithm to
 turn local \SC-like splits into top-level definitions.
@@ -208,7 +215,13 @@ postulate
 %endif
 
 We consider all signature weakenings to be equal (i.e. every morphism
-|Wk Φ Ψ| is unique; signature weakenings form a \emph{thin category}).
+|Wk Φ Ψ| is unique; signature weakenings form a 
+\emph{thin category}\remarknote{There is a slightly confusing clash of
+terminology here. The category of thinnings is not a thin category, because
+e.g. the context |• ▷ 𝔹| can be thinned to |• ▷ 𝔹 ▷ 𝔹| either
+by inserting a new 𝔹 typed variable at the end or the start of the context.
+|Wk| does not have this same freedom: it can only append definitions
+to the end of the signature.}).
 
 \begin{remark}[Specialised Substitutions] \phantom{a}
 \labremark{scdefspecsub}
@@ -216,14 +229,14 @@ We consider all signature weakenings to be equal (i.e. every morphism
 We could alternatively build a syntax taking non-generalised
 (or ``specialised'')
 substitutions as primitive 
-(i.e. the signature contextualising the domain and range context
+(enforcing that the signatures contextualising the domain and range contexts
 must be the same, {|Tms : Ctx Ξ → Ctx Ξ → Set|}). If we committed to this 
 approach, we would have to add two distinct presheaf actions to |Ty| and |Tm| 
 (one for |Wk| and one for |Tms|), and also ensure |Tms| itself is a 
 displayed presheaf over signature weakenings.
 Our category of generalised substitutions can then be derived by pairing
 {|φ : Wk Φ Ψ|} and {|δ : Tms Δ Γ|} morphisms, with the overall effect
-of on terms being to take them from context |Γ| to context |Δ [ γ ]|.
+of on terms being to take them from context |Γ| to context |Δ [ φ ]|.
 
 We will take exactly this approach in the strictified syntax, where it is
 desirable for signature weakenings embedded in generalised substitutions to
