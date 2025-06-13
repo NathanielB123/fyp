@@ -1,6 +1,4 @@
-# Various Bits and Pieces Relating to my Final Year (Masters) Project at Imperial:
-
-# Local Rewrite Rules in Dependent Type Theory
+# Various Bits and Pieces Relating to my Final Year (Masters) Project at Imperial: Local Rewriting in Dependent Type Theory
 
 ## Guide:
 
