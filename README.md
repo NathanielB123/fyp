@@ -12,6 +12,6 @@
 
 - [Completion.hs](./Completion.hs): Implementations of ground completion and E-Graphs for first order terms, just to learn the concepts.
 
-### Note:
+## Note:
 
 Some of the Agda mechanisations (specifically the "strictified" syntaxes in the [Dependent](./Dependent/) folder, and any files that depend on them) require my fork of Agda to typecheck ([specifically, the `mutual-rewrite` branch pushed here](https://github.com/NathanielB123/agda/tree/mutual-rewrite)).
