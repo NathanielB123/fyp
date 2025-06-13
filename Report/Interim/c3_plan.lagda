@@ -104,7 +104,7 @@ by Evaluation) typechecker.
 
 \section{The Plan}
 
-I think in the immediate future, focussing on implementation is a good
+I think in the immediate future, focusing on implementation is a good
 idea, and I hope that a simple proof-of-concept will not actually be too
 difficult to get working. Dependent pattern matching is fiddly, but is also the
 only 

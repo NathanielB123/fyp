@@ -24,12 +24,18 @@ infixr 4 _∙~_
 \chapter{STLC Modulo Equations}
 \labch{simply}
 
+In this chapter, we prove decidability of conversion for STLC modulo 
+a fixed (global) set of Boolean
+equations via rewriting to completion. We end by discussing the challenges in
+adapting this proof to a setting where these equations can be introduced
+locally.
+
 \section{STLC with Boolean Equations}
 \labsec{simplebooleq}
 
 We begin our exploration of \SC/local equality reflection by
 studying convertibility of STLC terms modulo equations.
-We will focus on equations of an extremely restricted form:
+We will focus on equations of a restricted form:
 |t == b|, where |t| is a |𝔹|-typed term and |b| is a closed
 Boolean.
 
@@ -150,14 +156,18 @@ data _~_ : Tm Γ A → Tm Γ A → Set where
 We will package the set of equations with which we decide conversion modulo into
 \emph{equational contexts}. For our restricted class of equations, these take
 the form of lists of pairs of |𝔹|-typed terms
-and closed Booleans. Substituting equational contexts folds
-substitution over the LHS terms.
+and closed Booleans.
 
 \begin{code}
 data Eqs (Γ : Ctx) : Set where
   •        : Eqs Γ
   _▷_>eq_  : Eqs Γ → Tm Γ 𝔹 → Bool → Eqs Γ 
+\end{code}
 
+Substituting equational contexts folds
+substitution over the LHS terms.
+
+\begin{code}
 _[_]Eq : Eqs Γ → Tms[ q ] Δ Γ → Eqs Δ
 •              [ δ ]Eq = •
 (Ξ ▷ t >eq b)  [ δ ]Eq = (Ξ [ δ ]Eq) ▷ (t [ δ ]) >eq b
@@ -174,33 +184,57 @@ variable
 Conversion relative to a set of in-scope equations can then be defined
 inductively.
 
+%if False
 \begin{code}
 data EqVar :  Eqs Γ → Tm Γ 𝔹 → Bool → Set where
   ez  : EqVar (Ξ ▷ t >eq b) t b
   es  : EqVar Ξ t b₁ → EqVar (Ξ ▷ u >eq b₂) t b₁
-  
+\end{code}
+%endif
+
+\begin{code}
 data _⊢_~_ (Ξ : Eqs Γ) : Tm Γ A → Tm Γ A → Set where
-    -- Equivalence
+\end{code}
+
+First |_⊢_~_| should be an equivalence relation, congruent over
+all term formers.
+
+\begin{code}
   rfl~ : Ξ ⊢ t ~ t
   sym~ : Ξ ⊢ t₁ ~ t₂ → Ξ ⊢ t₂ ~ t₁
   _∙~_ : Ξ ⊢ t₁ ~ t₂ → Ξ ⊢ t₂ ~ t₃ → Ξ ⊢ t₁ ~ t₃
 
-  -- Computation
-  ⇒β   : Ξ ⊢ (ƛ t) · u   ~ t [ < u > ]
-  𝔹β₁  : Ξ ⊢ if TT  u v  ~ u
-  𝔹β₂  : Ξ ⊢ if FF  u v  ~ v
-
-  -- Local equations
-  eq   : EqVar Ξ t b → Ξ ⊢ t ~ ⌜ b ⌝𝔹
-
-  -- Congruence
   ƛ_   : Ξ [ wk ]Eq ⊢ t₁ ~ t₂ → Ξ ⊢ ƛ t₁ ~ ƛ t₂ 
   _·_  : Ξ ⊢ t₁ ~ t₂ → Ξ ⊢ u₁ ~ u₂ → Ξ ⊢ t₁ · u₁ ~ t₂ · u₂
   if   : Ξ ⊢ t₁ ~ t₂ → Ξ ⊢ u₁ ~ u₂ → Ξ ⊢ v₁ ~ v₂
        → Ξ ⊢ if t₁ u₁ v₁ ~ if t₂ u₂ v₂
 \end{code}
 
-Note that the rule for ``|if|'' here is not \smart in the sense of \SC: we
+It should also include the standard computation rules for |⇒| and |𝔹| types.
+
+\begin{code}
+  ⇒β   : Ξ ⊢ (ƛ t) · u   ~ t [ < u > ]
+  𝔹β₁  : Ξ ⊢ if TT  u v  ~ u
+  𝔹β₂  : Ξ ⊢ if FF  u v  ~ v
+\end{code}
+
+So far, this relation is identical to ordinary declarative β-conversion.
+We account for local equations by defining a type of evidence that 
+a particular equation, |t >eq b|, occurs in an equational
+context, |Ξ|: |EqVar Ξ t b|.
+
+\begin{spec}
+data EqVar :  Eqs Γ → Tm Γ 𝔹 → Bool → Set where
+  ez  : EqVar (Ξ ▷ t >eq b) t b
+  es  : EqVar Ξ t b₁ → EqVar (Ξ ▷ u >eq b₂) t b₁
+\end{spec}
+
+\begin{code}
+  eq   : EqVar Ξ t b → Ξ ⊢ t ~ ⌜ b ⌝𝔹
+\end{code}
+
+Note that the congruence rule for ``|if|'' here is not \smart in the sense 
+of \SC: we
 do not introduce equations on the scrutinee in the branches.
 
 \begin{spec}
@@ -236,6 +270,7 @@ That is, contexts in which |TT| and |FF| are convertible.
 def-incon : Eqs Γ → Set
 def-incon Ξ = Ξ ⊢ TT ~ FF
 \end{code}
+\end{definition}
 
 Again, under definitionally-inconsistent contexts, all terms are convertible.
 
@@ -256,7 +291,6 @@ STLC (that is, the absence of large elimination), we do not get a
 type-level equality collapse. Definitional inconsistency is therefore a bit less
 dangerous in the setting of STLC, but we must still keep the consequences it in 
 mind when deciding conversion.
-\end{definition}
 
 \begin{definition}[Equational Context Equivalence] \phantom{a}
 
@@ -335,7 +369,7 @@ while we do at least stay conservative over conversion
 \end{code}
 
 we find that the induced notion of algorithmic convertibility is much weaker
-that our declarative specification. Note that the LHS
+than our declarative specification. Problems arise from how the LHS
 terms in contextual equations need not themselves be irreducible, so e.g.
 in the equational context |• ▷ if TT TT v >eq false|, we can derive 
 |TT ~ FF|, but not |TT >* FF| (or |FF >* TT|)
@@ -437,6 +471,10 @@ already being a closed Boolean). We will now make this
 notion concrete, and name it \emph{spontaneous reduction} (|𝔹|-typed terms may
 ``spontaneously'' collapse to |TT| or |FF|).
 
+\sideremark{Recall that |¬is 𝔹?| here 
+ensures that |t| is not
+already a closed Boolean, preventing reductions like |TT >! TT|.}
+
 \begin{code}
 data _>!_ : Tm Γ A → Tm Γ A → Set where
   -- Computation
@@ -496,7 +534,8 @@ postulate
 %endif
 
 Under complete equational contexts |Ξ|, there are no critical pairs
-w.r.t. |Ξ ⊢_>_| (LHSs cannot overlap), so we can prove that reduction is 
+w.r.t. |Ξ ⊢_>_| (LHSs cannot overlap). Therefore, we can prove that 
+reduction is 
 confluent (ordinary
 β-reduction cases are dealt with by switching to parallel reduction
 \sidecite{takahashi1995parallel} - we know the new |rw| case can only apply if 
@@ -507,7 +546,7 @@ the term is otherwise irreducible from |Stk (Ξ - e) t|).
                → Σ⟨ w ∶ Tm Γ A ⟩× (Ξ ⊢ u >* w × Ξ ⊢ v >* w)
 \end{code} 
 
-Therefore, we can define algorithmic conversion and prove that declarative
+We can define algorithmic conversion and, via confluence, prove that declarative
 conversion is preserved.
 
 \begin{code}
@@ -534,7 +573,7 @@ open _⊢_<~>_
 <~>-pres : Complete Ξ → Ξ ⊢ t₁ ~ t₂ → Ξ ⊢ t₁ <~> t₂
 \end{code}
 
-Algorithmic of convertibility of stuck terms implies syntactic equality 
+Algorithmic convertibility of stuck terms implies syntactic equality 
 (|Stk<~>|), so 
 we can further derive uniqueness of normal forms (stuck terms under complete
 equational context reduction).
@@ -612,7 +651,7 @@ postulate
 w.r.t. |Complete| equational contexts) follows from decidability of syntactic
 equality on first-order datatypes.}
 
-\sideremark{|reduce| fully reduces terms w.r.t. |_⊢_>_|.}
+\sideremark{``|reduce|'' fully reduces terms w.r.t. |_⊢_>_|.}
 
 \begin{code}
   reduce          : Eqs Γ → Tm Γ A → Tm Γ A
@@ -674,7 +713,8 @@ contradiction
   where Ξ⊥ = • ▷ TT {Γ = •} >eq false
 \end{code}
 
-Completion in our setting should be \textit{partial}. We will either
+It follows that completion in our setting should be \textit{partial}. 
+We will either
 complete an equational environment, or discover a syntactically
 inconsistent equation like |TT >eq false|
 and conclude that it is definitionally inconsistent.

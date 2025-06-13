@@ -14,6 +14,7 @@ infix 4 _⊢_~_
 \end{code}
 %endif
 
+\pagebreak
 \section{Locally Introducing Equations}
 \labsec{localext}
 
@@ -64,7 +65,7 @@ though. As mentioned in \refsec{coprodeta}, known algorithms which can decide
 η-equality for positive types are quite inefficient (e.g. 
 renormalising terms $2^n$ times where $n$ is the number of distinct neutral
 Boolean subterms). I claim that we can take a smarter approach
-with |_⊢_~_|. Specifically, we could need to split on Boolean neutrals only
+with |_⊢_~_|. Specifically, we can split on Boolean neutrals only
 at stuck ``|if|''-expressions, and normalise the left and right branch
 just once under the corresponding equation (e.g. given |if t u v|, we must
 normalise  |u| under |t ~ TT|, but not |t ~ FF|).
@@ -147,7 +148,7 @@ local-equation-introducing ``|if|'' rule, open.
 We also leave discussion of how to deal
 with more general classes of equations (e.g. at types other than |𝔹|) 
 for the coming chapters, as there is not too much insight to be gained
-by focussing on the special case of simple types 
+by focusing on the special case of simple types 
 (in some ways, STLC
 makes such extensions more challenging, as the expressivity of dependent types
 gives us ways to encode many type formers in terms of simpler ones - e.g.

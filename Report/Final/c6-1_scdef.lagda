@@ -17,10 +17,17 @@ module Report.Final.c6-1_scdef where
 \chapter{Elaborating Smart Case}
 \labch{scdef}
 
+In this chapter, we describe a new type theory, named \SCDef which
+introduces equational assumptions at the level of global definitions. 
+We prove normalisation (by evaluation), and describe
+an elaboration algorithm to
+turn local \SC-like splits into top-level definitions.
+
 \section{A New Core Language}
+\labsec{scdefcore}
 
 To recap the findings of the previous chapter, 
-locally-introduced equations caused two main issues
+locally-introduced equations caused two main issues:
 \begin{itemize}
 \item Any restrictions on equations (enforced in order to retain decidability) 
       must
@@ -136,7 +143,7 @@ so they have different internal representations.
 In \SCDef, we pull essentially the same trick. We can rigorously study
 a core type theory which introduces equations via top-level definitions
 (proving soundness and normalisation), and then describe an \emph{elaboration}
-algorithm to take a surface language with an \SC-like construct, and
+algorithm to take a surface language with a \SC-like construct, and
 compile it into core \SCDef terms (by lifting \smart case-splits into
 top-level definitions).
 
@@ -338,7 +345,7 @@ be ill-typed ({|t₁ [ δ ] == t₂ [ δ ]|} may not hold at the call-site).
 Note that while each individual definition can only reflect one equation
 at a time, definitions can depend on each other linearly, and 
 preserve previous reflected equations (by asking for them in their
-argument telescopes), so nesting multiple equality reflections.
+argument telescopes), thus nesting multiple equality reflections.
 
 \subsubsection{Returning to Booleans}
 

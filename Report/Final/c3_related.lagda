@@ -142,7 +142,7 @@ As mentioned in the introduction, this work is largely inspired by, and is
 intended as a continuation of, Altenkirch
 et al.'s work on Smart Case \sidecite[*-1.5]{altenkirch2011case}. This work
 primarily
-focussed on pattern matching on booleans (i.e. only introducing equations
+focused on pattern matching on booleans (i.e. only introducing equations
 from neutral\remarknote{A "neutral" term is one comprising of a spine
 of elimination forms blocked on a variable.} boolean-typed terms to closed 
 boolean values). Even in this
@@ -424,7 +424,7 @@ In fact, presentations of coproduct
 η \sidecite{dougherty2000equality, altenkirch2001normalization} often include 
 analagous constructions to Smart Case constraint sets.
 
-Focussing on the case of booleans, with the simply-typed recursor
+Focusing on the case of booleans, with the simply-typed recursor
 |if : Tm Γ 𝔹 → Tm Γ A → Tm Γ A → Tm Γ A|,
 such an η-rule can be expressed as follows:
 

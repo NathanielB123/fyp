@@ -37,7 +37,6 @@ open +ValStkRec public
 +ValRec Γ A B ValA ValB (inl t) (yes _) = ValA t
 +ValRec Γ A B ValA ValB (inr t) (yes _) = ValB t
 
-
 Val : ∀ Γ A → Tm Γ A → Set
 
 +ValStk : ∀ Γ A B → Tm Γ (A +' B) → Set

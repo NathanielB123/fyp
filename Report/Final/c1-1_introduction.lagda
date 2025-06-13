@@ -178,25 +178,27 @@ a minimal dependent type theory featuring ``full'' \SC for Booleans,
 named \SCBool.
 Concretely, our contributions include:
 
-% TODO section references everywhere!
 \begin{itemize}
 \item A proof of decidability of STLC modulo |β|-conversion, plus a set of
       Boolean equations (specifically, equations between |𝔹|-typed terms 
-      and closed Booleans |TT|/|FF|).
+      and closed Booleans |TT|/|FF|): \refsec{simplebooleq}.
 \item A specification of a minimal dependently-typed language with \SC named
       \SCBool, including an appropriately-generalised notion of substitution
-      to account for contexts containing equational assumptions.
-\item Soundness of \SCBool, by constructing a model in Agda.
+      to account for contexts containing equational 
+      assumptions: \refsec{scboolsyntax}.
+\item Soundness of \SCBool, by constructing a model in 
+      Agda: \refsec{scboolsound}.
 \item A typechecking algorithm for \SCBool, including a proof-of-concept
-      implementation written in Haskell.
+      implementation written in Haskell: \refsec{typecheckingsc}.
 \item A specification of an alternative dependently-typed language supporting
       equational assumptions, but this time at the level of global 
-      \emph{definitions}, \SCDef, along with another soundness proof.
+      \emph{definitions}, \SCDef, along with another soundness proof:
+      \refsec{scdefcore}.
 \item Decidability of conversion for \SCDef, leveraging the technique of 
-      normalisation by evaluation (NbE).
+      normalisation by evaluation (NbE): \refsec{normscdef}.
 \item An elaboration algorithm from a surface language with \SC to \SCDef
       (compared to ``native'' \SC, we lose only congruence of conversion 
-      over case splits). 
+      over case splits): \refsec{elabscdef}. 
 \end{itemize}
 
 The formal results of this project are \emph{mostly} mechanised in Agda. 

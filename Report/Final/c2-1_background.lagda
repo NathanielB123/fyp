@@ -381,12 +381,14 @@ variables. E.g. the polymorphic identity function can be typed as
 id : ∀ {A : Set} → A → A
 \end{spec}
 
-To avoid Russell-style paradoxes, type theories that embed types in terms in 
+To avoid Russell-style paradoxes, type theories which embed types in terms in 
 this
 % David Davies suggests explaining what a universe hierarchy is, which is
 % reasonable but also, do I have time?
-fashion also need a concept of a universe hierarchy (the term |Type| itself 
-needs type, but |Type ∶ Type| is unsound \sidecite{hurkens1995simplification}). 
+fashion often employ the 
+concept of a universe hierarchy. The term |Type| itself 
+needs type, but |Set ∶ Set| is unsound \sidecite{hurkens1995simplification}.
+Instead we have |Set ∶ Set₁|, and |Set₁ ∶ Set₂| etc...
 We refer to the Agda documentation \sidecite{agda2024universe} for details of 
 how their implementation of universes works.
 

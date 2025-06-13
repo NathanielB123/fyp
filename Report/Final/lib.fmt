@@ -209,6 +209,7 @@
 %format Prop = "\Keyword{Prop}"
 %format Set  = Type
 %format Set₁ = Type ₁
+%format Set₂ = Type ₂
 
 % Some Haskell keywords
 %format type   = "\Keyword{type}"
@@ -376,6 +377,7 @@
 %format vᴺᶠ     = v ᴺᶠ
 %format Aᴺᶠ     = A ᴺᶠ
 %format Bᴺᶠ     = B ᴺᶠ
+%format infTyᴺᶠ = infTy ᴺᶠ
 
 %format tᴺᵉ′    = tᴺᵉ ′
 %format tᴺᶠ′    = tᴺᶠ ′
@@ -565,8 +567,6 @@
 %format Tms′            = Tms
 %format ε′              = ε
 %format vlookup′        = vlookup
-%format A′              = A
-%format B′              = B
 %format +ℕ′             = +ℕ 
 %format +ze′            = +ze
 %format bool-lemma′     = bool-lemma
@@ -576,6 +576,7 @@
 %format complete-pres′  = complete-pres
 %format complete-compl′ = complete-compl
 %format ,eq′            = ,eq
+%format >′*             = >*
 
 %format _+ℕ′_           = _ +ℕ′ _ 
 %format _,eq′_          = _ ,eq′ _
@@ -593,9 +594,10 @@
 %format wkeq     = wk "_{\leadsto}"
 %format wk<>eq   = wk<> "_{\leadsto}"
 %format wk<>eqTy = wk<>eq ᵀʸ
+%format wkeq^    = wk^ "_{\leadsto}"
+%format wkeq^Ty  = wkeq^ ᵀʸ
 
-
-%format <_>eq   = < _ >eq
+%format <_>>eq   = <_> >eq
 %format _,eq_   = _ ,eq "\!" _
 %format _^_>eq_ = _^_ >eq _
 %format _▷_>eq_ = _▷_ >eq _
@@ -655,3 +657,6 @@
 %format nd-step = N.D.-step
 
 %format map⊎ = map+
+
+%format fndThm-ƛ  = fndThm- ƛ
+%format fndThm-ƛ> = fndThm- ƛ >

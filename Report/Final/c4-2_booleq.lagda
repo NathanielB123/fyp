@@ -119,7 +119,8 @@ id {Γ = su Γ} = id {Γ = Γ} ^
 
 In this section, we will be dealing with quite a few distinct reduction
 relations at a fine-grained level of detail. To assist with this, we
-define generically the monotonic closure of term relations |_[_]>_|:
+define generically the monotonic closure of term relations, |_[_]>_|.
+This lets us lift term relations |_>_| over our various term formers.
 
 \begin{code}
 _[_]>_  : Tm Γ → (∀ {Γ} → Tm Γ → Tm Γ → Set) 
@@ -159,6 +160,8 @@ map>  : (∀ {Γ} {t u : Tm Γ} → t >₁ u → t >₂ u)
       → t [ _>₁_ ]> u → t [ _>₂_ ]> u
 \end{code}
 
+We can now define our reduction relations as a ``step'' relation containing 
+the interesting cases, lifted using |_[_]>|.
 Ordinary β-reduction can then just be defined as the monotonic closure
 of the computation rules for |⇒| and |𝔹|:
 
@@ -262,22 +265,25 @@ are valid.
 We can prove |𝔹*/nd-comm>| by checking all the cases for individual 
 |nd-step|s/single Boolean rewrites (|_>𝔹_|) and then extending over the
 monotonic closure of |nd-step| and transitive closure of |_>𝔹_|.
+The relevant cases are:
 \begin{itemize}
   \item When the |nd-step| is a |⇒β| contraction, then the Boolean rewrite
         (|_>𝔹_|)
         must have occurred inside the lambda body or the argument, and so we can
-        first β-reduce and then rewrite (potentially multiple times, if
-        specifically the rewrite took place inside the argument\remarknote{E.g.
+        first β-reduce and then rewrite (multiple times, if
+        the rewrite took place inside the argument
+        specifically\remarknote{E.g.
         given |u >𝔹 u′|, then we can get from |(ƛ x. f x x) u| to
         |f u′ u′| by first β-contracting to get |f u u| and then applying the
         rewrite twice.}) 
         to get back to the same term.
   \item When the step is a non-deterministic choice, the Boolean
-        rewrite must have occurred inside the scrutinee, LHS or RHS of the ``|if|''
+        rewrite must have occurred inside the scrutinee, LHS, or RHS, 
+        of the ``|if|''
         expression. We can instead perform the non-deterministic choice
-        before the rewrite and then either get back to the term immediately
-        (if the rewrite was inside the scrutinee or the dropped branch of
-        the ``|if|'') or apply the rewrite again to the retained branch.
+        before the rewrite, and then either get back to the term immediately
+        (if the rewrite was wither inside the scrutinee or the dropped branch of
+        the ``|if|''), or apply the rewrite again to the retained branch.
 \end{itemize}
 
 \sideremark{|_[_]𝔹>*| here witnesses a generalisation of |_>𝔹*_| being stable 

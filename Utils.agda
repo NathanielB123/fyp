@@ -11,7 +11,7 @@ open import Data.Product using (Σ; ∃; _×_; ∃-syntax)
 open import Relation.Binary.PropositionalEquality as EQ
   using ( _≡_; refl; erefl; cong; cong₂; subst; sym; subst-subst-sym
         ; subst-sym-subst; sym-cong; cong-app)
-  renaming (trans to infixr 4 _∙_)
+  renaming (trans to infixr 4 _∙_; J to ≡-elim)
   public
 open EQ.≡-Reasoning using (begin_; _≡⟨⟩_; _∎) public
 open import Relation.Binary.HeterogeneousEquality as HEQ
@@ -29,7 +29,7 @@ open import Data.Bool
   public
 open import Data.Sum 
   using (_⊎_) 
-  renaming (inj₁ to inl; inj₂ to inr; map to map⊎; map₁ to mapl; map₂ to mapr) 
+  renaming (inj₁ to inl; inj₂ to inr; map to map⊎; map₁ to mapl; map₂ to mapr)
   public
 open import Data.Nat using (ℕ) 
   renaming (zero to ze; suc to su; _⊔_ to _⊔ℕ_; _+_ to _+ℕ_; _*_ to _×ℕ_) 
@@ -43,15 +43,16 @@ open import Induction.WellFounded
 open Induction.WellFounded.Subrelation public
 open import Relation.Binary.Construct.Closure.Transitive 
   using (_∷_; TransClosure) 
-  renaming ([_] to ⟪_⟫; wellFounded to wellFounded+)
+  renaming ([_] to ⟪_⟫; wellFounded to wellFounded+; accessible to accessible+
+           ; _++_ to _∘⁺_)
   public
 open import Relation.Binary.Construct.Closure.Reflexive
   using (refl; ReflClosure)
   renaming ([_] to ⟪_⟫; map to map?)
   public
 open import Relation.Binary.Construct.Closure.ReflexiveTransitive
-  using (ε; Star)
-  renaming (_◅_ to _∷_; _◅◅_ to _∘*_; gmap to map*)
+  using (Star)
+  renaming (_◅_ to _∷_; _◅◅_ to _∘*_; gmap to map*; ε to rfl*)
   public
 open import Relation.Binary.Construct.Union
   using (_∪_)
@@ -62,6 +63,7 @@ open import Function
   using (_∘_; case_of_; flip) 
   public
 
+infix 1 Σ-syntax
 infixr 2 step-≡
 infix  1 begin≅_
 
@@ -79,7 +81,7 @@ private variable
   x y z : A
   i j k : Fin n
   r r₁ r₂ r₃ r₄ : A → A → Set ℓ
-  p : x ≡ y
+  p q : x ≡ y
 
 -- We add an extra |≡| to the right of |step-≡| as defined in the standard 
 -- library to make it easier to format
@@ -89,6 +91,11 @@ syntax step-≡ x p q = x ≡⟨ q ⟩≡ p
 
 begin≅_ : x HEQ.≅-Reasoning.IsRelatedTo y → x ≡ y
 begin≅ p = ≅→≡ (hbegin p)
+
+Σ-syntax : (A : Set ℓ₁) → (A → Set ℓ₂) → Set (ℓ₁ ⊔ℓ ℓ₂)
+Σ-syntax = Σ
+
+syntax Σ-syntax A (λ x → B) = Σ⟨ x ∶ A ⟩× B
 
 -- |dcong₂| that computes slightly better than the one in the standard library
 dcong₂ : ∀ {B : A → Set ℓ}
@@ -116,18 +123,25 @@ _[_∣_]_ : A → (A → A → Set ℓ₁) → (A → A → Set ℓ₂) → A �
 x [ r₁ ∣ r₂ ] y = (r₁ ∪ r₂) x y 
 
 _∷+_ : r x y → Star r y z → TransClosure r x z
-p ∷+ ε        = ⟪ p ⟫
+p ∷+ rfl*     = ⟪ p ⟫
 p ∷+ (q ∶> r) = p ∷ (q ∷+ r)
 
-pattern ⟪_⟫* p = p ∷ ε
+pattern ⟪_⟫* p = p ∷ rfl*
 
 ?to* : x [ r ]? y → x [ r ]* y
-?to* ⟪ p ⟫ = p ∷ ε
-?to* refl  = ε
+?to* ⟪ p ⟫ = p ∷ rfl*
+?to* refl  = rfl*
 
 flip* : x [ r ]* y → y [ flip r ]* x
-flip* ε       = ε
-flip* (p ∷ q) = flip* q ∘* (p ∷ ε)
+flip* rfl*    = rfl*
+flip* (p ∷ q) = flip* q ∘* (p ∷ rfl*)
+
+flip+ :  x [ r ]+ y → y [ flip r ]+ x
+flip+ ⟪ p ⟫   = ⟪ p ⟫
+flip+ (p ∷ q) = flip+ q ∘⁺ ⟪ p ⟫
+
+flipAcc+ : Acc _[ r ]+_ x → Acc (flip _[ flip r ]+_) x
+flipAcc+ (acc a) = acc λ p → flipAcc+ (a (flip+ p))
 
 ⟦_⟧𝔹 : Bool → Set
 ⟦ true  ⟧𝔹 = ⊤
@@ -138,6 +152,9 @@ is p x = ⟦ p x ⟧𝔹
 
 ¬is : (A → Bool) → A → Set
 ¬is p x = ⟦ ! p x ⟧𝔹
+
+sn⁺ : SN r x → SN (_[ r ]+_) x
+sn⁺ a = flipAcc+ (accessible+ _ a)
 
 record Box (P : Prop ℓ) : Set ℓ where
   constructor box
@@ -223,7 +240,14 @@ infix 4 _≡[_]≡_
 {-# DISPLAY _≡_ (coe p x) y = x ≡[ p ]≡ y #-}
 
 sym[] : coe p x ≡ y → coe (sym p) y ≡ x
-sym[] {p = refl} refl = refl
+sym[] {p = refl} = sym
+
+infixr 4 trs[]
+
+trs[] : x ≡[ p ]≡ y → y ≡[ q ]≡ z → x ≡[ p ∙ q ]≡ z
+trs[] {p = refl} {q = refl} = _∙_
+
+syntax trs[] {p = p} {q = q} p′ q′ = p′ [ p ]∙[ q ] q′
 
 shift : coe p x ≡ y → x ≡ coe (sym p) y
 shift p = sym (sym[] p)
@@ -236,6 +260,10 @@ data _+_+_ (A : Set ℓ₁) (B : Set ℓ₂) (C : Set ℓ₃) : Set (ℓ₁ ⊔�
   inl : A → A + B + C
   inm : B → A + B + C
   inr : C → A + B + C
+
+Bool-elim : ∀ (P : Bool → Set ℓ) (b : Bool) → P true → P false → P b
+Bool-elim P true  pTT pFF = pTT
+Bool-elim P false pTT pFF = pFF
 
 Bool-split : ∀ (b : Bool) → (b ≡ true → A) → (b ≡ false → A) → A
 Bool-split true  t f = t refl

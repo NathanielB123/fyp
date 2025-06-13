@@ -136,7 +136,7 @@ expressions to
 some
 extent via "|with|-abstractions" \sidecite[*5]{mcbride2004view, agda2024with}. 
 We will cover why this feature is not quite satisfactory (including for this 
-example) in \refsec{with}.}, and we are instead forced to do the 
+example) in \refsec{withabstr}.}, and we are instead forced to do the 
 equational reasoning manually:
 \sideremark[*12]{We can shorten these equational proofs by "code golfing"
 and avoiding the more readable, but also more verbose equational reasoning 

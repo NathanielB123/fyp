@@ -86,7 +86,7 @@ instance Ord Tm where
   -- We use a Knuth Bendix Ordering with 'approxSize' as our simplification
   -- order.
   -- i.e. We start by comparing w.r.t. simplification order (which must obey
-  -- congruence), then we compare head symbols (i.e. particular 'Tm' formation
+  -- monotonicity), then we compare head symbols (i.e. particular 'Tm' formation
   -- rule) and then finally we proceed lexicographically
   compare :: Tm -> Tm -> Ordering
   compare t u 

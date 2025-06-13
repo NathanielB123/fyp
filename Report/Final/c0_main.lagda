@@ -100,49 +100,46 @@ serve as a basis for future proof assistant development.
 \makeatother
 \end{center}
 \begin{quotation}
-TODO
-% I would like to thank:
-% \begin{itemize}
-%   \item Steffen van Bakel, for agreeing to supervise this project and trying
-%         his best to warn me about leaving the report-writing until the last
-%         minute.
-%   \item David Davies, for giving fantastically-detailed feedback on drafts
-%         of this report.
-%         I can only apologise for not finding the time to act on all of it.
-%   \item Thorsten Altenkirch and Philip Wadler, for giving me a massive
-%         confidence boost by inviting me to collaborate
-%         on ``Substitution Without Copy and Paste'' after I merely answered
-%         a couple questions on the Agda Zulip. 
-%   \item Honestly, pretty-much the whole type theory community, for 
-%         being so open to sharing work in progress and answering questions
-%         across the Zulips, Discords, Mastodon, StackExchange, mailing lists 
-%         etc.
-%         Some special shout-outs go to Simon Peyton Jones, András Kovács, 
-%         Conor McBride and Amélia Liao for creating some phenomenal learning
-%         resources. I also should thank Anja Petković Komel, Loïc Pujet
-%         and Théo Winterhalter for inspiring me to copy their use of the 
-%         |kaobook| LaTeX template. This report would look quite different if 
-%         not for you!
-%   \item A few more individuals from the type theory community,
-%         for answering some of my questions in ways that were directly related 
-%         to this project.
-%         That includes Guillaume Allais, who taught me the 
-%         ``don't mash the potato'' principle, Reed Mullanix, who suggested I
-%         look into extension types and Raphaël Bocquet, who resolved my 
-%         confusions with stabilised neutrals.
-%   \item My friends, for putting up with my constant rambling about
-%         dependent types for the past few years.
-%         I think Aaron, Daniel, Iurii, Jacob, Jyry, Sophia and Robin probably 
-%         faced the brunt of it. I also want to especially
-%         thank Alona; our late-night conversations about PL design during 
-%         2nd and 3rd year are a huge part of why I fell in love with this field.
-%   \item My family, for not only also having to put up with my type theory
-%         obsession, but also immediately supporting my pivot in future plans
-%         towards academia. Those plans are 
-%         admittedly looking a little shaky right now,
-%         but I extremely grateful that I can count on your encouragement
-%         regardless.
-% \end{itemize}
+I would like to thank:
+\begin{itemize}
+  \item Steffen van Bakel, for agreeing to supervise this project and trying
+        his best to warn me about leaving the report-writing until the last
+        minute.
+  \item David Davies, for giving fantastically-detailed feedback on drafts
+        of this report.
+        I can only apologise for not leaving enough time to act on all of it.
+  \item Thorsten Altenkirch and Philip Wadler, for giving me a huge
+        confidence boost by inviting me to collaborate
+        on ``Substitution Without Copy and Paste'' after
+        I answered just a couple questions on the Agda Zulip. 
+  \item Honestly, pretty-much the whole type theory community, for 
+        being so open to sharing work in progress and answering questions
+        across the Zulips, Discords, Mastodon, StackExchange, mailing lists 
+        etc.
+        A few people helped answer questions directly relevant to
+        this project, including Guillaume Allais, who taught me the 
+        ``don't mash the potato'' principle; Reed Mullanix, who suggested I
+        look into extension types and Raphaël Bocquet, who resolved my 
+        confusions with stabilised neutrals.
+        Some special shout-outs also go to Simon Peyton Jones, András Kovács, 
+        Conor McBride and Amélia Liao for producing some phenomenal
+        talks/learning resources. 
+        I also should thank Anja Petković Komel, Loïc Pujet
+        and Théo Winterhalter for inspiring me to copy their use of the 
+        |kaobook| LaTeX template!
+  \item My friends, for putting up with my constant rambling about
+        dependent types for the past few years.
+        I think Daniel, Iurii, Jacob, Jyry, Sophia and Robin probably 
+        faced the brunt of it. I also want to especially
+        thank Alona; our late-night conversations about PL design during 
+        2nd and 3rd year are a huge part of why I fell in love with this field.
+  \item My family, for not only also having to put up with my type theory
+        obsession, but also immediately supporting my pivot in future plans
+        towards academia. Those plans are 
+        admittedly looking a little shaky right now,
+        but I extremely grateful that I can count on your encouragement
+        regardless.
+\end{itemize}
 \end{quotation}
 \vspace*{\fill}
 
@@ -195,7 +192,12 @@ TODO
 %include c5-1_scbool.lagda
 %include c6-1_scdef.lagda
 %include c6-2_scdef.lagda
+%include c7-1_eval.lagda
+%include c8-1_decl.lagda
 
+\appendix
+
+%include c9-1_appendix.lagda
 
 %% bibliography
 % \bibliographystyle{apa}

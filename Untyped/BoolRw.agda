@@ -181,17 +181,17 @@ if* p q r = map* _ if₁ p ∘* map* _ if₂ q ∘* map* _ if₃ r
 _^𝔹 : δ >Tms𝔹* σ → (δ ^) >Tms𝔹* (σ ^)
 _⁺𝔹 : δ >Tms𝔹* σ → (δ ⁺) >Tms𝔹* (σ ⁺)
 
-p ^𝔹 = (p ⁺𝔹) , ε
+p ^𝔹 = (p ⁺𝔹) , rfl*
 
 _[_]𝔹* : ∀ (t : Tm Γ) → δ >Tms𝔹* σ → t [ δ ] >𝔹* t [ σ ]
 (` vz)     [ p , q ]𝔹* = q
 (` vs i)   [ p , q ]𝔹* = (` i) [ p ]𝔹*
 (t · u)    [ p ]𝔹*     = (t [ p ]𝔹*) ·* (u [ p ]𝔹*)
 (ƛ t)      [ p ]𝔹*     = ƛ* (t [ p ^𝔹 ]𝔹*)
-TT         [ p ]𝔹*     = ε
-FF         [ p ]𝔹*     = ε
+TT         [ p ]𝔹*     = rfl*
+FF         [ p ]𝔹*     = rfl*
 (if t u v) [ p ]𝔹*     = if* (t [ p ]𝔹*) (u [ p ]𝔹*) (v [ p ]𝔹*)
-_          [ refl ]𝔹*  = ε
+_          [ refl ]𝔹*  = rfl*
 
 _[]𝔹? : is 𝔹? t → is 𝔹? (t [ δ ])
 _[]𝔹? {t = TT} tt = tt
@@ -206,10 +206,10 @@ if₁ p []𝔹> = if₁ (p []𝔹>)
 if₂ p []𝔹> = if₂ (p []𝔹>)
 if₃ p []𝔹> = if₃ (p []𝔹>)
 
-pattern ⟪_⟫* p = p ∷ ε
+pattern ⟪_⟫* p = p ∷ rfl*
 
 _[]𝔹>* : t >𝔹* u → t [ δ ] >𝔹* u [ δ ]
-ε        []𝔹>* = ε
+rfl*     []𝔹>* = rfl*
 (p ∶> q) []𝔹>* = (p []𝔹>) ∶> (q []𝔹>*)
 
 refl    ⁺𝔹 = refl
@@ -220,13 +220,13 @@ _[_]𝔹>* {u = u} p q = (u [ q ]𝔹*) ∘* (p []𝔹>*)
 
 𝔹/nd-comm : t >𝔹 u → nd-step u v → ∃[ w ] nd-step t w × w >𝔹* v
 𝔹/nd-comm (l· (ƛ p))       ⇒β  = _ Σ, ⇒β Σ, ⟪ p []𝔹> ⟫*
-𝔹/nd-comm (·r {t = ƛ t} p) ⇒β  = _ Σ, ⇒β Σ, t [ refl {δ = id} , (p ∷ ε) ]𝔹*
-𝔹/nd-comm (if₁ p)          ndl = _ Σ, ndl Σ, ε
-𝔹/nd-comm (if₂ p)          ndl = _ Σ, ndl Σ, (p ∷ ε)
-𝔹/nd-comm (if₃ p)          ndl = _ Σ, ndl Σ, ε
-𝔹/nd-comm (if₁ p)          ndr = _ Σ, ndr Σ, ε
-𝔹/nd-comm (if₂ p)          ndr = _ Σ, ndr Σ, ε 
-𝔹/nd-comm (if₃ p)          ndr = _ Σ, ndr Σ, (p ∷ ε)
+𝔹/nd-comm (·r {t = ƛ t} p) ⇒β  = _ Σ, ⇒β Σ, t [ refl {δ = id} , ⟪ p ⟫* ]𝔹*
+𝔹/nd-comm (if₁ p)          ndl = _ Σ, ndl Σ, rfl*
+𝔹/nd-comm (if₂ p)          ndl = _ Σ, ndl Σ, ⟪ p ⟫*
+𝔹/nd-comm (if₃ p)          ndl = _ Σ, ndl Σ, rfl*
+𝔹/nd-comm (if₁ p)          ndr = _ Σ, ndr Σ, rfl*
+𝔹/nd-comm (if₂ p)          ndr = _ Σ, ndr Σ, rfl* 
+𝔹/nd-comm (if₃ p)          ndr = _ Σ, ndr Σ, ⟪ p ⟫*
 
 -- TODO - can we remove the duplication here?
 𝔹/nd-comm> : t >𝔹 u → u >nd v → ∃[ w ] t >nd w × w >𝔹* v
@@ -243,17 +243,17 @@ _[_]𝔹>* {u = u} p q = (u [ q ]𝔹*) ∘* (p []𝔹>*)
   = _ Σ, if₂ q′ Σ, map* _ if₂ p′
 𝔹/nd-comm> (if₃ p) (if₃ q) using _ Σ, q′ Σ, p′ ← 𝔹/nd-comm> p q 
   = _ Σ, if₃ q′ Σ, map* _ if₃ p′
-𝔹/nd-comm> (l· p)  (·r q)  = _ Σ, ·r q  Σ, (l· p  ∷ ε)
-𝔹/nd-comm> (·r p)  (l· q)  = _ Σ, l· q  Σ, (·r p  ∷ ε)
-𝔹/nd-comm> (if₁ p) (if₂ q) = _ Σ, if₂ q Σ, (if₁ p ∷ ε)
-𝔹/nd-comm> (if₁ p) (if₃ q) = _ Σ, if₃ q Σ, (if₁ p ∷ ε)
-𝔹/nd-comm> (if₂ p) (if₁ q) = _ Σ, if₁ q Σ, (if₂ p ∷ ε)
-𝔹/nd-comm> (if₂ p) (if₃ q) = _ Σ, if₃ q Σ, (if₂ p ∷ ε)
-𝔹/nd-comm> (if₃ p) (if₁ q) = _ Σ, if₁ q Σ, (if₃ p ∷ ε)
-𝔹/nd-comm> (if₃ p) (if₂ q) = _ Σ, if₂ q Σ, (if₃ p ∷ ε)
+𝔹/nd-comm> (l· p)  (·r q)  = _ Σ, ·r q  Σ, ⟪ l· p  ⟫*
+𝔹/nd-comm> (·r p)  (l· q)  = _ Σ, l· q  Σ, ⟪ ·r p  ⟫*
+𝔹/nd-comm> (if₁ p) (if₂ q) = _ Σ, if₂ q Σ, ⟪ if₁ p ⟫*
+𝔹/nd-comm> (if₁ p) (if₃ q) = _ Σ, if₃ q Σ, ⟪ if₁ p ⟫*
+𝔹/nd-comm> (if₂ p) (if₁ q) = _ Σ, if₁ q Σ, ⟪ if₂ p ⟫*
+𝔹/nd-comm> (if₂ p) (if₃ q) = _ Σ, if₃ q Σ, ⟪ if₂ p ⟫*
+𝔹/nd-comm> (if₃ p) (if₁ q) = _ Σ, if₁ q Σ, ⟪ if₃ p ⟫*
+𝔹/nd-comm> (if₃ p) (if₂ q) = _ Σ, if₂ q Σ, ⟪ if₃ p ⟫*
 
 𝔹*/nd-comm> : t >𝔹* u → u >nd v → ∃[ w ] t >nd w × w >𝔹* v
-𝔹*/nd-comm> ε        r = _ Σ, r Σ, ε
+𝔹*/nd-comm> rfl*     r = _ Σ, r Σ, rfl*
 𝔹*/nd-comm> (p <∶ q) r using _ Σ, r′  Σ, q′ ← 𝔹/nd-comm>  q r  
                            | _ Σ, r′′ Σ, p′ ← 𝔹*/nd-comm> p r′
   = _ Σ, r′′ Σ, (q′ ∘* p′)
@@ -321,7 +321,7 @@ snnd!> p ndᴬ (acc 𝒶rw) (inr q)
   = snnd! (p <∶ map> !-step𝔹 q) ndᴬ (𝒶rw q)
 
 snnd→snβ! : SNnd t → SNβ! t
-snnd→snβ! a = accessible (map⊎ (map> β⊆nd) (λ p → p)) (snnd! ε a (sn! _))
+snnd→snβ! a = accessible (map⊎ (map> β⊆nd) (λ p → p)) (snnd! rfl* a (sn! _))
 
 -- Unfortunately, while simply-typed terms are SN w.r.t. |_>nd_| (the proof is
 -- just a slight variation of the standard computability predicates argument for

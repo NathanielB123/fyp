@@ -14,6 +14,7 @@ module Report.Final.c6-2_scdef where
 
 \pagebreak
 \section{Normalisation}
+\labsec{normscdef}
 
 In the below section, we switch to use a strictified \SCDef syntax.
 Compared to the presentation with explicit substitutions, the 
@@ -188,6 +189,7 @@ just require that |tᴺᵉ| not be larger than any alternative β-neutral
 with the statement that |t| is also not convertible to a closed 
 Boolean given prior.}
 
+As in \hyperref[sec:finitaryrw]{Section 5.3.2 - Finitary Types}
 I think there are at least two possible solutions to here:
 \begin{itemize}
   \item We could keep the same definition of neutrals as above, and give
@@ -200,7 +202,7 @@ I think there are at least two possible solutions to here:
         % TODO CITE?
         To actually decide equality of normal forms, we then can use standard
         term rewriting approaches such as ground completion or E-Graphs
-        (the equational theory on normal forms is, up to coherence, a ground
+        (the equational theory on β-normal forms is, up to coherence, a ground
         TRS).
   \item Alternatively, we could attempt to fully normalise terms during NbE,
         by integrating ground completion directly.
@@ -643,7 +645,7 @@ Nf~  rfl~ rfl~ (π₂eq δ [ rfl~ ]~)
 This is why we had to embed equations into environments.
 After splitting on the Boolean, the RHS reduces to |TT|/|FF|, and if we project
 our the convertibility evidence the environment, specifically 
-|eval* Θᶜ δ ρ| (focussing
+|eval* Θᶜ δ ρ| (focusing
 on the |TT| case WLOG), we obtain
 
 \begin{spec}
@@ -735,6 +737,11 @@ move on to the topic of constructing these now.
 
 \pagebreak
 \section{Elaboration}
+\labsec{elabscdef}
+
+We first consider the task of generating |ValidTRS|s from a set of
+equational assumptions in a context, and then move on to presenting
+an elaboration algorithm which can turn \SC into \SCDef calls.
 
 \subsection{Syntactic Restrictions for Generating TRSs}
 \labsec{synrestrs}
@@ -851,7 +858,7 @@ with an untyped syntax resembling \SCBool, and write the algorithm
 in bidirectional style (\sidecite{dunfield2022bidir}), 
 with a mutually recursive |check| and |infer| (as in
 \sidecite{coquand1996algorithm}, and also my Haskell \SCBool typechecker
-(\secref{typecheckingsc}).
+(\refsec{typecheckingsc}).
 
 
 To account for local case splits being turned into new top level definitions,
@@ -874,22 +881,25 @@ data PreTm : Set where
 neutral term.}
 
 \begin{code}
+data NfTy : ∀ Γ → Ty {Ξ = Ξ} Γ → Set
+
 record InfTm (Γ : Ctx Ξ) : Set where
   constructor inf
+  pattern
   field
     {infSig}  : Sig
     infWk     : Wk infSig Ξ
     infTy     : Ty (Γ [ infWk ]𝒲Ctx)
+    infTyᴺᶠ   : NfTy (Γ [ infWk ]𝒲Ctx) infTy
     infTm     : Tm (Γ [ infWk ]𝒲Ctx) infTy
 
 record ChkTm (Γ : Ctx Ξ) (A : Ty Γ) : Set where
   constructor chk
+  pattern
   field
     {elabSig}  : Sig
     elabWk     : Wk elabSig Ξ
     elabTm     : Tm (Γ [ elabWk ]𝒲Ctx) (A [ elabWk ]𝒲Ty)
-
-data NfTy : ∀ Γ → Ty {Ξ = Ξ} Γ → Set
 
 check  : ValidTRS Γ → NfTy Γ A → PreTm → Maybe (ChkTm Γ A)
 infer  : ValidTRS Γ → PreTm → Maybe (InfTm Γ)
@@ -932,35 +942,55 @@ abstraction, etc.) is relatively standard. We just need to make sure to
 account for new top-level definitions generated during elaboration of
 subterms by composing the returned signature weakenings.
 
+(Un-annotated) λ-abstractions are not inferrable
 \begin{code} 
--- λ-abstractions are not inferrable
 infer Γᶜ (ƛ t)    = nothing
--- We can infer applications by inferring the LHS, checking it is a function
--- type and checking that the argument has the appropriate type
+\end{code}
+
+
+However, we can infer applications by first inferring the LHS, ensuring that 
+the synthesised
+type of the LHS is headed with |Π|, and checking
+also that the argument has the appropriate type
+\sideremark{Technically we should also account for the case where the 
+synthesised type of |t| is headed with a coercion..}
+\begin{code} 
 infer Γᶜ (t · u)  = do
-  inf φ₁ (Π A B) t′ ← infer Γᶜ t
+  inf φ₁ (Π A B) (Π Aᴺᶠ Bᴺᶠ) t′ ← infer Γᶜ t
     where _ → nothing
   let Γᶜ′    = Γᶜ [ φ₁ ]𝒲ᶜ
-  chk φ₂ u′  ← check Γᶜ′ (normTy Γᶜ′ A) u
-  just (inf (φ₁ ⨾𝒲 φ₂) (B [ φ₂ ]𝒲Ty [ < u′ > ]Ty) ((t′ [ φ₂ ]𝒲) · u′))
+  chk φ₂ u′  ← check Γᶜ′ Aᴺᶠ u
+  just (inf  (φ₁ ⨾𝒲 φ₂) 
+             _
+             (normTy (Γᶜ′ [ φ₂ ]𝒲ᶜ) ((B [ φ₂ ]𝒲Ty) [ < u′ > ]Ty))
+             ((t′ [ φ₂ ]𝒲) · u′))
+\end{code}
 
--- We can check λ-abstractions by checking the body has the expected type
--- (in the context extended by the domain)
+We can also check (un-annotated) λ-abstractions by checking the body has 
+the expected type
+(in the context extended by the domain)
+\begin{code} 
 check Γᶜ (Π Aᴺᶠ Bᴺᶠ)  (ƛ t) = do
   chk φ t′ ← check (Γᶜ [ wkᵀʰ ]ᶜ) Bᴺᶠ t
   just (chk φ (ƛ t′))
--- Of course, λ-abstractions are only typeable with Π-types
+\end{code}
+
+Of course, λ-abstractions are only typeable at Π-types
+\begin{code} 
 check Γᶜ _            (ƛ t) = nothing
--- We can check applications by first inferring a type, and then checking it
--- matches the expected one
--- Note that all inferrable terms can be checked with this approach
+\end{code}
+
+We can check applications by first inferring a type, and then checking it
+matches the expected one.
+Actually, all inferrable terms can be checked using this approach.
+\begin{code} 
 check {A = A} Γᶜ Aᴺᶠ  (t · u) = do
-  inf φ A′ tu′  ← infer Γᶜ (t · u)
-  Γ~ Σ, A~      ← convTy Γᶜ A′ (A [ φ ]𝒲Ty)
+  inf φ A′ _ tu′  ← infer Γᶜ (t · u)
+  Γ~ Σ, A~        ← convTy Γᶜ A′ (A [ φ ]𝒲Ty)
   just (chk φ (coe~ Γ~ A~ tu′))
 \end{code}
 
-The interesting part here is elaboration of \SIF.
+The interesting case here is really elaboration of \SIF.
 We first recursively check the subterms, then construct
 a new definition using these, and finally return a |call|
 expression which simply calls the definition.

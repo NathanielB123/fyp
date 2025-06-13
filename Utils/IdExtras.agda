@@ -11,7 +11,7 @@ infix 4 _≡ᴾ_
 infixr 4 _∙ᴾ_
 
 private variable
-  A B : Set ℓ
+  A B C : Set ℓ
   x y z : A
 
 data _≡ᴾ_ {A : Set ℓ} (x : A) : A → Prop ℓ where
@@ -85,7 +85,10 @@ Bool-splitᴾ true  t f = t refl
 Bool-splitᴾ false t f = f refl
 
 postulate
-  funextᴾ : ∀ {B : A → Set ℓ} {f g : ∀ x → B x} → (∀ x → f x ≡ᴾ g x) → f ≡ᴾ g
+  funextᴾ   : ∀ {B : A → Set ℓ} {f g : ∀ x → B x} → (∀ x → f x ≡ᴾ g x) → f ≡ᴾ g
+  funext    : ∀ {B : A → Set ℓ} {f g : ∀ x → B x} → (∀ x → f x ≡ g x) → f ≡ g
+  funextImp : ∀ {B : A → Set ℓ} {f g : ∀ {x} → B x} → (∀ x → f {x} ≡ g {x}) 
+            → _≡_ {A = ∀ {x} → B x} f g
 
 record ⊤ᴾ : Prop where
   constructor tt
@@ -98,3 +101,16 @@ record Σᴾ (A : Prop ℓ₁) (B : A → Prop ℓ₂) : Prop (ℓ₁ ⊔ℓ ℓ
     fst : A
     snd : B fst
 open Σᴾ
+
+cong∙ : ∀ {f : A → B} → cong f (p ∙ q) ≡ (cong f p ∙ cong f q)
+cong∙ {p = refl} = refl
+
+{-# REWRITE cong∙ #-}
+
+coe∙ : coe (p ∙ q) x ≡ coe q (coe p x) 
+coe∙ {p = refl} = refl
+{-# REWRITE coe∙ #-}
+
+sym∙ : sym (p ∙ q) ≡ (sym q ∙ sym p)
+sym∙ {p = refl} {q = refl} = refl
+{-# REWRITE sym∙ #-}

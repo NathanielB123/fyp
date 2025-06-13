@@ -21,23 +21,26 @@ open import Report.Final.c2-4_background
 
 In this chapter, we introduce and study a minimal dependently-typed language
 featuring a \SC-like elimination principle for Booleans. We name
-this language \SCBool. We will also detail the core ideas behind my Haskell
+this language \SCBool. Our large chunk of the chapter is dedicated to
+explaining why normalisation for this theory is so challenging,
+with examples.
+We will also detail the core ideas behind the Haskell
 typechecker for an extended version of this language.
+
+\section{Syntax}
+\labsec{scboolsyntax}
 
 When moving from STLC with local equations to dependent types, we note 
 while equations of course must depend on the context (i.e. the LHS or RHS
 terms can embed variables), it is also sometimes desirable for types
 in the context to depend on local equations. For example, in a context
-where we have|x ∶ 𝔹, y ∶ IF x 𝔹 A| and the (definitional) equation |x == TT| 
+where we have |x ∶ 𝔹, y ∶ IF x 𝔹 A| and the (definitional) equation |x == TT| 
 holds, we have |y ∶ 𝔹| (congruence of definitional equality), and so
 ought to be able bind |z ∶ IF y B C|.
 
 To support this, we fuse the ordinary and equational context: contexts
 can now be extended either with types (introducing new variables) or
 definitional equations (expanding conversion).
-
-\section{Syntax}
-\labsec{scboolsyntax}
 
 We build upon our quotiented, explicit-substitution syntax 
 laid out in \refsec{dtlc}. Again, we have four sorts:
@@ -99,12 +102,27 @@ Boolean equations which we expect to hold definitionally.
   _▷_>eq_  : ∀ Γ → Tm Γ 𝔹 → Bool → Ctx
 \end{code}
 
-% TODO: Huh???
-We actually recover 
+We need to define an analagous rule to |_,_| for context extension by
+equations. Concretely, the question is this: given a substitution 
+|δ : Tms Δ Γ|, what additional information do we need to map from
+|Γ| extended by a new equation, |Γ ▷ t > eq b|? Recall that local equations
+are used in terms/types to derive convertibility, so
+I claim that the appropriate notion here is that
+|t| and |b| are convertible in the new context |Δ| (i.e. with the substitution
+applied).
 
 \begin{code}
   _,eq_    : ∀ (δ : Tms Δ Γ) → t [ δ ] ≡[ Tm≡ refl 𝔹[] ]≡ ⌜ b ⌝𝔹 
            → Tms Δ (Γ ▷ t >eq b)
+\end{code}  
+
+Note that requiring convertibility evidence (as opposed to e.g. evidence of the
+substituted rewrite exactly occurs somewhere in |Δ|) enables removing rewrites
+from contexts when they become redundant. 
+
+We now give also the associated naturality laws and projections:
+
+\begin{code}
   ,eq⨾  : ∀  {δ : Tms Δ Γ} {σ : Tms Θ Δ} {t≡} 
         →    (δ ,eq t≡) ⨾ σ 
         ≡    (δ ⨾ σ) ,eq  (subst (Tm Θ) 𝔹[] (t [ δ ⨾ σ ]) 
@@ -125,19 +143,20 @@ We actually recover
   π₁eq⨾  : π₁eq (δ ⨾ σ) ≡ π₁eq δ ⨾ σ
 \end{code}
 
-% TODO: A proper explanation of how these substitutions work is probably
-% warranted, lol
+Note that |π₂eq id| allows us to make use of the most recently bound
+equation in the context as convertibility evidence. 
+
 We define derived notions of weakening contexts by assuming new equations, 
 |wkeq|, instantiating contextual equations with evidence of convertibility, 
-|<_>eq|,
+|<_>>eq|,
 and finally functoriality of context extension by equations, |_^_>eq_|
 
 \begin{code}
 wkeq : Tms (Γ ▷ t >eq b) Γ
 wkeq = π₁eq id
 
-<_>eq : t ≡ ⌜ b ⌝𝔹 → Tms Γ (Γ ▷ t >eq b)
-<_>eq {t = t} {b = b} t≡ 
+<_>>eq : t ≡ ⌜ b ⌝𝔹 → Tms Γ (Γ ▷ t >eq b)
+<_>>eq {t = t} {b = b} t≡ 
   =    id 
   ,eq  (subst (Tm _) 𝔹[] (t [ id ]) 
   ≡⟨ cong (subst (Tm _) 𝔹[]) (shift [id]) ⟩≡
@@ -161,21 +180,24 @@ _^_>eq_  : ∀ (δ : Tms Δ Γ) t b
 \end{code}
 
 We also prove some equations about how these new substitution operations
-commute.
+commute. These are very similar to familiar laws pertaining to
+context extension by types, rather than equations: weakening commutes
+with lifting over the new equation, and weakening followed by instantiation
+is identity.
 
 \begin{code}
-wk^    : wkeq ⨾ (δ ^ t >eq b) ≡ δ ⨾ wkeq
+wkeq^    : wkeq ⨾ (δ ^ t >eq b) ≡ δ ⨾ wkeq
 
-wk<>eq    : ∀ {t≡ : t ≡ ⌜ b ⌝𝔹} → wkeq ⨾ < t≡ >eq ≡ id {Γ = Γ}
+wk<>eq   : ∀ {t≡ : t ≡ ⌜ b ⌝𝔹} → wkeq ⨾ < t≡ >>eq ≡ id {Γ = Γ}
 \end{code}
 
 %if False
 \begin{code}
-wk^Ty  : A [ wkeq ]Ty [ δ ^ t >eq b ]Ty ≡ A [ δ ]Ty [ wkeq ]Ty
+wkeq^Ty  : A [ wkeq ]Ty [ δ ^ t >eq b ]Ty ≡ A [ δ ]Ty [ wkeq ]Ty
 wk<>eqTy  : ∀ {t≡ : t ≡ ⌜ b ⌝𝔹} 
-          → A [ wkeq {b = b} ]Ty [ < t≡ >eq ]Ty ≡ A
+          → A [ wkeq {b = b} ]Ty [ < t≡ >>eq ]Ty ≡ A
 wk<>eqTm  : ∀ {t≡ : t ≡ ⌜ b ⌝𝔹}
-          → u [ wkeq {b = b} ] [ < t≡ >eq ] 
+          → u [ wkeq {b = b} ] [ < t≡ >>eq ] 
           ≡[ Tm≡ refl (wk<>eqTy {t≡ = t≡}) ]≡ u
 \end{code}
 %endif
@@ -186,7 +208,7 @@ wk<>eqTm  : ∀ {t≡ : t ≡ ⌜ b ⌝𝔹}
 -- unification is very unpredictable lol.
 -- Making the proofs abstract helps a bit.
 abstract
-  wk^ {δ = δ} {t = t} {b = b} = 
+  wkeq^ {δ = δ} {t = t} {b = b} = 
     wkeq ⨾ (δ ^ t >eq b)
     ≡⟨ sym π₁eq⨾ ⟩≡
     π₁eq (id ⨾ (δ ^ t >eq b))
@@ -195,7 +217,7 @@ abstract
     ≡⟨ π₁eq, ⟩≡
     δ ⨾ wkeq ∎
 
-  wk^Ty = [][]Ty ∙ refl [ wk^ ]Ty≡ ∙ sym [][]Ty
+  wkeq^Ty = [][]Ty ∙ refl [ wkeq^ ]Ty≡ ∙ sym [][]Ty
 
   wk<>eqTy {t≡ = t≡} = [][]Ty ∙ refl [ wk<>eq {t≡ = t≡} ]Ty≡ ∙ [id]Ty
 
@@ -213,12 +235,12 @@ postulate
 
   if[]  : if  t u v [ δ ] 
         ≡ if  (subst (Tm Δ) 𝔹[] (t [ δ ])) 
-              (subst (Tm _) wk^Ty (u [ δ ^ t >eq true   ]))
-              (subst (Tm _) wk^Ty (v [ δ ^ t >eq false  ]))
+              (subst (Tm _) wkeq^Ty (u [ δ ^ t >eq true   ]))
+              (subst (Tm _) wkeq^Ty (v [ δ ^ t >eq false  ]))
   𝔹β₁  : if TT u v 
-       ≡[ Tm≡ refl (sym (wk<>eqTy {t≡ = refl})) ]≡ u [ < refl >eq ]
+       ≡[ Tm≡ refl (sym (wk<>eqTy {t≡ = refl})) ]≡ u [ < refl >>eq ]
   𝔹β₂  : if FF u v
-       ≡[ Tm≡ refl (sym (wk<>eqTy {t≡ = refl})) ]≡ v [ < refl >eq ]
+       ≡[ Tm≡ refl (sym (wk<>eqTy {t≡ = refl})) ]≡ v [ < refl >>eq ]
 \end{code}
 
 As with our simply-typed equational contexts, \SCBool contexts can become
@@ -234,7 +256,6 @@ incon Γ = _≡_ {A = Tm Γ 𝔹} TT FF
 \end{code}
 \end{definition}
 
-% TODO: We should probably move this earlier
 % Importantly, note that |incon| is derivable even when all equations in the
 % context individually are not def.-inconsistent (i.e. are not
 % |TT >rw false| or |FF >rw true|). For example 
@@ -245,23 +266,19 @@ incon Γ = _≡_ {A = Tm Γ 𝔹} TT FF
 
 % TODO Have now moved this earlier. Let's just ref (maybe remind in the margin?)
 
-\begin{definition}[Equality collapse]\phantom{a}
-
-In the setting of dependent types, we define our usual notion of 
-equality collapse to be at the level of types.
+Recall from \refremark{eqcollapse} that definitionally inconsistent contexts
+lead to equality collapse: are types become convertible (assuming large
+elimination of Booleans).
 
 \begin{code}
 collapse : Ctx → Set
 collapse Γ = ∀ (A B : Ty Γ) → A ≡ B
-\end{code}
-\end{definition}
 
-Equality collapses in definitionally inconsistent contexts by the same
-argument as usual (building a chain of equations 
-{|u ≡ if TT u v ≡ if FF u v ≡ v|}, but this time using large |IF|).
-
-\begin{code}
 incon-collapse : incon Γ → collapse Γ
+\end{code}
+
+%if False
+\begin{code}
 incon-collapse Γ! A B = 
   A
   ≡⟨ sym IF-TT ⟩≡
@@ -271,47 +288,44 @@ incon-collapse Γ! A B =
   ≡⟨ IF-FF ⟩≡
   B ∎
 \end{code}
+%endif
 
-\begin{example}[Definitional Inconsistency Enables Self-Application] \phantom{a}
-\labexample{definconselfapp}
-
-Equality collapse at the type level is more dangerous than the simply-typed
-analogue. Under definitional equality of all types, we have that, e.g.
-|A ⇒ A == A|, which means we can type self-application and easily write
-looping terms such as {|(ƛ (x ∶ A). x x) (ƛ (x ∶ A). x x)|}.
+As an example of how the substitution calculus of \SCBool works,
+we will prove also that definitional inconsistency implies the collapse
+of the term equality.
 
 \begin{code}
-_[_]! : incon Γ → Tms Δ Γ → incon Δ
-Γ! [ δ ]! = 
-  TT
-  ≡⟨ sym[] TT[] ⟩≡ 
-  subst (Tm _) 𝔹[] (TT [ δ ])
-  ≡⟨ cong (subst (Tm _) 𝔹[]) (Γ! [ refl ]≡') ⟩≡ 
-  subst (Tm _) 𝔹[] (FF [ δ ])
-  ≡⟨ FF[] ⟩≡ 
-  FF ∎
+tm-collapse : Ctx → Set
+tm-collapse Γ = ∀ A (u v : Tm Γ A) → u ≡ v
 
-self-app : incon Γ → Tm Γ (Π A (A [ wk ]Ty))
-self-app {A = A} Γ! 
-  = ƛ subst  (Tm _) wk<>Ty 
-             (subst (Tm _) (incon-collapse (Γ! [ wk ]!) _ _) vz · vz)
+tm-incon-collapse : ∀ Γ → incon Γ → tm-collapse Γ
 \end{code}
-\end{example}
 
-
-% TODO GO BACK TO OLD EQUALITY COLLAPSE DISCUSSION AND AMEND THAT ACTUALLY
-% NORMALISATION IN THE PRESENCE OF INCONSISTENCY ISN'T GAME OVER
-
-We can of course also derive that definitionally inconsistent contexts
-collapse the term equality also, though dealing with the explicit substitutions
-clutters the argument somewhat.
-
-For example, the |u| and |v| inside the ``|if|'' must be weakened to account for 
+Note that, the |u| and |v| inside the ``|if|'' must be weakened to account for 
 the new 
 local equation, and contracting the ``|if|'' requires explicitly instantiating this
 equation with a substitution. Our |wk<>eq| lemma from earlier is exactly
 what we need to show that the composition of these two actions has
 no ultimate effect.
+
+\begin{code}
+tm-incon-collapse Γ p A u v = 
+  u
+  ≡⟨ sym (subst-subst-sym wk<>eqTy) ⟩≡
+  subst (Tm Γ) (sym (wk<>eqTy {t≡ = refl}) ∙ wk<>eqTy {t≡ = refl}) u
+  ≡⟨ cong (subst (Tm Γ) wk<>eqTy) (sym[] (wk<>eqTm {t≡ = refl})) ⟩≡
+  subst (Tm Γ) wk<>eqTy (u [ wkeq ] [ < refl >>eq ])
+  ≡⟨ sym[] (𝔹β₁ {u = u [ wkeq ]} {v = v [ wkeq ]}) ⟩≡
+  if TT  (u [ wkeq ]) (v [ wkeq ])
+  ≡⟨ cong (λ □ → if □ (u [ wkeq ]) (v [ wkeq ])) p ⟩≡
+  if FF  (u [ wkeq ]) (v [ wkeq ])
+  ≡⟨ shift 𝔹β₂ ⟩≡
+  subst (Tm Γ) wk<>eqTy (v [ wkeq ] [ < refl >>eq ])
+  ≡⟨ cong (subst (Tm Γ) wk<>eqTy) (shift (wk<>eqTm {t≡ = refl})) ⟩≡
+ subst (Tm Γ) (sym (wk<>eqTy {t≡ = refl}) ∙ wk<>eqTy {t≡ = refl}) v
+  ≡⟨ subst-subst-sym wk<>eqTy ⟩≡
+  v ∎
+\end{code}
 
 % Given |_≡_ {A = Tm Γ 𝔹} TT ≡ FF|, we are tasked with proving 
 % |t ≡ u| for arbitrary terms |t u : Tm Γ A|. The key idea is to follow the chain
@@ -322,29 +336,6 @@ no ultimate effect.
 % rewrite, and contracting the ``|if|'' requires explicitly instantiating this
 % rewrite with another substitution. Our |wk<>eq| lemma from earlier is exactly
 % what we need to show that these substitutions ultimately have no effect.
-
-\begin{code}
-tm-collapse : Ctx → Set
-tm-collapse Γ = ∀ A (u v : Tm Γ A) → u ≡ v
-
-tm-incon-collapse : ∀ Γ → incon Γ → tm-collapse Γ
-tm-incon-collapse Γ p A u v = 
-  u
-  ≡⟨ sym (subst-subst-sym wk<>eqTy) ⟩≡
-  subst (Tm Γ) (sym (wk<>eqTy {t≡ = refl}) ∙ wk<>eqTy {t≡ = refl}) u
-  ≡⟨ cong (subst (Tm Γ) wk<>eqTy) (sym[] (wk<>eqTm {t≡ = refl})) ⟩≡
-  subst (Tm Γ) wk<>eqTy (u [ wkeq ] [ < refl >eq ])
-  ≡⟨ sym[] (𝔹β₁ {u = u [ wkeq ]} {v = v [ wkeq ]}) ⟩≡
-  if TT  (u [ wkeq ]) (v [ wkeq ])
-  ≡⟨ cong (λ □ → if □ (u [ wkeq ]) (v [ wkeq ])) p ⟩≡
-  if FF  (u [ wkeq ]) (v [ wkeq ])
-  ≡⟨ shift 𝔹β₂ ⟩≡
-  subst (Tm Γ) wk<>eqTy (v [ wkeq ] [ < refl >eq ])
-  ≡⟨ cong (subst (Tm Γ) wk<>eqTy) (shift (wk<>eqTm {t≡ = refl})) ⟩≡
- subst (Tm Γ) (sym (wk<>eqTy {t≡ = refl}) ∙ wk<>eqTy {t≡ = refl}) v
-  ≡⟨ subst-subst-sym wk<>eqTy ⟩≡
-  v ∎
-\end{code}
 
 \section{Soundness}
 \labsec{scboolsound}
@@ -403,7 +394,8 @@ at the cost of having to repeat it).
          ⟦ FF ⟧Tm ∎) ρ
 \end{spec}
 
-To interpret ``smart'' ``|if|'', we define an analagous operation in our metatheory
+To interpret \smart ``|if|'', we define an analagous operation in our 
+metatheory
 that takes a propositional equality instead: the Boolean ``splitter''.
 
 % TODO: This could maybe go in the preliminaries/related work...
@@ -503,8 +495,8 @@ postulate
 \end{code}
 %endif
 
-Soundness itself than holds as usual: by passing the empty environment to
-the interpreted proof of |𝟘|:
+Soundness itself can be proved as usual: by passing the empty environment to
+the interpreted proof of |Id 𝔹 TT FF|.
 
 \begin{code}
 sound : ¬ Tm • (Id 𝔹 TT FF)
@@ -527,7 +519,7 @@ In \SCBool,
 checking whether the equational context can be completed before reducing
 is even more important, given under definitionally inconsistent contexts,
 terms that loop w.r.t. β-reduction can be defined 
-\refexample{definconselfapp}. 
+(\refexample{definconselfapp}). 
 We need to be careful to only
 ever reduce terms after we have completed at least the set of equations that
 their typing directly depends on.
@@ -559,8 +551,8 @@ we reduce \mbox{|(if x (ƛ _. TT) z) (if y z TT)|} w.r.t. this TRS,
 we get a self-application! 
 
 \sideremark{Technically, self-application does not immediately imply the
-existence of reduction looping, but we can easily repeat this 
-constructor to obtain Ω (\refremark{eqcollapse}).}
+existence of reduction loops, but we can easily repeat this 
+construction to obtain Ω (\refexample{definconselfapp}).}
 
 \begin{spec}
 (if x (ƛ _. TT) z) (if y z TT) 
@@ -594,49 +586,51 @@ inconsistency, so we can avoid blindly reducing.
 % is decidable, perhaps using such an approach, but do not have time in
 % this project to investigate further. 
 
+\pagebreak
 \subsection{Type Theory Modulo (Boolean) Equations}
 
 \sideremark{Note that difficulties associated with completion can in principle
 be avoided by requiring the set of equations to satisfy completion criteria
 by construction. In this setting, our problem here is effectively a special
-case of \sidecite[*4]{cockx2021taming}.\\
+case of \cite{cockx2021taming}.\\
 Unfortunately, when moving to locally-introduced equations, relying on
 the LHSs all being mutually irreducible is not really feasible. As we
 will discuss in \refsec{depbeyondbool}, any restrictions on equations 
 must be stable under substitution, and irreducibility of LHSs does not
-satisfy this criteria.}
+satisfy this criteria.}\sideblankcite{cockx2021taming}
 
 A nice first-step towards normalisation for \SCBool would be
 to attempt to prove decidability of conversion for for dependent types
 modulo a fixed (global) set of Boolean equations. We can arrive at an explicit 
-syntax for this problem by just replacing \SCBool's ``smart ``|if|'''' with the
+syntax for this problem by just replacing \SCBool's \SIF with the
 ordinary dependent one\remarknote{Note that in such a setting, we can consider
-a vastly restricted subset of \SCBool's substitutions, where the sub-context
+a vastly restricted subset of \SCBool's substitutions, where the 
+region of the context
 up to the last equational assumption always remains constant, and no new
-equations can be added.\\
-Specifically, we can define restricted weakenings which only
-append types (never equations) to the context, then replace the 
-terminal substitution |ε : Tms Δ •| with an embedding of these weakenings.
-\nocodeindent
-%if False
-\begin{code}
-postulate
-\end{code}
-%endif
-\begin{code}
-  Wk : Ctx → Ctx → Set
-  id𝒲   : Wk Γ Γ
-  _⁺𝒲_  : Wk Δ Γ → Wk (Δ ▷ A) Γ 
-
-  Tms′  : Ctx → Ctx → Set
-  ε′    : Wk Δ Γ → Tms′ Δ Γ
-\end{code}
-\resetcodeindent
-We also should change |_,eq_|, |π₁eq| and |π₂eq|. General substitutions
-should not be able to extend the context with new equations, but we do still
-want equations defined earlier in the context to apply everywhere, so switching
-back to a de Bruijn variable-like |EqVar| rule for reflecting equational
-assumptions seems natural.
+equations can be added.
+% Specifically, we can define restricted weakenings which only
+% append types (never equations) to the context, then replace the 
+% terminal substitution |ε : Tms Δ •| with an embedding of these weakenings.
+% \nocodeindent
+% %if False
+% \begin{code}
+% postulate
+% \end{code}
+% %endif
+% \begin{code}
+%   Wk : Ctx → Ctx → Set
+%   id𝒲   : Wk Γ Γ
+%   _⁺𝒲_  : Wk Δ Γ → Wk (Δ ▷ A) Γ 
+% 
+%   Tms′  : Ctx → Ctx → Set
+%   ε′    : Wk Δ Γ → Tms′ Δ Γ
+% \end{code}
+% \resetcodeindent
+% We also should change |_,eq_|, |π₁eq| and |π₂eq|. General substitutions
+% should not be able to extend the context with new equations, but we do still
+% want equations defined earlier in the context to apply everywhere, so switching
+% back to a de Bruijn variable-like |EqVar| rule for reflecting equational
+% assumptions seems natural.
 %TODO Code for this??
 }.
 
@@ -667,9 +661,9 @@ For example (working internally, in a context where |b ∶ 𝔹| and
 |IF b A (A ⇒ A) ⇒ A|.
 
 \begin{spec}
-ƛ (y ∶ IF b A (A ⇒ A)). 
-  (if [b′. IF b′ A (A ⇒ A) ⇒ A ⇒ A]  b (ƛ _. x)  y)
-  (if [b′. IF b′ A (A ⇒ A) ⇒ A]      b y         x)
+ƛ  (y ∶ IF b A (A ⇒ A)). 
+   (if [b′. IF b′ A (A ⇒ A) ⇒ A ⇒ A]  b (ƛ _. x)  y)
+   (if [b′. IF b′ A (A ⇒ A) ⇒ A]      b y         x)
 \end{spec}
 
 The untyped projection of this term is just
@@ -700,18 +694,38 @@ This puts us essentially back to square-one. We know to normalise
 \SCBool, we need to do completion, but completion can only be justified by
 making progress w.r.t. to
 some well-founded order, and our best candidate from STLC does not work. 
-I think one potential route forwards could be to define a TRS
+Perhaps one potential route forwards could be to define a TRS
 for an \SCBool context as a list of Boolean rewrites, plus a small-step
 relation covering the steps of completion (reducing a LHS, removing 
 a redundant equation, concluding definitional inconsistency from an inconsistent
-one). We could then aim to prove that 
+one).
+
+Another difficulty with \SCBool is that we must account for weakening the
+context by equations when recursing on the syntax (specifically, 
+when recursing into the LHS and RHS branches of \SIF). Strong
+normalisation defined as just accessibility w.r.t. the reduction relation
+is clearly not stable under extending the context with new 
+Boolean equations (the new equations can unlock new reductions)!
+One route forwards here could be take inspiration from the
+\emph{positively-characterised} neutral forms of
+\sidecite{sterling2021normalization, gratzer2022controlling}. There, neutral
+forms being unstable w.r.t. renamings was dealt with by pairing an
+inductively defined neutral with a function from evidence that the neutral
+becomes reducible (is \emph{destabilised}) in some renamed context
+to a normal form. I think applying a similar idea to strong normalisation 
+(parameterising accessibility over all thinned contexts) could
+assist a strong normalisation proof for \SCBool similarly.
 
 \subsection{Beyond Booleans}
 \labsec{depbeyondbool}
 
-A major motivating factor for my ``giving-up'' on \SCBool (on top of the
-challenges previously listed) is that going far beyond Boolean equations appears
-impossible.
+On top of the prior-mentioned issues, \SCBool's scope is somewhat limited.
+Specifically, generalising the \SC construct more general local equality
+reflection, admitting a larger class of equations, appears impossible.
+
+% A major motivating factor for my ``giving-up'' on \SCBool (on top of the
+% challenges previously listed) is that going far beyond Boolean equations appears
+% impossible.
 
 As covered in \refremark{scloceqref}, when we start generalising \SC, it is
 useful to view it through the lens of local equality reflection. 
@@ -726,9 +740,9 @@ reflected equation is no longer valid.
 
 \subsubsection{Neutral Types}
 
-This has significant consequences. One set of equations we may 
+This has significant consequences. One class of equations we may 
 aim to
-support are equations between neutral terms of neutral type. 
+support are equations between arbitrary terms of neutral type. 
 For example,
 in a context with variables {|b ∶ 𝔹|} and {|x ∶ IF b A B|},
 such that the term {|t ∶ Π b. IF b A B|} is typeable (and |t b| is neutral),
@@ -769,15 +783,33 @@ motivated work such as \sidecite{allais2013new}. Being restricted only to
 Boolean equations is unnacceptable!
 
 \subsubsection{Finitary Types}
+\labsec{finitaryrw}
 
 Going a little beyond our Boolean equations
 appears to be achievable to some extent though. 
 The first obvious equality-reflection-motivated 
-generalisation is to allow equations between |𝔹|-typed neutral terms. Assuming
-a normalisation proof of \SCBool based on completion, extending it to 
-account for neutral rewrites, oriented w.r.t. some term ordering should not be
-challenging (neutral equations are arguably better-behaved than 
-ones ending in closed Booleans, given they cannot unblock new |β|-reductions).
+generalisation is to allow |𝔹|-typed equations where the RHS is not
+restricted to be a closed Boolean. Assuming an irreducible LHS and RHS,
+the new equations here are all between neutral terms of |𝔹|-type,
+and can be dealt with either directly via completion (using a term
+ordering on neutrals to orient them appropriately) or (as 
+exchanging neutral terms
+cannot unblock β-reductions) conversion modulo these equations can be
+delayed until after β-reduction (and then decided
+using any approach we like - perhaps ground term rewriting,
+perhaps E-Graphs). 
+
+Note that the subject reduction issues we encountered with equations
+of neutral type do not crop up here, because while substitutions
+might unblock the LHS or RHS and allow it to reduce, this reduction
+can only ever produce another |𝔹|-typed neutral term or a closed Boolean
+(though we still would have to repeat completion after substitution).
+
+% equations between |𝔹|-typed neutral terms. Assuming
+% a normalisation proof of \SCBool based on completion, extending it to 
+% account for neutral rewrites, oriented w.r.t. some term ordering should not be
+% challenging (neutral equations are arguably better-behaved than 
+% ones ending in closed Booleans, given they cannot unblock new |β|-reductions).
 
 By extending our language with dependent pairs (|Σ|-types) with strict |η|, 
 we also get sum/coproduct-typed equations ``for free'' via a similar argument to 
@@ -790,9 +822,38 @@ in₁  t = TT  , t
 in₂  t = FF  , t
 \end{spec}
 Equations of the form |t == in₁ u| at type |A + B| can now be decomposed into 
-a Boolean equation |π₁ t == true| and a |A|-typed equation |π₂ t == u|. 
+a Boolean equation |π₁ t == true| and an |A|-typed equation |π₂ t == u|. 
 Of course, this approach only works if the |A|-typed equation is itself
-valid, and equations between neutrals |t == u|
+valid. 
+
+\begin{example}[Decomposing Coproduct Equations] \phantom{a}
+
+I find it is interesting that taking this encoding can deal with rewrites
+that otherwise appear like they should inevitably loop. For example,
+consider the equations
+\begin{spec}
+t >eq in₁ (case t TT FF)
+\end{spec}
+where |t| is some neutral 
+term of type |𝔹 + 𝔹|. Without decomposing using the above
+encoding, we appear to be stuck. The rewrite must be oriented towards
+|in₁ (case t TT FF)| or we risk missing β-reductions for case expressions
+blocking on |t|, but because |t| is also a subterm of the RHS, this
+rewriting process appears to have no end.
+
+If we decompose this using the encoding above, and η-expand the RHS, we get 
+\begin{spec}
+(π₁ t , π₂ t) >eq (TT , π₂ (case t TT FF))
+\end{spec}
+This can be decomposed into the Boolean equation |π₁ t >eq TT| and
+the neutral equation at |𝔹|-type |π₂ t ~ π₂ (case t TT FF)|.
+Under a reasonable term ordering (that is, one which is a monotonic
+simplification ordering), we would probably expect the latter equation
+to be oriented |π₂ (case t TT FF) >eq π₂ t|, but given both sides are neutral,
+this reorienting is fine!
+\end{example}
+
+Equations between neutrals |t == u|
 of type |A + B| are unfortunately a bit more problematic:
 the first |π₁ t == π₂ u| component
 is fine, assuming validity of neutral Boolean equations, but |π₂ t == π₂ u|
@@ -801,15 +862,66 @@ explained above, is hard to justify.
 
 \subsubsection{Infinitary Types}
 
-We finally spend a bit of time considering infinitary types.
+We can attempt to use a similar generic encoding to deal with infinitary
+types such as natural numbers, |ℕ|. By considering the underlying functor,
+we can decompose inductive types into a fixpoint operation.
 
-TODO - INFINITARY TYPES (I HAVE SOME REALLY OLD NOTES ON DISCORD USING A 
-DEDICATED FIXPOINT TYPE THAT I COULD TALK ABOUT HERE)
+\begin{spec}
+fixℕ    : 𝟙 + ℕ → ℕ
+unfixℕ  : ℕ → 𝟙 + ℕ
+\end{spec}
 
+Using this decomposition, and assuming a definitional η rule
+|n == fixℕ (unfixℕ n)|, the equation |n ~ su m| is equivalent to
+
+\begin{spec}
+-- Original
+n ~ su m
+-- η-expanding |fix|
+fixℕ (unfixℕ n) ~ fixℕ (in₂ m)
+-- η-expanding |Σ|
+fixℕ (π₁ (unfixℕ n) , π₂ (unfixℕ n)) ~ fixℕ (false , m)
+\end{spec}
+
+which can be decomposed into the two equations
+
+\begin{spec}
+π₁ (unfixℕ n) >eq  false
+
+π₂ (unfixℕ n) ~    m
+\end{spec}
+
+However, with infinitary types, we do need to be a bit more careful, as
+this decomposition process can end up producing infinitely-many equations.
+
+\begin{spec}
+n ~ su n
+-- η-expanding |fix| and |+|
+fixℕ (π₁ (unfixℕ n) , π₂ (unfixℕ n)) ~ fixℕ (false , n)
+-- Decomposing
+π₁ (unfixℕ n) >eq  false
+
+π₂ (unfixℕ n) ~    n
+-- But now if we η-expand |n| on the RHS...
+π₂ (unfixℕ n) ~ fixℕ (π₁ (unfixℕ n) , π₂ (unfixℕ n))
+-- ...the first decomposed rewrite applies!
+π₂ (unfixℕ n) ~ fixℕ (false , π₂ (unfixℕ n))
+-- And we are left with the same structure of equation as we got from initially
+-- η-expanding
+\end{spec}
+
+Intuitively, the problematic cases here all arise when one side of the
+equation occurs as a subterm of the other. We might hope to do a sort of
+``occurs check'' to explicitly prevent this, but we again hit issues
+with stability substitution. |n ~ su x| might pass the occurs check, but 
+after applying the substitution |n / x| it certainly does not.
+
+\pagebreak
 \section{Typechecking Smart Case}
 \labsec{typecheckingsc}
 
-We end this section with a description of the \SCBool typechecker implemented
+We end this section with a short description of the \SCBool 
+typechecker implemented
 in Haskell as a component of this project. As explained previously in 
 \refsec{scboolnormfail}, I do not know how to prove normalisation of
 \SCBool, and therefore do not claim that this typechecker is complete.
@@ -827,15 +939,15 @@ might actually abuse this inconsistency are quite rare in practice (the
 an actual universe hierarchy, and concerns with universes are pretty 
 orthogonal to the new features of \SCBool).
 
-
 Other than the extensions to specifically support \SIF,
 the implementation of \SCBool is pretty standard. Following
 \sidecite{coquand1996algorithm}, it implements bidirectional typechecking
 in terms of mutually recursive |infer| and |check| functions, and
 decides convertibility of types using normalisation by evaluation (NbE).
-\sideremark{We also explicitly maintain a slightly more suspect invariant:
+\sideremark{We also explicitly maintain a slightly more unusual invariant:
 that terms do not contain ``obviously ill-typed'' β-redexes. That is, 
-introduction rules in scrutinee position are always of the appropriate
+introduction rules in scrutinee position are always associated with
+the appropriate
 type former.\\\\Assuming a correct implementation, this invariant is
 completely reasonable (it is a subset of terms being well-typed in general),
 but alone it is definitely not necessarily preserved over operations
@@ -843,7 +955,7 @@ such as substitution or reduction. The compromise being struck here is
 essentially that Haskell's type system is not powerful enough to model
 full intrinsically-typed syntax, so I am encoding this 
 weaker invariant and then coercing (technically unsafely) when necessary.
-It is somewhat unclear whether this is a good idea.}
+It is somewhat unclear whether this was a good idea.}
 To guard against mistakes in the implementation, it also makes extensive use
 of GADTs (including singleton encodings \sidecite{lindley2013hasochism}) 
 to maintain invariants, including that
@@ -865,17 +977,17 @@ well-scoped de Bruijn variables) and normal/neutral forms do not contain
 % being a partial language, does allow us to |unsafeCoerce| between arbitrary
 % types.
 
-\sideremark{The optimisations I decided to make here were generally motivated
+When implementing NbE in a partial language, we can take a couple 
+shortcuts\remarknote{The optimisations I decided to make here were 
+generally motivated
 by simplicity rather than performance. There is certainly 
-a huge amount of potential
+a lot of potential
 to optimise further, e.g. by using a more efficient variable representation
 than unary de Bruijn indices, using de Bruijn levels in values,
 switching from metalanguage closures
 to first-order ones, eliminating the overheads associated with singleton 
 encodings by |unsafeCoerce|-ing more often, using more efficient data 
-structures, unboxing etc.}
-
-When implementing NbE in a partial language, we can take a couple shortcuts:
+structures, unboxing etc.}:
 \begin{itemize}
 \item Rather than defining values as a type family on object-language types,
       and defining quoting and unquoting by recursion on types, we
@@ -885,19 +997,168 @@ When implementing NbE in a partial language, we can take a couple shortcuts:
 \end{itemize}
 
 The novel part of the typechecker is dealing with the local equations.
-We support these by tracking a map from neutrals to values and looking up
-neutrals in the map when unquoting. To support extending the context with
-new equations, we interleave evaluation and completion, and if the
-context does end up definitionally inconsistent, we replace the term
-with a dedicated piece of syntax |Absrd| (guaranteeing convertibility
-of all such terms, and guarding against the danger of evaluating
-under definitionally inconsistent contexts. 
+We explain the implementation of this aspect in more detail.
 
-There is some infrastructure in place for supporting a wider class of
-equations that those of the form |t ~ b|, though keeping in mind
-the problems discovered in \refsec{depbeyondbool}, I am wary about how
-feasible it is to actually support this (e.g. without losing
-desirable properties such as subject reduction).
+To track equations, we store a map of rewrites, |EqMap g|, 
+from neutrals to values, with the invariant that all neutral LHSs
+are stuck w.r.t. all other rewrites. We pair this map with a list
+of values associated with every variable in scope to form 
+generalised environments, |Env d g|
+
+% \sideremark{Technically, the actual Haskell code defines
+% |EqMap g| as |[(Ne g, UnkVal g)]|. |UnkVal g| is
+% just a small implementation detail with how
+% we are maintaining the no-ill-typed-β-redexes invariant, unrelated
+% to the core typechecking algorithm. In the below code snippets, we
+% have hidden a lot of these sorts of encoding details.}
+
+\begin{spec}
+type EqMap g = [(Ne g, Val g)]
+type Env d g = (Vals d g, EqMap d)
+\end{spec}
+
+Unquoting neutral terms during evaluation corresponds exactly to looking
+up the neutral in the map. In the case the lookup fails (no rewrite
+applies), we just embed the neutral into |Val| directly (for simplicity, 
+we do not support η-conversion, though adding support for η of functions
+by tweaking equality testing of neutral/normal forms should be 
+possible \sidecite{lennon2022eta})
+
+\begin{spec}
+lookupNe :: EqMap g -> Ne g -> Val g
+lookupNe es t = fromMaybe (Ne t) (lookup t es)
+
+appVal :: EqMap g -> Val g -> Val g -> UnkVal g
+appVal es (Ne t) u = lookupNe es (App t u)
+\end{spec}
+
+To support extending the context with
+new equations, we interleave evaluation and completion. Specifically, to
+evaluate \SIF, we add the relevant equation between the scrutinee
+and |TT|/|FF| to the environment in which we evaluate each branch.
+
+\begin{spec}
+addEq  :: Env d g -> Val d -> Val d 
+       -> Maybe (Env d g)
+
+smrtIfVal  :: Env g2 g1 -> Maybe (Val g2) -> Val g2 
+           -> Tm g1 -> Tm g1 
+           -> Val g2
+smrtIfVal r _ TT      u  _  = Ex (eval r u)
+smrtIfVal r _ FF      _  v  = Ex (eval r v)
+smrtIfVal r m (Ne t)  u  v
+  |  rT  <- addEq r (Ne t) TT
+  ,  rF  <- addEq r (Ne t) FF
+  ,  u'  <- evalOrAbsrd rT u
+  ,  v'  <- evalOrAbsrd rF v 
+  = lookupNe (eqs r) (SmrtIf m t u' v')
+
+eval r (SmrtIf m t u v)
+  = smrtIfVal r m' t' u v
+  where  m' = fmap (eval r) m
+         t' = eval r t
+\end{spec}
+
+\sideremark{Dedicated absurd syntax is partially inspired by Agda's
+impossible patterns.}
+
+Note that |addEq| is partial in order to account for the context 
+possibly becoming
+definitionally inconsistent (|Nothing| means ``def. inconsistent''). 
+To guard against the danger of evaluating 
+under such
+contexts, and make the behaviour of the typechecker more predictable, 
+we introduce dedicated syntax for ``absurd'' terms in def. inconsistent
+contests (``|!|'' or |Absrd|). We regard using any term other than
+|!| in a def. inconsistent (as well as using |!| in
+\emph{consistent} contexts) to be a type error. We always check terms
+a typeable before evaluating them, so evaluation
+should never encounter this case.
+
+\begin{spec}
+evalOrAbsrd (Just r)  t      = eval r t
+evalOrAbsrd Nothing   Absrd  = Absrd
+evalOrAbsrd Nothing   _      = __IMPOSSIBLE__
+\end{spec}
+
+Adding equations to the environment calls into completion, which itself 
+operates by repeatedly
+iterating over the set of equations, evaluating LHSs w.r.t. all other equations,
+until a fixed point is reached (as mentioned in \refsec{scboolnormfail},
+we need to be careful here to not evaluate under sets of rewrites that
+might be definitionally inconsistent).
+
+\begin{spec}
+complete :: Env g g -> Maybe (Env g g)
+complete r = iterMaybeFix complStep r
+
+addEq (vs, es) t u = do
+  r'   <- addRw (mkEq t u) (idVals, es)
+  r''  <- complete r'
+  pure (evalVals r'' vs, eqs r'')
+\end{spec}
+
+Similarly to evaluation, inference for \SIF adds new equations to the
+environment
+before recursively typechecking the branches. We of course must check
+that terms in def. inconsistent branches are absurd, though unlike
+evaluation though, failing this check throws a human-readable type error
+(as opposed to raising an internal exception).
+
+\begin{spec}
+checkMaybeAbsurd :: Ctx g -> Maybe (Env g g) -> Ty g -> Tm g -> TCM ()
+checkMaybeAbsurd g  (Just r)  a  t      = check g r a t
+checkMaybeAbsurd _  Nothing   _  Absrd  = pure ()
+checkMaybeAbsurd _  Nothing   _  t      = throw 
+  ("Body in inconsistent contexts must be absurd, but was instead " 
+  <> show t)
+
+infer g r (SmrtIf (Just m) t u v) = do
+  check g r  U  m
+  check g r  B  t
+  let t'  = eval r t
+  let rT  = addEq r t' TT
+  let rF  = addEq r t' FF
+  checkMaybeAbsurd g rT  m u
+  checkMaybeAbsurd g rF  m v
+  let m' = eval r m
+  pure m'
+\end{spec}
+
+Note that while type inference for \SIF does not require a motive 
+parameterised over
+the scrutinee, it still does require an expected type to check at (|Just m|
+above).
+We support optionally annotating \SIF expressions with their return type,
+but to take advantage of the type we are checking at if it is known,
+|check| adds annotations before calling ``|infer|''
+
+\begin{spec}
+check g r a t = case t of
+  SmrtIf Nothing t' u' v' -> do 
+    _ <- infer g r (SmrtIf (Just a) t' u' v')
+    pure ()
+\end{spec}
+
+In retrospect, having ``|infer|'' erase annotations and call into
+``|check|'' for the actual typechecking logic would
+have probably been a bit neater, but this approach also works.
+
+% If the context ever becomes definitionally inconsistent, we
+
+
+%  we replace the term
+% with a dedicated piece of syntax |Absrd| (guaranteeing convertibility
+% of all such terms, and guarding against the danger of evaluating
+% under definitionally inconsistent contexts. 
+
+
+
+% There is some infrastructure in place for supporting a wider class of
+% equations that those of the form |t ~ b|, though keeping in mind
+% the problems discovered in \refsec{depbeyondbool}, I am wary about how
+% feasible it is to actually support this (e.g. without losing
+% desirable properties such as subject reduction).
 
 % \subsection{Bidirectional Typechecking}
 % 

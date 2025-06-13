@@ -334,7 +334,7 @@ reduction).
 \subsubsection{From the Standard Model to Presheaves}
 
 To derive a structurally-recursive normalisation algorithm,
-our attention be focussed on the case for application.
+our attention be focused on the case for application.
 Recall that when aiming to produce |Nf Γ A|s directly by recursion on our 
 syntax, we failed to derive a structurally recursive algorithm because there is 
 no analogue of \mbox{|_·_ : Tm Γ (A ⇒ B) → Tm Γ A → Tm Γ B|} on normal forms.

@@ -489,7 +489,7 @@ substitutions is nice for two reasons:\newline
 of single substitutions.\newline
 2. Higher-order encodings of substitutions (i.e. as functions) do not scale to 
 dependently-typed syntax (without "very-dependent types" 
-\sidecite[*2]{hickey1996formal, altenkirch2023munchhausen})}
+\sidecite[*2]{hickey1996formal, altenkirch2022munchhausen})}
 
 
 % ---------------------------------------------------------------------------- %

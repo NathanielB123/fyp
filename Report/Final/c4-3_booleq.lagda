@@ -25,7 +25,8 @@ infix 4 _>nd_
 We now return to the world of simply typed terms in order to prove that
 all such terms are strongly normalising w.r.t. non-deterministic reduction.
 For this, we will use the technique of logical relations (also
-known as computability or reducibility candidates). The specific proof 
+known as computability \sidecite{tait1967computability} 
+or reducibility candidates). The specific proof 
 we attempt is based on Girard's proof of strong normalisation
 for STLC in chapter 6 of \sidecite{girard1989proofs}, 
 translated into Agda by András Kovács \sidecite{kovacs2020strong}.
@@ -178,7 +179,7 @@ the syntax following \sidecite{altenkirch2025copypaste}, so to justify this
 decision, we merely need to reflect these propositional equations as 
 definitional ones (by conservativity of ETT over ITT 
 \sidecite{hofmann1995conservativity, winterhalter2019eliminating} 
-we in principle lose nothing by simplifying the presentation in this way).
+we, in principle, lose nothing by simplifying the presentation in this way).
 
 We recall the definition of non-deterministic reduction.
 
@@ -338,10 +339,10 @@ fndThm : ∀ (t : Tm Γ A) → Ps Δ Γ δ → P Δ A (t [ δ ])
 
 The fundamental theorem is proved by induction on terms, similarly to
 evaluation in NbE. We require that it is possible to derive strong
-normalisation from computability, |P-SN|, and that if all immediate
+normalisation from computability (|P-SN|) and that if all immediate
 reducts of a term (not headed by |ƛ|-abstraction) are computable, then the 
-original term must be also, |P<|. Both of these lemmas are proved
-by induction on types, similarly to quoting and unquoting in NbE.
+original term must be also (|P<|). These lemmas resemble quoting and
+unquoting in NbE.
 
 \begin{code}
 ƛ? : Tm Γ A → Bool
@@ -405,7 +406,7 @@ expressions is a little more complicated. We repeatedly appeal to
 induct w.r.t. reduction order in the cases where a subterm
 is reduced. When we finally hit |⇒β| or |ndl|/|ndr|, we return
 computability of the reduct. To carry along computability evidence until
-this point, we need that computability is stable under reduction, |P>|.
+this point, we also need that computability is stable under reduction, |P>|.
 
 \begin{code}
 P> : t₁ >nd t₂ → P Γ A t₁ → P Γ A t₂
@@ -452,7 +453,7 @@ We now prove the remaining lemmas by recursion on types.
         applying computability of |⇒|-typed terms to a fresh variable, and then
         taking advantage of how strong normalisability is stable under 
         taking subterms
-        and renaming to get back to |SN| of the original |⇒|-typed ter,.
+        and renaming to get back to |SN| of the original |⇒|-typed term.
 \end{itemize}
 
 
