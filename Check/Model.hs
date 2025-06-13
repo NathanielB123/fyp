@@ -96,7 +96,7 @@ pattern VZ = FZ
 pattern VS i = FS i
 {-# COMPLETE VZ, VS #-}
 
-type data ParSort = B | U | Pi | Id | Bot | V |   Absrd
+type data ParSort = B | U | Pi | Id | Bot | V | Absrd
 
 -- 'Neu'tral or 'Par'tisan
 type data Sort = Neu | Par ParSort
@@ -165,7 +165,7 @@ data Model d q g where
   -- Of course, this prevents us from trying to enforce equality of sorts
   -- in places where terms of def equal types are expected (e.g. the branches
   -- of an 'If', but I think this is more trouble than it's worth anyway)
-  Absrd :: Model Syn (Par Absrd) g
+  Absrd :: Model q (Par Absrd) g
 
 type Tm  q = Model Syn (Par q)
 type Ty    = Tm U
@@ -200,8 +200,8 @@ instance Show (Model Syn q g) where
   show (Transp _ p t)   = "transp " <> parens (show p) <> " " <> parens (show t)
   show (Expl _ p)       = "! " <> parens (show p)
   show (Var i)          = "`" <> show i
-  show TT               = "True"
-  show FF               = "False"
+  show TT               = "TT"
+  show FF               = "FF"
   show (Id _ x y)       = parens (show x) <> " = " <> parens (show y)
   show (Rfl _)          = "Refl"
   show Absrd            = "!"
@@ -377,12 +377,29 @@ unify (Id _ x1 y1) (Id _ x2 y2) = unifies $ conv x1 x2 && conv y1 y2
 -- 'rfl's with def equal types must be def equal themselves
 unify (Rfl _) (Rfl _) = DefUnify
 unify (Ne t1) (Ne t2) = unifies $ convNe t1 t2
-unify _ _ = Unknown
+unify Absrd   Absrd   = DefUnify
+-- This is a fun edge case. When we compare neutral LHSs in our rewrite map
+-- to a normalised term, the normalised term my contain 'Absrd' in places
+-- where that rewrite LHS does not (because the rewrite LHS has not been
+-- normalised w.r.t. itself).
+-- I think just unifying 'Absrd' with everything should be fine (we
+-- know we are in a definitionally inconsistent context) 
+unify Absrd   _       = DefUnify
+unify _       Absrd   = DefUnify
+
+-- unify Absrd   u       = __IMPOSSIBLE__ 
+--   $ "Tried to unify 'Absrd' with " <> show u
+-- unify t       Absrd   = __IMPOSSIBLE__ 
+--   $ "Tried to unify 'Absrd' with " <> show t
+
+unify _       _       = Unknown
 
 -- Neutrals are either definitionally equal or unknown
 convNe :: Sing SNat g => Ne g -> Ne g -> ConvJud
 convNe (AppNe t1 u1) (AppNe t2 u2) = convNe t1 t2 && conv u1 u2
 convNe (IfNe _ t1 u1 v1) (IfNe _ t2 u2 v2) 
+  = convNe t1 t2 && conv u1 u2 && conv v1 v2
+convNe (SmrtIfNe _ t1 u1 v1) (SmrtIfNe _ t2 u2 v2)
   = convNe t1 t2 && conv u1 u2 && conv v1 v2
 convNe (TranspNe _ p1 t1) (TranspNe _ p2 t2) = convNe p1 p2 && conv t1 t2
 convNe (ExplNe _ p1) (ExplNe _ p2) = convNe p1 p2
@@ -416,3 +433,4 @@ reify FF         = FF
 reify U          = U
 reify B          = B
 reify Bot        = Bot
+reify Absrd      = Absrd

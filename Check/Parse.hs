@@ -143,6 +143,7 @@ pCommonTm
   =   parens pTm
   <|> pU <|> pB <|> pBot
   <|> pTT <|> pFF
+  <|> pAbsrd
   <|> (Var <$> pVar)
 
 pParensTm :: Parsec Tm

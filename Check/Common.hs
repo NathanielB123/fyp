@@ -36,5 +36,5 @@ appendError :: String -> TCM a -> TCM a
 appendError _ (Success x) = Success x
 appendError s (Failure e) = Failure (s <> "\n  - " <> e)
 
-__IMPOSSIBLE__ :: a
-__IMPOSSIBLE__ = error "ICE: Something went wrong!"
+__IMPOSSIBLE__ :: String -> a
+__IMPOSSIBLE__ s = error $ "ICE: Something went wrong! " <> s

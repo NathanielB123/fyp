@@ -159,7 +159,7 @@ evalVals _ Emp          = Emp
 addEq :: Sing SNat d => Env d g -> Val q d -> Val r d 
       -> Maybe (Env d g)
 addEq (vs, es) t u = do
-  r' <- addRw (mkEq t u) (idVals, es)
+  r'   <- addRw (mkEq t u) (idVals, es)
   r''  <- complete r'
   pure (evalVals r'' vs, eqs r'')
 
@@ -193,12 +193,11 @@ smrtIfVal :: Sing SNat g2
 smrtIfVal r _ TT         u _ = Ex $ eval r u
 smrtIfVal r _ FF         _ v = Ex $ eval r v
 smrtIfVal r m (Ne t) u v
-  | Just rT <- addEq r (Ne t) TT
-  , Just rF <- addEq r (Ne t) FF
-  , u'      <- eval rT u
-  , v'      <- eval rF v 
+  | rT <- addEq r (Ne t) TT
+  , rF <- addEq r (Ne t) FF
+  , u' <- evalOrAbsrd rT u
+  , v' <- evalOrAbsrd rF v 
   = lookupNe (eqs r) $ SmrtIf m t u' v'
-  | otherwise = __IMPOSSIBLE__
 
 jVal :: Sing SNat g 
      => EqMap g -> Body Sem U g -> Val Id g -> Val q g -> UnkVal g
@@ -252,6 +251,13 @@ evalBody r (Clo t)
                (t wk1 (thinEqMap wk2 es) (thin wk2 u))
   where d = vLen r
 
+evalOrAbsrd :: (Sing SNat g2, Sing SSort q) 
+            => Maybe (Env g2 g1) -> Model d q g1 -> PresVal q g2
+evalOrAbsrd (Just r) t     = eval r t
+evalOrAbsrd Nothing  Absrd = Absrd
+evalOrAbsrd Nothing  _     
+  = __IMPOSSIBLE__ "Tried to evaluate non-'Absrd' in def-incon context"
+
 eval :: (Sing SNat g2, Sing SSort q) 
      => Env g2 g1 -> Model d q g1 -> PresVal q g2
 eval r (Var i)   = presTM fill $ envLookup i r
@@ -291,7 +297,7 @@ eval r (Transp m p t) = presTM fill $ jVal (eqs r) m' p' t'
 eval r (Expl m p) = presTM fill $ explVal (eqs r) m' p'
   where m' = eval r <$> m
         p' = evalPres r p
-eval _ Absrd = __IMPOSSIBLE__
+eval _ Absrd = __IMPOSSIBLE__ "Tried to evaluate an 'Absrd'!"
 
 notConvErr :: (Show a, Show b) => a -> b -> Error
 notConvErr t u = quotes (show t) <> " and " <> quotes (show u)

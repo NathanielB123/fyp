@@ -34,6 +34,15 @@ check t a = do
   a''    <- Sanity.checkOfSort [] SU a'
   Check.check Nil (Emp, []) a'' t''
 
+eval :: String -> String -> TCM String
+eval t a = do
+  t'     <- runParser (pTm <* "\n") t
+  a'     <- runParser (pTm <* "\n") a
+  Ex t'' <- Sanity.check [] t'
+  a''    <- Sanity.checkOfSort [] SU a'
+  Check.check Nil (Emp, []) a'' t''
+  pure $ show $ Check.eval @Z (Emp, []) t''
+
 parseTest :: String -> TCM (Pre.Tm)
 parseTest = runParser (pTm <* "\n")
 
@@ -55,3 +64,13 @@ boolLemmaSpecTm = "\\f. sif (f TT) then Rfl else (sif (f FF) then Rfl else Rfl) 
 -- >>> check boolLemmaSpecTm boolLemmaSpecTy
 -- Success: ()
 
+absrdTy = "B -> B \n"
+absrdTm = "\\b : B. sif { B } (sif b then TT else FF) then (sif b then TT else !) else FF \n"
+-- >>> check absrdTm absrdTy
+-- Success: ()
+
+-- >>> infer absrdTm
+-- Success: Π (𝔹) (𝔹)
+
+-- >>> eval absrdTm absrdTy
+-- Success: "\955 sif (sif (`0) then (TT) else (FF))) then (sif (`0) then (TT) else (!))) else (FF))"
