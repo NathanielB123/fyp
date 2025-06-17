@@ -888,7 +888,7 @@ with an untyped syntax resembling \SCBool, and write the algorithm
 in bidirectional style (\sidecite{dunfield2022bidir}), 
 with a mutually recursive |check| and |infer| (as in
 \sidecite{coquand1996algorithm}, and also my Haskell \SCBool typechecker
-(\refsec{typecheckingsc}).
+\refsec{typecheckingsc}).
 
 
 To account for local case splits being turned into new top level definitions,
@@ -927,9 +927,9 @@ record ChkTm (Γ : Ctx Ξ) (A : Ty Γ) : Set where
   constructor chk
   pattern
   field
-    {elabSig}  : Sig
-    elabWk     : Wk elabSig Ξ
-    elabTm     : Tm (Γ [ elabWk ]𝒲Ctx) (A [ elabWk ]𝒲Ty)
+    {chkSig}  : Sig
+    chkWk     : Wk chkSig Ξ
+    chkTm     : Tm (Γ [ chkWk ]𝒲Ctx) (A [ chkWk ]𝒲Ty)
 
 check  : ValidTRS Γ → NfTy Γ A → PreTm → Maybe (ChkTm Γ A)
 infer  : ValidTRS Γ → PreTm → Maybe (InfTm Γ)
@@ -983,7 +983,7 @@ the synthesised
 type of the LHS is headed with |Π|, and checking
 also that the argument has the appropriate type
 \sideremark{Technically we should also account for the case where the 
-synthesised type of |t| is headed with a coercion..}
+synthesised type of |t| is headed with a coercion here.}
 \begin{code} 
 infer Γᶜ (t · u)  = do
   inf φ₁ (Π A B) (Π Aᴺᶠ Bᴺᶠ) t′ ← infer Γᶜ t
@@ -1046,11 +1046,11 @@ check {A = A} Γᶜ Aᴺᶠ (if t u v) = do
 
 We rely on a few helpers here. |complete| is a partial implementation of
 completion (capable of either returning a |ValidTRS|, evidence of a
-definitional inconsistency of failing). We described some possible
+definitional inconsistency, or failing). We described some possible
 implementations of this in \refsec{synrestrs}.
 
 We also need a slightly generalised version of |check|, to account for
-(improved) implementations of |complete| that sometimes return 
+implementations of |complete| that sometimes return 
 evidence of definitional inconsistency.
 
 \begin{spec}

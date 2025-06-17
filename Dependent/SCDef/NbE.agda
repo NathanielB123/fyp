@@ -95,18 +95,22 @@ data PreNe~  : ∀ Γ~ A~ → Tm~ Γ~ A~ t₁ t₂
   coh  : PreNe~ Γ~ A~ t~ tᴾᴺᵉ (coe~ Γ~ A~ t~ tᴾᴺᵉ)
   -- Todo: Congruence cases
 
-data DecPreNe~ (t₁ᴾᴺᵉ : PreNe {Ξ = Ξ} Γ₁ A₁ t₁) 
+data DecPreNe~ (Γ~ : Ctx~ Γ₁ Γ₂) 
+               (t₁ᴾᴺᵉ : PreNe {Ξ = Ξ} Γ₁ A₁ t₁) 
                (t₂ᴾᴺᵉ : PreNe {Ξ = Ξ} Γ₂ A₂ t₂) : Set where
-  conv  : PreNe~ Γ~ A~ t~ t₁ᴾᴺᵉ t₂ᴾᴺᵉ →  DecPreNe~ t₁ᴾᴺᵉ t₂ᴾᴺᵉ
-  ¬conv : (∀ {Γ~ A~ t~} → PreNe~ Γ~ A~ t~ t₁ᴾᴺᵉ t₂ᴾᴺᵉ → ∥⊥∥) 
-        → DecPreNe~ t₁ᴾᴺᵉ t₂ᴾᴺᵉ
+  conv  : PreNe~ Γ~ A~ t~ t₁ᴾᴺᵉ t₂ᴾᴺᵉ →  DecPreNe~ Γ~ t₁ᴾᴺᵉ t₂ᴾᴺᵉ
+  ¬conv : (∀ {A~ t~} → PreNe~ Γ~ A~ t~ t₁ᴾᴺᵉ t₂ᴾᴺᵉ → ∥⊥∥) 
+        → DecPreNe~ Γ~ t₁ᴾᴺᵉ t₂ᴾᴺᵉ
 
--- Syntactic equality of pre-neutral terms should be decidable (e.g. we
--- could project out the raw untyped terms and compare those)
--- A possible difficulty is recovering |Γ~|, |A~| and |t~| in the case
--- the neutrals are equal. This might require some refactoring
-synCmp : (t₁ᴾᴺᵉ : PreNe Γ₁ A₁ t₁) (t₂ᴾᴺᵉ : PreNe Γ₂ A₂ t₂)
-       → DecPreNe~ t₁ᴾᴺᵉ t₂ᴾᴺᵉ
+-- Syntactic equality of pre-neutral terms (equivalence up to coherence) is
+-- decidable (defined mutually with deciding equality of neutral/normal forms).
+-- We follow Altenkirch and Kaposi's "Normalisation by Evaluation for Type 
+-- Theory in Type Theory" and synthesise the equation between the types of the 
+-- neutrals.
+-- Implementing the failure cases here requires proving disjointness of 
+-- constructors, which is certainly possible, but a bit painful...
+synCmp : ∀ Γ~ (t₁ᴾᴺᵉ : PreNe Γ₁ A₁ t₁) (t₂ᴾᴺᵉ : PreNe Γ₂ A₂ t₂)
+       → DecPreNe~ Γ~ t₁ᴾᴺᵉ t₂ᴾᴺᵉ
 
 -- We define TRS equivalence with only the congruence cases in order to get 
 -- a nicer induction principle
@@ -338,7 +342,7 @@ checkrw •                  tᴾᴺᵉ
   = stk (λ _ r → ¬rw• r)
 checkrw (Γᵀᴿ ▷ uᴾᴺᵉ >rw b) tᴾᴺᵉ with checkrw Γᵀᴿ tᴾᴺᵉ
 ... | rw  r  = rw (rs r)
-... | stk ¬r with synCmp tᴾᴺᵉ uᴾᴺᵉ
+... | stk ¬r with synCmp rfl~ tᴾᴺᵉ uᴾᴺᵉ
 ... | conv  tᴾᴺᵉ~  = rw (coe~ rflTRS~ (sym~ tᴾᴺᵉ~) rz)
 ... | ¬conv ¬~     = stk λ where _ r → ¬rw▷ (¬r _) ¬~ r
 
