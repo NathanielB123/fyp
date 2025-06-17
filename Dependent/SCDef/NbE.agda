@@ -5,15 +5,10 @@ open import Utils.IdExtras
 
 open import Dependent.SCDef.Strict
 
+-- Note: Currently missing a lot of cases pertaining to e.g. large elimination
+-- See Dependent/Standard/Nbe.agda for more detail on how to deal with
+-- these ("Smart Case" doesn't change much)
 module Dependent.SCDef.NbE where
-
--- Coherence-equivalence
--- Stricter that conversion. Corresponds to syntactic equality of the underlying
--- untyped term
-data CohCtx~ : Ctx Ψ → Ctx Ψ → Prop
-data CohTy~  : Ctx~ Γ₁ Γ₂ → Ty Γ₁ → Ty Γ₂ → Prop
-data CohTm~  : ∀ Γ~ → Ty~ Γ~ A₁ A₂ → Tm Γ₁ A₁ → Tm Γ₂ A₂ → Prop
-data CohTms~ : Ctx~ Δ₁ Δ₂ → Ctx~ Γ₁ Γ₂ → Tms Δ₁ Γ₁ → Tms Δ₂ Γ₂ → Prop
 
 data Thin {Ξ} : ∀ Δ Γ → Tms {Ξ = Ξ} Δ Γ → Set where
   coe~  : ∀ Δ~ Γ~ → Tms~ Δ~ Γ~ δ₁ δ₂ → Thin Δ₁ Γ₁ δ₁ → Thin Δ₂ Γ₂ δ₂
@@ -76,24 +71,62 @@ data TRS (Γ : Ctx Ξ) : Set where
   •       : TRS Γ
   _▷_>rw_ : TRS Γ → PreNe Γ 𝔹 t → Bool → TRS Γ
 
+coeTRS : Ctx~ Γ₁ Γ₂ → TRS Γ₁ → TRS Γ₂
+coeTRS Γ~ •                  = •
+coeTRS Γ~ (Γᵀᴿ ▷ tᴾᴺᵉ >rw b) = coeTRS Γ~ Γᵀᴿ ▷ coe~ Γ~ 𝔹 coh tᴾᴺᵉ >rw b
+
 variable
   Γᵀᴿ Γ₁ᵀᴿ Γ₂ᵀᴿ : TRS Γ  
+  t₃ᴾᴺᵉ : PreNe Γ A t
+  t₁₂~ t₂₃~ : Tm~ _ _ t₁ t₂
 
-data CohPreNe~  : ∀ Γ~ A~ → Tm~ Γ~ A~ t₁ t₂
-                → PreNe Γ₁ A₁ t₁ → PreNe Γ₂ A₂ t₂ → Prop where
-  coh : CohPreNe~ Γ~ A~ t~ tᴾᴺᵉ (coe~ Γ~ A~ t~ tᴾᴺᵉ)
+-- We define equivalence on pre-neutral terms as "equivalence up to coherence" 
+-- I.e. syntactic equality of the underlying untyped objects. 
+-- This is obviously stricter than conversion.
+data PreNe~  : ∀ Γ~ A~ → Tm~ Γ~ A~ t₁ t₂
+             → PreNe Γ₁ A₁ t₁ → PreNe Γ₂ A₂ t₂ → Prop where
+  rfl~ : PreNe~ rfl~ rfl~ rfl~ tᴾᴺᵉ tᴾᴺᵉ
+  sym~ : PreNe~ Γ~ A~ t~ t₁ᴾᴺᵉ t₂ᴾᴺᵉ
+       → PreNe~ (sym~ Γ~) (sym~ A~) (sym~ t~) t₂ᴾᴺᵉ t₁ᴾᴺᵉ
+  _∙~_ : PreNe~ Γ₁₂~ A₁₂~ t₁₂~ t₁ᴾᴺᵉ t₂ᴾᴺᵉ 
+       → PreNe~ Γ₂₃~ A₂₃~ t₂₃~ t₂ᴾᴺᵉ t₃ᴾᴺᵉ
+       → PreNe~ (Γ₁₂~ ∙~ Γ₂₃~) (A₁₂~ ∙~ A₂₃~) (t₁₂~ ∙~ t₂₃~) t₁ᴾᴺᵉ t₃ᴾᴺᵉ
 
-data CohTRS~  : Ctx~ Γ₁ Γ₂ → TRS Γ₁ → TRS Γ₂ → Prop where
-  rfl~ : CohTRS~ rfl~ Γᵀᴿ Γᵀᴿ
+  coh  : PreNe~ Γ~ A~ t~ tᴾᴺᵉ (coe~ Γ~ A~ t~ tᴾᴺᵉ)
+  -- Todo: Congruence cases
 
+data DecPreNe~ (t₁ᴾᴺᵉ : PreNe {Ξ = Ξ} Γ₁ A₁ t₁) 
+               (t₂ᴾᴺᵉ : PreNe {Ξ = Ξ} Γ₂ A₂ t₂) : Set where
+  conv  : PreNe~ Γ~ A~ t~ t₁ᴾᴺᵉ t₂ᴾᴺᵉ →  DecPreNe~ t₁ᴾᴺᵉ t₂ᴾᴺᵉ
+  ¬conv : (∀ {Γ~ A~ t~} → PreNe~ Γ~ A~ t~ t₁ᴾᴺᵉ t₂ᴾᴺᵉ → ∥⊥∥) 
+        → DecPreNe~ t₁ᴾᴺᵉ t₂ᴾᴺᵉ
+
+-- Syntactic equality of pre-neutral terms should be decidable (e.g. we
+-- could project out the raw untyped terms and compare those)
+-- A possible difficulty is recovering |Γ~|, |A~| and |t~| in the case
+-- the neutrals are equal. This might require some refactoring
+synCmp : (t₁ᴾᴺᵉ : PreNe Γ₁ A₁ t₁) (t₂ᴾᴺᵉ : PreNe Γ₂ A₂ t₂)
+       → DecPreNe~ t₁ᴾᴺᵉ t₂ᴾᴺᵉ
+
+-- We define TRS equivalence with only the congruence cases in order to get 
+-- a nicer induction principle
+data TRS~  : Ctx~ Γ₁ Γ₂ → TRS Γ₁ → TRS Γ₂ → Prop where
+  •      : TRS~ Γ~ • •
+  _▷_>rw : TRS~ Γ~ Γ₁ᵀᴿ Γ₂ᵀᴿ → PreNe~ Γ~ 𝔹 t~ t₁ᴾᴺᵉ t₂ᴾᴺᵉ
+         → TRS~ Γ~ (Γ₁ᵀᴿ ▷ t₁ᴾᴺᵉ >rw b) (Γ₂ᵀᴿ ▷ t₂ᴾᴺᵉ >rw b)
+
+rflTRS~ : TRS~ rfl~ Γᵀᴿ Γᵀᴿ
+rflTRS~ {Γᵀᴿ = •}                = •
+rflTRS~ {Γᵀᴿ = Γᵀᴿ ▷ tᴾᴺᵉ >rw b} = rflTRS~ ▷ rfl~ >rw
 
 data RwVar : TRS {Ξ = Ξ} Γ → PreNe Γ A t → Bool → Set where
-  coe~  : CohTRS~ Γ~ Γ₁ᵀᴿ Γ₂ᵀᴿ
-        → CohPreNe~ Γ~ A~ t~ t₁ᴾᴺᵉ t₂ᴾᴺᵉ
+  coe~  : TRS~ Γ~ Γ₁ᵀᴿ Γ₂ᵀᴿ
+        → PreNe~ Γ~ A~ t~ t₁ᴾᴺᵉ t₂ᴾᴺᵉ
         → RwVar Γ₁ᵀᴿ t₁ᴾᴺᵉ b → RwVar Γ₂ᵀᴿ t₂ᴾᴺᵉ b
 
   rz : RwVar (Γᵀᴿ ▷ tᴾᴺᵉ >rw b) tᴾᴺᵉ b
   rs : RwVar Γᵀᴿ tᴾᴺᵉ b₁ → RwVar (Γᵀᴿ ▷ uᴾᴺᵉ >rw b₂) tᴾᴺᵉ b₁
+
 record ValidTRS (Γ : Ctx Ψ) : Set where
   field
     trs    : TRS Γ
@@ -119,9 +152,9 @@ record 𝔹Valᵗᶠ (Γ : Ctx Ξ) {A} (t : Tm Γ A) : Set where
   constructor closed
   field
     {ctx}   : Ctx Ξ
-    {bool}  : Bool
     {ctx~}  : Ctx~ Γ ctx
     {ty~}   : Ty~ ctx~ A 𝔹
+    bool    : Bool
     tm~     : Tm~ ctx~ ty~ t ⌜ bool ⌝𝔹
 
 data 𝔹Val : ∀ (Γ : Ctx Ψ) {A} → Tm Γ A → Set where
@@ -139,17 +172,17 @@ data 𝔹Val~ : ∀ Γ~ A~ → Tm~ {Ξ = Ξ} Γ~ A~ t₁ t₂
            → Prop where
   rfl~    : ∀ {tⱽ : 𝔹Val Γ t} → 𝔹Val~ rfl~ rfl~ rfl~ tⱽ tⱽ
   -- TODO: This is very specialised to the implementation of |eval|.
-  -- Like these equations should be provable, but I am not sure they are the
+  -- Like, these equations should be provable, but I am not sure they are the
   -- best choice as direct constructors
   TT-coh  : 𝔹Val~ rfl~ rfl~ (t~ ∙~ TT (sym~ Γ~)) (TT t~) (TT rfl~)
   FF-coh  : 𝔹Val~ rfl~ rfl~ (t~ ∙~ FF (sym~ Γ~)) (FF t~) (FF rfl~)
 
-data CheckRwResult (Γᵀᴿ : TRS Γ) (tᴾᴺᵉ : PreNe Γ A t) : Set where
-  rw   : RwVar Γᵀᴿ tᴾᴺᵉ b → CheckRwResult Γᵀᴿ tᴾᴺᵉ
-  stk  : (∀ b → ¬ RwVar Γᵀᴿ tᴾᴺᵉ b) → CheckRwResult Γᵀᴿ tᴾᴺᵉ
+data DecRw (Γᵀᴿ : TRS Γ) (tᴾᴺᵉ : PreNe Γ A t) : Set where
+  rw   : RwVar Γᵀᴿ tᴾᴺᵉ b → DecRw Γᵀᴿ tᴾᴺᵉ
+  stk  : (∀ b → RwVar Γᵀᴿ tᴾᴺᵉ b → ∥⊥∥) → DecRw Γᵀᴿ tᴾᴺᵉ
 
 checkrw  : ∀ (Γᵀᴿ : TRS Γ) (tᴾᴺᵉ : PreNe Γ A t) 
-         → CheckRwResult Γᵀᴿ tᴾᴺᵉ
+         → DecRw Γᵀᴿ tᴾᴺᵉ
 
 rwVal : ValidTRS Γ → PreNe Γ A t → Box (predNe Γ A t) ⊎ 𝔹Valᵗᶠ Γ t
 
@@ -266,7 +299,7 @@ eval-call {f = f} ρ (ne A~ tᴺᵉ) uⱽ vⱽ
 lookupℰ : ∀ (i : Var Γ A) (ρ : Env Ξ Δ Γ Δᶜ δ) → Val Γ A Δ Δᶜ δ ρ (lookup i δ)
 
 eval Δᶜ (coe~ Γ~ A~ t) ρ = {!   !}
-eval Δᶜ (` i)          ρ = {!   !}
+eval Δᶜ (` i)          ρ = lookupℰ i ρ
 eval {δ = δ} Δᶜ (ƛ t) ρ {γ = γ} γᵀʰ {u = u} uⱽ 
   = coe𝒱 rfl~ (sym~ (Πβ {t = t [ (_ ⨾ _) ^ _ ]} {u = u}))
          (eval {δ = (_ ⨾ _) , u} (Δᶜ [ γᵀʰ ]TRS) t 
@@ -283,17 +316,31 @@ eval {δ = σ} Δᶜ (call f δ) ρ
                        (lookup𝒮 _ f .rhs) (δⱽ Σ, box tⱽ~))
 ... | tⱽ | uⱽ | vⱽ = eval-call {f = f} δⱽ tⱽ uⱽ vⱽ
 
-∥_∥⊥ : ⊥ → ∥⊥∥
-∥_∥⊥ ()
-
--- This should be provable by introducing small-step reduction
--- i.e. no reductions are applicable to a |PreNe| except for rewriting,
--- so if we can map from declarative to algorithmic conversion, then we
--- can extract out the |RwVar|
--- Of course, this relies on proving confluence
-inv-lemma : PreNe Γ A t → Tm~ Γ~ A~ t ⌜ b ⌝𝔹 → EqVar Γ (coe~ Γ~ A~ t) b
 
 ⌜⌝𝔹~ : Tm~ Γ~ 𝔹 ⌜ b ⌝𝔹 ⌜ b ⌝𝔹
+⌜⌝𝔹~ {b = true}   = TT _
+⌜⌝𝔹~ {b = false}  = FF _
+
+¬rw• : RwVar • tᴾᴺᵉ b → ∥⊥∥
+¬rw• (coe~ • tᴾᴺᵉ~ r) = ¬rw• r
+
+¬rw▷ : (RwVar Γᵀᴿ tᴾᴺᵉ b₂ → ∥⊥∥) 
+     → (∀ {Γ~ A~ t~} → PreNe~ Γ~ A~ t~ tᴾᴺᵉ uᴾᴺᵉ → ∥⊥∥) 
+     → RwVar (Γᵀᴿ ▷ uᴾᴺᵉ >rw b₁) tᴾᴺᵉ b₂ → ∥⊥∥
+¬rw▷ ¬r ¬~ (coe~ (Γᵀᴿ~ ▷ uᴾᴺᵉ~ >rw) tᴾᴺᵉ~ r) 
+  = ¬rw▷ (λ r′ → ¬r (coe~ Γᵀᴿ~ tᴾᴺᵉ~ r′)) 
+         (λ ~ → ¬~ ((sym~ tᴾᴺᵉ~ ∙~ ~) ∙~ uᴾᴺᵉ~))
+         r
+¬rw▷ ¬r ¬~ rz     = ¬~ rfl~
+¬rw▷ ¬r ¬~ (rs r) = ¬r r
+
+checkrw •                  tᴾᴺᵉ 
+  = stk (λ _ r → ¬rw• r)
+checkrw (Γᵀᴿ ▷ uᴾᴺᵉ >rw b) tᴾᴺᵉ with checkrw Γᵀᴿ tᴾᴺᵉ
+... | rw  r  = rw (rs r)
+... | stk ¬r with synCmp tᴾᴺᵉ uᴾᴺᵉ
+... | conv  tᴾᴺᵉ~  = rw (coe~ rflTRS~ (sym~ tᴾᴺᵉ~) rz)
+... | ¬conv ¬~     = stk λ where _ r → ¬rw▷ (¬r _) ¬~ r
 
 rwVar-lemma : ∀ (r : RwVar {Ξ = Ξ} {Γ = Γ} {A = A} Γᵀᴿ tᴾᴺᵉ b)
             →  Σ⟨ Γ′ ∶ Ctx Ξ ⟩× Σ⟨ Γ~ ∶ Box (Ctx~ Γ Γ′) 
@@ -310,21 +357,25 @@ rwVarTy~ r = rwVar-lemma r .snd .snd .unbox
 
 rwVal Γᶜ tᴾᴺᵉ with checkrw (Γᶜ .trs) tᴾᴺᵉ
 ... | rw {b = b} r 
-  = inr (closed (Γᶜ .soundTR {A~ = rwVarTy~ r} r))
+  = inr  (closed b (Γᶜ .soundTR {A~ = rwVarTy~ r} r))
 ... | stk ¬r 
-  = inl  (box λ b Γ~ A~ t~ → ∥ ¬r b (Γᶜ .complTR t~ tᴾᴺᵉ) ∥⊥)
+  = inl  (box λ b Γ~ A~ t~ → ¬r b (Γᶜ .complTR t~ tᴾᴺᵉ))
+
+-- TODO: Justify this... somehow
+postulate
+  coe𝒱′ : ∀ {ρ : Env Ξ Δ Γ Δᶜ δ} (A~ : Ty~ rfl~ A₁ (A₂ [ δ ]Ty))
+        → Tm~ Δ~ A~ t₁ t₂
+        → Val Δ A₁ Δ Δᶜ id idℰ t₁ → Val Γ A₂ Δ Δᶜ δ ρ t₂
 
 uvalpre {Δᶜ = Δᶜ} A tᴾᴺᵉ with rwVal Δᶜ tᴾᴺᵉ 
 ... | inl tᴾ          = uval A (tᴾᴺᵉ Σ, tᴾ)
--- We need a |coe𝒱| that takes a context equation to make this work properly
--- Oh well!
-... | inr (closed {bool = true}   t~) = {!!}
-... | inr (closed {bool = false}  t~) = {!!}
+... | inr (closed {ctx~ = Γ~} {ty~ = A~} b t~) 
+  = coe𝒱′ (𝔹 {Γ~ = Γ~} ∙~ sym~ A~) (⌜⌝𝔹~ {Γ~ = Γ~} ∙~ sym~ t~) ⌜ b ⌝𝔹𝒱
 
 uval (coe~ Γ~ A) tᴺᵉ = {!   !}
 uval 𝔹 tᴺᵉ = ne rfl~ tᴺᵉ
 uval (Π A B) {t = t}     tᴺᵉ γᵀʰ {u} uⱽ 
-  = uvalpre B (PreNe._·_ {t = t [ _ ]} (tᴺᵉ  [ γᵀʰ ]Ne) (qval A uⱽ))
+  = uvalpre B (_·_ {t = t [ _ ]} (tᴺᵉ  [ γᵀʰ ]Ne) (qval A uⱽ))
 uval (IF t A B) tᴺᵉ = {!   !}
 
 q𝔹Val : 𝔹Val Γ t → Nf Γ 𝔹 t
@@ -338,3 +389,15 @@ qval (Π A B)         tⱽ = coe~ rfl~ rfl~ (sym~ Πη) tᴺᶠ′
   where vzⱽ = uvalpre {δ = _ ⨾ wk {A = (A [ _ ]Ty)}} A (` vz)
         tᴺᶠ′ = ƛ qval B (tⱽ wkᵀʰ vzⱽ)
 qval (IF b A B)      tⱽ = {!!}
+
+
+-- Obviously missing here is how to actually construct 'ValidTRS's
+-- I think a nice first step here would be to prove
+
+inv-lemma : PreNe Γ A t → Tm~ Γ~ A~ t ⌜ b ⌝𝔹 → EqVar Γ (coe~ Γ~ A~ t) b
+
+-- This should be provable by introducing small-step reduction
+-- i.e. no reductions are applicable to a |PreNe| except for rewriting,
+-- so if we can map from declarative to algorithmic conversion, then we
+-- can extract out the |RwVar|
+-- Of course, this relies on proving confluence
