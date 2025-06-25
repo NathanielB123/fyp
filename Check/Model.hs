@@ -203,7 +203,7 @@ instance Show (Model Syn q g) where
   show TT               = "TT"
   show FF               = "FF"
   show (Id _ x y)       = parens (show x) <> " = " <> parens (show y)
-  show (Rfl _)          = "Refl"
+  show (Rfl _)          = "Rfl"
   show Absrd            = "!"
 
 recoverSub :: q <= r -> Dict (Sing (<=) '(q, r))

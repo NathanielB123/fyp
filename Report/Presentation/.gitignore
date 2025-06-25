@@ -12,6 +12,8 @@
 *.fls
 *.nav
 *.snm
+*.bbl-SAVE-ERROR
+*.bcf-SAVE-ERROR
 *.pdf
 
 main.tex

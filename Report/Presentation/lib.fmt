@@ -692,3 +692,4 @@
 
 %format ⟨phantom⟩ = "\phantom{a}"
 %format in'       = "\Varid{in}"
+%format type'     = "\Varid{type}"
