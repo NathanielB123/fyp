@@ -3,7 +3,7 @@
 ## Guide:
 
 - [submitted.pdf](./submitted.pdf): The submitted final report.
-- [slides.pdf](./slides.pdf): Presentation slides.
+- [slides.pdf](./slides.pdf): Presentation slides. I have also uploaded a recording of the presentation to [YouTube](https://www.youtube.com/watch?v=rfyeSeX8-bc).
 - [Dependent](./Dependent): Agda mechanisations of a minimal dependent type theory with Booleans, and the extended languages "SCBool" and "SCDef", as defined in the report.
 - [Check](./Check): A bidirectional NbE typechecker for "SCBool".
 - [Untyped](./Untyped/BoolRw.agda): A proof that for untyped lambda calculus with Booleans, well-foundedness of "non-deterministic reduction" (as defined in the report) implies well-foundedness of "spontaneous reduction" (again as defined in the report, basically β-reduction plus arbitrary rewrites to closed Booleans).
