@@ -24,7 +24,7 @@
 % output "main.tex" file for unreplaced characters will be a good-enough
 % solution here.
 
-%seperation 2
+%separation 2
 %latency 2
 
 %subst comment a = "{\text{\rmfamily-{}-} \textit{" a "}}"
@@ -681,3 +681,5 @@
 
 %format fndThm-ƛ  = fndThm- ƛ
 %format fndThm-ƛ> = fndThm- ƛ >
+
+%format >eq*      = >eq *

@@ -343,7 +343,7 @@ t == λ x → t x
 
 Some η-rules are a lot trickier to decide than others. A general rule-of-thumb
 is that η-laws for \emph{negative} type formers (e.g. functions (|Π|),
-pairs (|Σ|), unit (|⊤|)) \remarknote[][*-4]{Specifically,
+pairs (|Σ|), unit (|⊤|)) are simpler\remarknote[][*-4]{Specifically,
 we can delay checking of these η laws until after β-reduction, or 
 alternatively can deal with them directly via NbE (\refsec{nbe}) by specialising
 unquoting appropriately.\\

@@ -638,7 +638,7 @@ if  : ∀ (A : Ty (Γ ▷ 𝔹)) (t : Tm Γ 𝔹)
       → Tm Γ (A [ < t > ]Ty)
 \end{spec}
 
-the LHS and RHS have type {|A [ < TT > ]|} and {|A [ < FF > ]Ty|} respectively,
+the LHS and RHS have type {|A [ < TT > ]Ty|} and {|A [ < FF > ]Ty|} respectively,
 while the overall expression instead has type {|A [ < t > ]Ty|} (where |t|
 is the scrutinee).
 
@@ -663,11 +663,11 @@ The untyped projection of this term is just
 ƛ y. (if b (ƛ _. x) y) (if b y x)
 \end{spec}
 
-Under non-deterministic reduction, we can collapse the first ``|if|'' the 
-right branch (|y|), and the second ``|if|'' the left branch (also, |y|) 
+Under non-deterministic reduction, we can collapse the first ``|if|'' to the 
+right branch (|y|), and the second ``|if|'' to the left branch (also, |y|) 
 resulting in |ƛ y. y y| (and under spontaneous
-reduction, we can do the same thing in two steps, but first collapsing the 
-scrutinee the the appropriate closed Boolean). We then just need to repeat
+reduction, we can do the same thing in two steps, first collapsing the 
+scrutinees the the appropriate closed Booleans). We then just need to repeat
 the same construction, replacing |A| with |IF b A (A ⇒ A) ⇒ A|, and we are left
 with (after erasing types)
 
@@ -704,7 +704,7 @@ forms being unstable w.r.t. renamings was dealt with by pairing an
 inductively defined neutral with a function from evidence that the neutral
 becomes reducible (is \emph{destabilised}) in some renamed context
 to a normal form. I think applying a similar idea to strong normalisation 
-(parameterising accessibility over all thinned contexts) could
+(parameterising accessibility over all renamed/thinned contexts) could
 assist a strong normalisation proof for \SCBool similarly.
 
 \subsection{Beyond Booleans}
