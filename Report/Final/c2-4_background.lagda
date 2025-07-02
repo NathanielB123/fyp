@@ -392,9 +392,11 @@ rule for Booleans - i.e. type-level ``|if|'' expressions.
   IF-FF  :  IF FF A B ≡ B
 \end{code}
 
-We could go further, and add a recursive large elimination rule 
-e.g. for |ℕ|s, but I think |IF| provides a nice balance between forcing
-us to demonstrate how to account for large elimination without adding too
+Adding recursive large elimination principles (e.g. for |ℕ|s) is a bit trickier,
+requiring some notion of type-type dependency (i.e. type variables)
+\sidecite{angiuli2025principles}. I think |IF| provides a nice balance between 
+forcing
+us to demonstrate how to account for large elimination without introducing too
 much extra complexity.
 
 We also show how extend the syntax with a propositional identity type 
